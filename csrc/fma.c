@@ -13,7 +13,7 @@ static PyMethodDef no_methods[] = {
 
 static struct PyModuleDef module_def = {
     PyModuleDef_HEAD_INIT,
-    "npufunc",
+    "_fma",
     NULL,
     -1,
     no_methods,
@@ -51,7 +51,7 @@ static char types[] = {NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE};
 static void *data[] = {NULL};
 
 
-PyMODINIT_FUNC PyInit_npufunc(void)
+PyMODINIT_FUNC PyInit__fma(void)
 {
     PyObject *module, *ufunc, *dict;
     module = PyModule_Create(&module_def);

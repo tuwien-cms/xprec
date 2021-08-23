@@ -1,0 +1,16 @@
+.*
+*~
+\#*\#
+
+*.pyc
+__pycache__/
+build/
+dist/
+*.so
+*.egg-info/
+
+notebooks/*.ipynb
+
+!.gitignore
+!/.github/
+!/.editorconfig
