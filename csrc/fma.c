@@ -7,131 +7,140 @@
 #include "numpy/ufuncobject.h"
 #include "numpy/npy_3kcompat.h"
 
-// Module definition
-
-static PyMethodDef no_methods[] = {
-    {NULL, NULL, 0, NULL}    // No methods defined
-};
-
-static struct PyModuleDef module_def = {
-    PyModuleDef_HEAD_INIT,
-    "_fma",
-    NULL,
-    -1,
-    no_methods,
-    NULL,
-    NULL,
-    NULL,
-    NULL
-};
 
 
-// Caution: loop definitions must precede PyMODINIT_FUNC
-
-static void double_fma(char **args, const npy_intp *dimensions,
-                       const npy_intp* steps, void* data)
-{
-    npy_intp i;
-    npy_intp n = dimensions[0];
-    char *in1 = args[0], *in2 = args[1], *in3 = args[2], *out1 = args[3];
-    npy_intp is1 = steps[0], is2 = steps[1], is3 = steps[2], os1 = steps[3];
-
-    for (i = 0; i < n; i++) {
-        *(double *)out1 = fma(*(double *)in1, *(double *)in2, *(double *)in3);
-
-        in1 += is1;
-        in2 += is2;
-        in3 += is3;
-        out1 += os1;
-    }
-}
-
-static PyUFuncGenericFunction fma_funcs[] = {&double_fma};
-static char fma_types[] = {NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE, NPY_DOUBLE};
-static void *fma_data[] = {NULL};
-
-
+/**
+ * Type for double-double calculations
+ */
 struct ddouble {
     double x;
     double e;
 };
 
-static void add_ddouble(char **args, const npy_intp *dimensions,
-                        const npy_intp* steps, void* data)
-{
-    assert (sizeof(struct ddouble) == 2 * sizeof(double));
-    npy_intp i;
-    npy_intp n = dimensions[0];
-    char *_in1 = args[0], *_in2 = args[1], *_out1 = args[2];
-    npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];
-
-    for (i = 0; i < n; i++) {
-        const struct ddouble *lhs = (const struct ddouble *)_in1;
-        const struct ddouble *rhs = (const struct ddouble *)_in2;
-        struct ddouble *out = (struct ddouble *)_out1;
-
-        out->x = lhs->x + rhs->x;
-        out->e = lhs->e - rhs->e;
-
-        _in1 += is1;
-        _in2 += is2;
-        _out1 += os1;
+/**
+ * Create ufunc loop routine for a unary operation
+ */
+#define DDOUBLE_UNARY_FUNCTION(func_name, inner_func)                   \
+    static void func_name(char **args, const npy_intp *dimensions,      \
+                          const npy_intp* steps, void* data)            \
+    {                                                                   \
+        assert (sizeof(struct ddouble) == 2 * sizeof(double));          \
+        npy_intp i;                                                     \
+        npy_intp n = dimensions[0];                                     \
+        char *_in1 = args[0], *_out1 = args[1];                         \
+        npy_intp is1 = steps[0], os1 = steps[1];                        \
+                                                                        \
+        for (i = 0; i < n; i++) {                                       \
+            const struct ddouble *in = (const struct ddouble *)_in1;    \
+            struct ddouble *out = (struct ddouble *)_out1;              \
+            *out = func(*in);                                           \
+                                                                        \
+            _in1 += is1;                                                \
+            _out1 += os1;                                               \
+        }                                                               \
     }
-}
 
-#define DDOUBLE_BINARY(name, loop_func) 1
+/**
+ * Create ufunc loop routine for a binary operation
+ */
+#define DDOUBLE_BINARY_FUNCTION(func_name, inner_func)                  \
+    static void func_name(char **args, const npy_intp *dimensions,      \
+                          const npy_intp* steps, void* data)            \
+    {                                                                   \
+        assert (sizeof(struct ddouble) == 2 * sizeof(double));          \
+        npy_intp i;                                                     \
+        npy_intp n = dimensions[0];                                     \
+        char *_in1 = args[0], *_in2 = args[1], *_out1 = args[2];        \
+        npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];        \
+                                                                        \
+        for (i = 0; i < n; i++) {                                       \
+            const struct ddouble *lhs = (const struct ddouble *)_in1;   \
+            const struct ddouble *rhs = (const struct ddouble *)_in2;   \
+            struct ddouble *out = (struct ddouble *)_out1;              \
+            *out = inner_func(*lhs, *rhs);                              \
+                                                                        \
+            _in1 += is1;                                                \
+            _in2 += is2;                                                \
+            _out1 += os1;                                               \
+        }                                                               \
+    }
 
 
-
-// Init routine
-
-PyMODINIT_FUNC PyInit__fma(void)
+inline struct ddouble mytest(struct ddouble lhs, struct ddouble rhs)
 {
-    PyObject *module, *dict;
-    PyObject *fma_ufunc, *add_dd_ufunc;
+    struct ddouble result;
+    result.x = lhs.x + rhs.x;
+    result.e = lhs.e - rhs.e;
+    return result;
+}
+DDOUBLE_BINARY_FUNCTION(add_ddouble, mytest)
 
+
+
+
+static PyArray_Descr *make_ddouble_dtype()
+{
     PyObject *dtype_tuple;
     PyArray_Descr *dtype;
-    PyArray_Descr *dtypes[3];
 
-    // Create module
-    module = PyModule_Create(&module_def);
-    if (!module)
-        return NULL;
-
-    // Initialize numpy things
-    import_array();
-    import_umath();
-
-    // Create ufuncs
-    fma_ufunc = PyUFunc_FromFuncAndData(
-            fma_funcs, fma_data, fma_types, 1, 3, 1, PyUFunc_None, "fma",
-            "FMA docstring", 0);
-
-    // Build dtypes
     dtype_tuple = Py_BuildValue("[(s, s), (s, s)]", "x", "d", "e", "d");
     PyArray_DescrConverter(dtype_tuple, &dtype);
     Py_DECREF(dtype_tuple);
+    return dtype;
+}
 
-    dtypes[0] = dtype;
-    dtypes[1] = dtype;
-    dtypes[2] = dtype;
+static void ddouble_binary(PyArray_Descr *dtype, PyObject *module_dict,
+                           PyUFuncGenericFunction func, const char *name,
+                           const char *docstring)
+{
+    PyObject *ufunc;
+    PyArray_Descr *dtypes[] = {dtype, dtype, dtype};
 
-    // Create dummy ufuncs
-    add_dd_ufunc = PyUFunc_FromFuncAndData(
-            NULL, NULL, NULL, 0, 2, 1, PyUFunc_None, "add_dd",
-            "add_dd docstring", 0);
-
-    // Register for dtype
+    ufunc = PyUFunc_FromFuncAndData(
+                NULL, NULL, NULL, 0, 2, 1, PyUFunc_None, name, docstring, 0);
     PyUFunc_RegisterLoopForDescr(
-            (PyUFuncObject *)add_dd_ufunc, dtype, &add_ddouble, dtypes, NULL);
+                (PyUFuncObject *)ufunc, dtype, func, dtypes, NULL);
+    PyDict_SetItemString(module_dict, name, ufunc);
+    Py_DECREF(ufunc);
+}
 
-    // Register ufuncs
-    dict = PyModule_GetDict(module);
-    PyDict_SetItemString(dict, "fma", fma_ufunc);
-    PyDict_SetItemString(dict, "add_dd", add_dd_ufunc);
-    Py_DECREF(fma_ufunc);
+// Init routine
+PyMODINIT_FUNC PyInit__fma(void)
+{
+    static PyMethodDef no_methods[] = {
+        {NULL, NULL, 0, NULL}    // No methods defined
+    };
+    static struct PyModuleDef module_def = {
+        PyModuleDef_HEAD_INIT,
+        "_fma",
+        NULL,
+        -1,
+        no_methods,
+        NULL,
+        NULL,
+        NULL,
+        NULL
+    };
 
+    /* Module definition */
+    PyObject *module, *module_dict;
+    PyArray_Descr *dtype;
+
+    /* Create module */
+    module = PyModule_Create(&module_def);
+    if (!module)
+        return NULL;
+    module_dict = PyModule_GetDict(module);
+
+    /* Initialize numpy things */
+    import_array();
+    import_umath();
+
+    /* Build ufunc dtype */
+    dtype = make_ddouble_dtype();
+
+    /* Create ufuncs */
+    ddouble_binary(dtype, module_dict, add_ddouble, "add_dd", "docstring");
 
     return module;
 }
