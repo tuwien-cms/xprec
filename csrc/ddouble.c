@@ -1,5 +1,6 @@
 #include "Python.h"
 #include "math.h"
+#include "stdbool.h"
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarraytypes.h"
@@ -241,6 +242,30 @@ inline ddouble invq(ddouble y)
 }
 DDOUBLE_UNARY_FUNCTION(u_invq, invq)
 
+inline ddouble sqrq(ddouble a)
+{
+    /* Alg 11 */
+    ddouble c = two_prod(a.hi, a.hi);
+    double t = 2 * a.hi * a.lo;
+    return two_sum_quick(c.hi, c.lo + t);
+}
+DDOUBLE_UNARY_FUNCTION(u_sqrq, sqrq)
+
+inline ddouble sqrtq(ddouble a)
+{
+    /* Algorithm from Karp (QD library) */
+    if (a.hi <= 0)
+        return (ddouble){.hi = sqrt(a.hi), .lo = 0};
+
+    double x = 1.0 / sqrt(a.hi);
+    double ax = a.hi * x;
+
+    ddouble ax_sqr = sqrq((ddouble){ax, 0});
+    double diff = subqq(a, ax_sqr).hi * x * 0.5;
+    return two_sum(ax, diff);
+}
+DDOUBLE_UNARY_FUNCTION(u_sqrtq, sqrtq)
+
 /* ----------------------- Python stuff -------------------------- */
 
 static PyArray_Descr *make_ddouble_dtype()
@@ -340,6 +365,8 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     ddouble_ufunc(dtype, module_dict, u_posq, 1, "pos", "");
     ddouble_ufunc(dtype, module_dict, u_absq, 1, "abs", "");
     ddouble_ufunc(dtype, module_dict, u_invq, 1, "inv", "");
+    ddouble_ufunc(dtype, module_dict, u_sqrq, 1, "sqr", "");
+    ddouble_ufunc(dtype, module_dict, u_sqrtq, 1, "sqrt", "");
 
     /* Store dtype in module and return */
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
