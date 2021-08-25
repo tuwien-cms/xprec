@@ -15,6 +15,7 @@ typedef struct {
     double lo;
 } ddouble;
 
+
 /**
  * Create ufunc loop routine for a unary operation
  */
@@ -79,7 +80,6 @@ inline ddouble two_sum(double a, double b)
     double lo = (a - (s - v)) + (b - v);
     return (ddouble){.hi = s, .lo = lo};
 }
-BINARY_FUNCTION(u_adddd, two_sum, ddouble, double, double)
 
 inline ddouble two_diff(double a, double b)
 {
@@ -88,7 +88,6 @@ inline ddouble two_diff(double a, double b)
     double lo = (a - (s - v)) - (b + v);
     return (ddouble){.hi = s, .lo = lo};
 }
-BINARY_FUNCTION(u_subdd, two_diff, ddouble, double, double)
 
 inline ddouble two_prod(double a, double b)
 {
@@ -96,7 +95,6 @@ inline ddouble two_prod(double a, double b)
     double lo = fma(a, b, -s);
     return (ddouble){.hi = s, .lo = lo};
 }
-BINARY_FUNCTION(u_muldd, two_prod, ddouble, double, double)
 
 /* -------------------- Combining quad/double ------------------------ */
 
@@ -107,6 +105,14 @@ inline ddouble addqd(ddouble x, double y)
     return two_sum_quick(s.hi, v);
 }
 BINARY_FUNCTION(u_addqd, addqd, ddouble, ddouble, double)
+
+inline ddouble subqd(ddouble x, double y)
+{
+    ddouble s = two_diff(x.hi, y);
+    double v = x.lo + s.lo;
+    return two_sum_quick(s.hi, v);
+}
+BINARY_FUNCTION(u_subqd, subqd, ddouble, ddouble, double)
 
 inline ddouble mulqd(ddouble x, double y)
 {
@@ -130,17 +136,34 @@ BINARY_FUNCTION(u_divqd, divqd, ddouble, ddouble, double)
 
 /* -------------------- Combining double/quad ------------------------- */
 
+ddouble negq(ddouble);
+ddouble invq(ddouble);
+
 inline ddouble adddq(double x, ddouble y)
 {
     return addqd(y, x);
 }
 BINARY_FUNCTION(u_adddq, adddq, ddouble, double, ddouble)
 
+inline ddouble subdq(double x, ddouble y)
+{
+    /* TODO: Probably not ideal */
+    return addqd(negq(y), x);
+}
+BINARY_FUNCTION(u_subdq, subdq, ddouble, double, ddouble)
+
 inline ddouble muldq(double x, ddouble y)
 {
     return mulqd(y, x);
 }
 BINARY_FUNCTION(u_muldq, muldq, ddouble, double, ddouble)
+
+inline ddouble divdq(double x, ddouble y)
+{
+    /* TODO: Probably not ideal */
+    return mulqd(invq(y), x);
+}
+BINARY_FUNCTION(u_divdq, divdq, ddouble, double, ddouble)
 
 /* -------------------- Combining quad/quad ------------------------- */
 
@@ -206,6 +229,18 @@ inline ddouble absq(ddouble a)
 }
 DDOUBLE_UNARY_FUNCTION(u_absq, absq)
 
+inline ddouble invq(ddouble y)
+{
+    /* Alg 17 with x = 1 */
+    double t_hi = 1.0 / y.hi;
+    ddouble r = mulqd(y, t_hi);
+    double pi_hi = 1.0 - r.hi;
+    double d = pi_hi - r.lo;
+    double t_lo = d / y.hi;
+    return two_sum_quick(t_hi, t_lo);
+}
+DDOUBLE_UNARY_FUNCTION(u_invq, invq)
+
 /* ----------------------- Python stuff -------------------------- */
 
 static PyArray_Descr *make_ddouble_dtype()
@@ -220,21 +255,18 @@ static PyArray_Descr *make_ddouble_dtype()
 }
 
 static void binary_ufunc(PyArray_Descr *q_dtype, PyObject *module_dict,
-        PyUFuncGenericFunction dd_func, PyUFuncGenericFunction dq_func,
+        PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
         const char *name, const char *docstring)
 {
     PyObject *ufunc;
     PyArray_Descr *d_dtype = PyArray_DescrFromType(NPY_DOUBLE);
-    PyArray_Descr *dd_dtypes[] = {d_dtype, d_dtype, q_dtype},
-                  *dq_dtypes[] = {d_dtype, q_dtype, q_dtype},
+    PyArray_Descr *dq_dtypes[] = {d_dtype, q_dtype, q_dtype},
                   *qd_dtypes[] = {q_dtype, d_dtype, q_dtype},
                   *qq_dtypes[] = {q_dtype, q_dtype, q_dtype};
 
     ufunc = PyUFunc_FromFuncAndData(
                 NULL, NULL, NULL, 0, 2, 1, PyUFunc_None, name, docstring, 0);
-    PyUFunc_RegisterLoopForDescr(
-                (PyUFuncObject *)ufunc, q_dtype, dd_func, dd_dtypes, NULL);
     PyUFunc_RegisterLoopForDescr(
                 (PyUFuncObject *)ufunc, q_dtype, dq_func, dq_dtypes, NULL);
     PyUFunc_RegisterLoopForDescr(
@@ -299,14 +331,15 @@ PyMODINIT_FUNC PyInit__ddouble(void)
 
     /* Create ufuncs */
     //ddouble_ufunc(dtype, module_dict, u_addqq, 2, "add", "");
-    binary_ufunc(dtype, module_dict, u_adddd, u_adddq, u_addqd, u_addqq, "add", "");
-    ddouble_ufunc(dtype, module_dict, u_subqq, 2, "sub", "");
-    ddouble_ufunc(dtype, module_dict, u_mulqq, 2, "mul", "");
-    ddouble_ufunc(dtype, module_dict, u_divqq, 2, "div", "");
+    binary_ufunc(dtype, module_dict, u_adddq, u_addqd, u_addqq, "add", "");
+    binary_ufunc(dtype, module_dict, u_subdq, u_subqd, u_subqq, "sub", "");
+    binary_ufunc(dtype, module_dict, u_muldq, u_mulqd, u_mulqq, "mul", "");
+    binary_ufunc(dtype, module_dict, u_divdq, u_divqd, u_divqq, "div", "");
 
     ddouble_ufunc(dtype, module_dict, u_negq, 1, "neg", "");
     ddouble_ufunc(dtype, module_dict, u_posq, 1, "pos", "");
     ddouble_ufunc(dtype, module_dict, u_absq, 1, "abs", "");
+    ddouble_ufunc(dtype, module_dict, u_invq, 1, "inv", "");
 
     /* Store dtype in module and return */
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
