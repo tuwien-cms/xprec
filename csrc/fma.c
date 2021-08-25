@@ -89,15 +89,15 @@ static PyArray_Descr *make_ddouble_dtype()
     return dtype;
 }
 
-static void ddouble_binary(PyArray_Descr *dtype, PyObject *module_dict,
-                           PyUFuncGenericFunction func, const char *name,
-                           const char *docstring)
+static void ddouble_ufunc(PyArray_Descr *dtype, PyObject *module_dict,
+                          PyUFuncGenericFunction func, int nargs,
+                          const char *name, const char *docstring)
 {
     PyObject *ufunc;
     PyArray_Descr *dtypes[] = {dtype, dtype, dtype};
 
     ufunc = PyUFunc_FromFuncAndData(
-                NULL, NULL, NULL, 0, 2, 1, PyUFunc_None, name, docstring, 0);
+                NULL, NULL, NULL, 0, nargs, 1, PyUFunc_None, name, docstring, 0);
     PyUFunc_RegisterLoopForDescr(
                 (PyUFuncObject *)ufunc, dtype, func, dtypes, NULL);
     PyDict_SetItemString(module_dict, name, ufunc);
@@ -140,7 +140,7 @@ PyMODINIT_FUNC PyInit__fma(void)
     dtype = make_ddouble_dtype();
 
     /* Create ufuncs */
-    ddouble_binary(dtype, module_dict, add_ddouble, "add_dd", "docstring");
+    ddouble_ufunc(dtype, module_dict, add_ddouble, 1, "add_dd", "docstring");
 
     return module;
 }
