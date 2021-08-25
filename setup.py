@@ -5,11 +5,9 @@ import io
 import os.path
 import re
 
-from distutils import log
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from setuptools.command.build_ext import build_ext
-from setuptools.command.sdist import sdist
 
 
 def readfile(*parts):
@@ -53,6 +51,8 @@ class BuildExtWithNumpy(build_ext):
         for ext in extensions:
             if '-fopenmp' not in ext.extra_compile_args:
                 ext.extra_compile_args.append('-fopenmp')
+            if '-g' not in ext.extra_compile_args:
+                ext.extra_compile_args.append('-g')
             if self._link_openmp and '-fopenmp' not in ext.extra_link_args:
                 ext.extra_link_args.append('-fopenmp')
 
