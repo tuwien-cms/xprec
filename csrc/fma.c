@@ -56,28 +56,22 @@ struct ddouble {
     double e;
 };
 
-
 static void add_ddouble(char **args, const npy_intp *dimensions,
                         const npy_intp* steps, void* data)
 {
+    assert (sizeof(struct ddouble) == 2 * sizeof(double));
     npy_intp i;
     npy_intp n = dimensions[0];
     char *_in1 = args[0], *_in2 = args[1], *_out1 = args[2];
     npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];
 
     for (i = 0; i < n; i++) {
-        // const struct ddouble *lhs = (const struct ddouble *)_in1;
-        // const struct ddouble *rhs = (const struct ddouble *)_in2;
-        // struct ddouble *out = (struct ddouble *)_out1;
+        const struct ddouble *lhs = (const struct ddouble *)_in1;
+        const struct ddouble *rhs = (const struct ddouble *)_in2;
+        struct ddouble *out = (struct ddouble *)_out1;
 
-        // out->x = lhs->x + rhs->x;
-        // out->x = lhs->e - rhs->e;
-        const double *lhs = (const double *)_in1;
-        const double *rhs = (const double *)_in2;
-        double *out = (double *)_out1;
-
-        out[0] = lhs[0] + rhs[1];
-        out[1] = lhs[1] - rhs[1];
+        out->x = lhs->x + rhs->x;
+        out->e = lhs->e - rhs->e;
 
         _in1 += is1;
         _in2 += is2;
