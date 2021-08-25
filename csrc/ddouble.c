@@ -7,7 +7,6 @@
 #include "numpy/npy_3kcompat.h"
 
 
-
 /**
  * Type for double-double calculations
  */
@@ -32,7 +31,7 @@ typedef struct {
         for (i = 0; i < n; i++) {                                       \
             const ddouble *in = (const ddouble *)_in1;                  \
             ddouble *out = (ddouble *)_out1;                            \
-            *out = func(*in);                                           \
+            *out = inner_func(*in);                                     \
                                                                         \
             _in1 += is1;                                                \
             _out1 += os1;                                               \
@@ -64,16 +63,79 @@ typedef struct {
         }                                                               \
     }
 
-inline ddouble mytest(ddouble lhs, ddouble rhs)
+/* ----------------------- Functions ----------------------------- */
+
+inline ddouble two_sum_quick(double a, double b)
 {
-    ddouble result;
-    result.x = lhs.x + rhs.x;
-    result.e = lhs.e - rhs.e;
-    return result;
+    double s = a + b;
+    double e = b - (s - a);
+    return (ddouble){.x = s, .e = e};
 }
-DDOUBLE_BINARY_FUNCTION(add_ddouble, mytest)
+
+inline ddouble two_sum(double a, double b)
+{
+    double s = a + b;
+    double v = s - a;
+    double e = (a - (s - v)) + (b - v);
+    return (ddouble){.x = s, .e = e};
+}
+
+inline ddouble two_diff(double a, double b)
+{
+    double s = a - b;
+    double v = s - a;
+    double e = (a - (s - v)) - (b + v);
+    return (ddouble){.x = s, .e = e};
+}
+
+inline ddouble two_prod(double a, double b)
+{
+    double s = a * b;
+    double e = fma(a, b, -s);
+    return (ddouble){.x = s, .e = e};
+}
+
+inline ddouble addq(ddouble a, ddouble b)
+{
+    ddouble res = two_sum(a.x, b.x);
+    res.e += a.e + b.e;
+    return two_sum_quick(res.x, res.e);
+}
+DDOUBLE_BINARY_FUNCTION(u_addq, addq)
+
+inline ddouble subq(ddouble a, ddouble b)
+{
+    ddouble res = two_diff(a.x, b.x);
+    res.e += a.e - b.e;
+    return two_sum_quick(res.x, res.e);
+}
+DDOUBLE_BINARY_FUNCTION(u_subq, subq)
+
+inline ddouble mulq(ddouble a, ddouble b)
+{
+    ddouble res = two_prod(a.x, b.x);
+    res.e += a.x * b.e + a.e * b.x;
+    return two_sum_quick(res.x, res.e);
+}
+DDOUBLE_BINARY_FUNCTION(u_mulq, mulq)
+
+inline ddouble divq(ddouble a, ddouble b)
+{
+    double r = a.x / b.x;
+    ddouble s = two_prod(r, b.x);
+    double e = (a.x - s.x - s.e + a.e - r * b.e) / b.x;
+    return two_sum_quick(r, e);
+}
+DDOUBLE_BINARY_FUNCTION(u_divq, divq)
+
+inline ddouble negq(ddouble a)
+{
+    return (ddouble){-a.x, -a.e};
+}
+DDOUBLE_UNARY_FUNCTION(u_negq, negq)
 
 
+/* ----------------------- Python stuff -------------------------- */
 
 static PyArray_Descr *make_ddouble_dtype()
 {
@@ -137,7 +199,11 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     dtype = make_ddouble_dtype(module_dict);
 
     /* Create ufuncs */
-    ddouble_ufunc(dtype, module_dict, add_ddouble, 2, "add_dd", "docstring");
+    ddouble_ufunc(dtype, module_dict, u_addq, 2, "add", "");
+    ddouble_ufunc(dtype, module_dict, u_subq, 2, "sub", "");
+    ddouble_ufunc(dtype, module_dict, u_mulq, 2, "mul", "");
+    ddouble_ufunc(dtype, module_dict, u_divq, 2, "div", "");
+    ddouble_ufunc(dtype, module_dict, u_negq, 1, "neg", "");
 
     /* Store dtype in module and return */
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
