@@ -41,7 +41,7 @@ typedef struct {
 /**
  * Create ufunc loop routine for a binary operation
  */
-#define DDOUBLE_BINARY_FUNCTION(func_name, inner_func)                  \
+#define BINARY_FUNCTION(func_name, inner_func, type_r, type_a, type_b)  \
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp* steps, void* data)            \
     {                                                                   \
@@ -52,9 +52,9 @@ typedef struct {
         npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];        \
                                                                         \
         for (i = 0; i < n; i++) {                                       \
-            const ddouble *lhs = (const ddouble *)_in1;                 \
-            const ddouble *rhs = (const ddouble *)_in2;                 \
-            ddouble *out = (ddouble *)_out1;                            \
+            const type_a *lhs = (const type_a *)_in1;                   \
+            const type_b *rhs = (const type_b *)_in2;                   \
+            type_r *out = (type_r *)_out1;                              \
             *out = inner_func(*lhs, *rhs);                              \
                                                                         \
             _in1 += is1;                                                \
@@ -79,6 +79,7 @@ inline ddouble two_sum(double a, double b)
     double lo = (a - (s - v)) + (b - v);
     return (ddouble){.hi = s, .lo = lo};
 }
+BINARY_FUNCTION(u_adddd, two_sum, ddouble, double, double)
 
 inline ddouble two_diff(double a, double b)
 {
@@ -87,6 +88,7 @@ inline ddouble two_diff(double a, double b)
     double lo = (a - (s - v)) - (b + v);
     return (ddouble){.hi = s, .lo = lo};
 }
+BINARY_FUNCTION(u_subdd, two_diff, ddouble, double, double)
 
 inline ddouble two_prod(double a, double b)
 {
@@ -94,6 +96,7 @@ inline ddouble two_prod(double a, double b)
     double lo = fma(a, b, -s);
     return (ddouble){.hi = s, .lo = lo};
 }
+BINARY_FUNCTION(u_muldd, two_prod, ddouble, double, double)
 
 /* -------------------- Combining quad/double ------------------------ */
 
@@ -103,6 +106,7 @@ inline ddouble addqd(ddouble x, double y)
     double v = x.lo + s.lo;
     return two_sum_quick(s.hi, v);
 }
+BINARY_FUNCTION(u_addqd, addqd, ddouble, ddouble, double)
 
 inline ddouble mulqd(ddouble x, double y)
 {
@@ -110,6 +114,7 @@ inline ddouble mulqd(ddouble x, double y)
     double v = fma(x.lo, y, c.lo);
     return two_sum_quick(c.hi, v);
 }
+BINARY_FUNCTION(u_mulqd, mulqd, ddouble, ddouble, double)
 
 inline ddouble divqd(ddouble x, double y)
 {
@@ -121,6 +126,21 @@ inline ddouble divqd(ddouble x, double y)
     double t_lo = (d_hi + d_lo) / y;
     return two_sum_quick(t_hi, t_lo);
 }
+BINARY_FUNCTION(u_divqd, divqd, ddouble, ddouble, double)
+
+/* -------------------- Combining double/quad ------------------------- */
+
+inline ddouble adddq(double x, ddouble y)
+{
+    return addqd(y, x);
+}
+BINARY_FUNCTION(u_adddq, adddq, ddouble, double, ddouble)
+
+inline ddouble muldq(double x, ddouble y)
+{
+    return mulqd(y, x);
+}
+BINARY_FUNCTION(u_muldq, muldq, ddouble, double, ddouble)
 
 /* -------------------- Combining quad/quad ------------------------- */
 
@@ -132,7 +152,7 @@ inline ddouble addqq(ddouble x, ddouble y)
     ddouble z = two_sum_quick(v.hi, t.lo + v.lo);
     return z;
 }
-DDOUBLE_BINARY_FUNCTION(u_addqq, addqq)
+BINARY_FUNCTION(u_addqq, addqq, ddouble, ddouble, ddouble)
 
 inline ddouble subqq(ddouble x, ddouble y)
 {
@@ -142,7 +162,7 @@ inline ddouble subqq(ddouble x, ddouble y)
     ddouble z = two_sum_quick(v.hi, t.lo + v.lo);
     return z;
 }
-DDOUBLE_BINARY_FUNCTION(u_subqq, subqq)
+BINARY_FUNCTION(u_subqq, subqq, ddouble, ddouble, ddouble)
 
 inline ddouble mulqq(ddouble a, ddouble b)
 {
@@ -152,7 +172,7 @@ inline ddouble mulqq(ddouble a, ddouble b)
     t = fma(a.lo, b.hi, t);
     return two_sum_quick(c.hi, c.lo + t);
 }
-DDOUBLE_BINARY_FUNCTION(u_mulqq, mulqq)
+BINARY_FUNCTION(u_mulqq, mulqq, ddouble, ddouble, ddouble)
 
 inline ddouble divqq(ddouble x, ddouble y)
 {
@@ -164,7 +184,9 @@ inline ddouble divqq(ddouble x, ddouble y)
     double t_lo = d / y.hi;
     return two_sum_quick(t_hi, t_lo);
 }
-DDOUBLE_BINARY_FUNCTION(u_divqq, divqq)
+BINARY_FUNCTION(u_divqq, divqq, ddouble, ddouble, ddouble)
+
+/* -------------------- Unary functions ------------------------- */
 
 inline ddouble negq(ddouble a)
 {
@@ -184,7 +206,6 @@ inline ddouble absq(ddouble a)
 }
 DDOUBLE_UNARY_FUNCTION(u_absq, absq)
 
-
 /* ----------------------- Python stuff -------------------------- */
 
 static PyArray_Descr *make_ddouble_dtype()
@@ -196,6 +217,34 @@ static PyArray_Descr *make_ddouble_dtype()
     PyArray_DescrConverter(dtype_tuple, &dtype);
     Py_DECREF(dtype_tuple);
     return dtype;
+}
+
+static void binary_ufunc(PyArray_Descr *q_dtype, PyObject *module_dict,
+        PyUFuncGenericFunction dd_func, PyUFuncGenericFunction dq_func,
+        PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
+        const char *name, const char *docstring)
+{
+    PyObject *ufunc;
+    PyArray_Descr *d_dtype = PyArray_DescrFromType(NPY_DOUBLE);
+    PyArray_Descr *dd_dtypes[] = {d_dtype, d_dtype, q_dtype},
+                  *dq_dtypes[] = {d_dtype, q_dtype, q_dtype},
+                  *qd_dtypes[] = {q_dtype, d_dtype, q_dtype},
+                  *qq_dtypes[] = {q_dtype, q_dtype, q_dtype};
+
+    ufunc = PyUFunc_FromFuncAndData(
+                NULL, NULL, NULL, 0, 2, 1, PyUFunc_None, name, docstring, 0);
+    PyUFunc_RegisterLoopForDescr(
+                (PyUFuncObject *)ufunc, q_dtype, dd_func, dd_dtypes, NULL);
+    PyUFunc_RegisterLoopForDescr(
+                (PyUFuncObject *)ufunc, q_dtype, dq_func, dq_dtypes, NULL);
+    PyUFunc_RegisterLoopForDescr(
+                (PyUFuncObject *)ufunc, q_dtype, qd_func, qd_dtypes, NULL);
+    PyUFunc_RegisterLoopForDescr(
+                (PyUFuncObject *)ufunc, q_dtype, qq_func, qq_dtypes, NULL);
+    PyDict_SetItemString(module_dict, name, ufunc);
+
+    Py_DECREF(ufunc);
+    Py_DECREF(d_dtype);
 }
 
 static void ddouble_ufunc(PyArray_Descr *dtype, PyObject *module_dict,
@@ -221,7 +270,7 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     };
     static struct PyModuleDef module_def = {
         PyModuleDef_HEAD_INIT,
-        "_fma",
+        "_ddouble",
         NULL,
         -1,
         no_methods,
@@ -249,7 +298,8 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     dtype = make_ddouble_dtype(module_dict);
 
     /* Create ufuncs */
-    ddouble_ufunc(dtype, module_dict, u_addqq, 2, "add", "");
+    //ddouble_ufunc(dtype, module_dict, u_addqq, 2, "add", "");
+    binary_ufunc(dtype, module_dict, u_adddd, u_adddq, u_addqd, u_addqq, "add", "");
     ddouble_ufunc(dtype, module_dict, u_subqq, 2, "sub", "");
     ddouble_ufunc(dtype, module_dict, u_mulqq, 2, "mul", "");
     ddouble_ufunc(dtype, module_dict, u_divqq, 2, "div", "");
