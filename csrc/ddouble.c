@@ -11,8 +11,8 @@
  * Type for double-double calculations
  */
 typedef struct {
-    double x;
-    double e;
+    double hi;
+    double lo;
 } ddouble;
 
 /**
@@ -68,71 +68,121 @@ typedef struct {
 inline ddouble two_sum_quick(double a, double b)
 {
     double s = a + b;
-    double e = b - (s - a);
-    return (ddouble){.x = s, .e = e};
+    double lo = b - (s - a);
+    return (ddouble){.hi = s, .lo = lo};
 }
 
 inline ddouble two_sum(double a, double b)
 {
     double s = a + b;
     double v = s - a;
-    double e = (a - (s - v)) + (b - v);
-    return (ddouble){.x = s, .e = e};
+    double lo = (a - (s - v)) + (b - v);
+    return (ddouble){.hi = s, .lo = lo};
 }
 
 inline ddouble two_diff(double a, double b)
 {
     double s = a - b;
     double v = s - a;
-    double e = (a - (s - v)) - (b + v);
-    return (ddouble){.x = s, .e = e};
+    double lo = (a - (s - v)) - (b + v);
+    return (ddouble){.hi = s, .lo = lo};
 }
 
 inline ddouble two_prod(double a, double b)
 {
     double s = a * b;
-    double e = fma(a, b, -s);
-    return (ddouble){.x = s, .e = e};
+    double lo = fma(a, b, -s);
+    return (ddouble){.hi = s, .lo = lo};
 }
 
-inline ddouble addq(ddouble a, ddouble b)
-{
-    ddouble res = two_sum(a.x, b.x);
-    res.e += a.e + b.e;
-    return two_sum_quick(res.x, res.e);
-}
-DDOUBLE_BINARY_FUNCTION(u_addq, addq)
+/* -------------------- Combining quad/double ------------------------ */
 
-inline ddouble subq(ddouble a, ddouble b)
+inline ddouble addqd(ddouble x, double y)
 {
-    ddouble res = two_diff(a.x, b.x);
-    res.e += a.e - b.e;
-    return two_sum_quick(res.x, res.e);
+    ddouble s = two_sum(x.hi, y);
+    double v = x.lo + s.lo;
+    return two_sum_quick(s.hi, v);
 }
-DDOUBLE_BINARY_FUNCTION(u_subq, subq)
 
-inline ddouble mulq(ddouble a, ddouble b)
+inline ddouble mulqd(ddouble x, double y)
 {
-    ddouble res = two_prod(a.x, b.x);
-    res.e += a.x * b.e + a.e * b.x;
-    return two_sum_quick(res.x, res.e);
+    ddouble c = two_prod(x.hi, y);
+    double v = fma(x.lo, y, c.lo);
+    return two_sum_quick(c.hi, v);
 }
-DDOUBLE_BINARY_FUNCTION(u_mulq, mulq)
 
-inline ddouble divq(ddouble a, ddouble b)
+inline ddouble divqd(ddouble x, double y)
 {
-    double r = a.x / b.x;
-    ddouble s = two_prod(r, b.x);
-    double e = (a.x - s.x - s.e + a.e - r * b.e) / b.x;
-    return two_sum_quick(r, e);
+    /* Alg 14 */
+    double t_hi = x.hi / y;
+    ddouble pi = two_prod(t_hi, y);
+    double d_hi = x.hi - pi.hi;
+    double d_lo = x.lo - pi.lo;
+    double t_lo = (d_hi + d_lo) / y;
+    return two_sum_quick(t_hi, t_lo);
 }
-DDOUBLE_BINARY_FUNCTION(u_divq, divq)
+
+/* -------------------- Combining quad/quad ------------------------- */
+
+inline ddouble addqq(ddouble x, ddouble y)
+{
+    ddouble s = two_sum(x.hi, y.hi);
+    ddouble t = two_sum(x.lo, y.lo);
+    ddouble v = two_sum_quick(s.hi, s.lo + t.hi);
+    ddouble z = two_sum_quick(v.hi, t.lo + v.lo);
+    return z;
+}
+DDOUBLE_BINARY_FUNCTION(u_addqq, addqq)
+
+inline ddouble subqq(ddouble x, ddouble y)
+{
+    ddouble s = two_diff(x.hi, y.hi);
+    ddouble t = two_diff(x.lo, y.lo);
+    ddouble v = two_sum_quick(s.hi, s.lo + t.hi);
+    ddouble z = two_sum_quick(v.hi, t.lo + v.lo);
+    return z;
+}
+DDOUBLE_BINARY_FUNCTION(u_subqq, subqq)
+
+inline ddouble mulqq(ddouble a, ddouble b)
+{
+    /* Alg 11 */
+    ddouble c = two_prod(a.hi, b.hi);
+    double t = a.hi * b.lo;
+    t = fma(a.lo, b.hi, t);
+    return two_sum_quick(c.hi, c.lo + t);
+}
+DDOUBLE_BINARY_FUNCTION(u_mulqq, mulqq)
+
+inline ddouble divqq(ddouble x, ddouble y)
+{
+    /* Alg 17 */
+    double t_hi = x.hi / y.hi;
+    ddouble r = mulqd(y, t_hi);
+    double pi_hi = x.hi - r.hi;
+    double d = pi_hi + (x.lo - r.lo);
+    double t_lo = d / y.hi;
+    return two_sum_quick(t_hi, t_lo);
+}
+DDOUBLE_BINARY_FUNCTION(u_divqq, divqq)
 
 inline ddouble negq(ddouble a)
 {
-    return (ddouble){-a.x, -a.e};
+    return (ddouble){-a.hi, -a.lo};
 }
 DDOUBLE_UNARY_FUNCTION(u_negq, negq)
+
+inline ddouble posq(ddouble a)
+{
+    return (ddouble){-a.hi, -a.lo};
+}
+DDOUBLE_UNARY_FUNCTION(u_posq, posq)
+
+inline ddouble absq(ddouble a)
+{
+    return signbit(a.hi) ? negq(a) : a;
+}
+DDOUBLE_UNARY_FUNCTION(u_absq, absq)
 
 
 /* ----------------------- Python stuff -------------------------- */
@@ -142,7 +192,7 @@ static PyArray_Descr *make_ddouble_dtype()
     PyObject *dtype_tuple;
     PyArray_Descr *dtype;
 
-    dtype_tuple = Py_BuildValue("[(s, s), (s, s)]", "x", "d", "e", "d");
+    dtype_tuple = Py_BuildValue("[(s, s), (s, s)]", "hi", "d", "lo", "d");
     PyArray_DescrConverter(dtype_tuple, &dtype);
     Py_DECREF(dtype_tuple);
     return dtype;
@@ -199,11 +249,14 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     dtype = make_ddouble_dtype(module_dict);
 
     /* Create ufuncs */
-    ddouble_ufunc(dtype, module_dict, u_addq, 2, "add", "");
-    ddouble_ufunc(dtype, module_dict, u_subq, 2, "sub", "");
-    ddouble_ufunc(dtype, module_dict, u_mulq, 2, "mul", "");
-    ddouble_ufunc(dtype, module_dict, u_divq, 2, "div", "");
+    ddouble_ufunc(dtype, module_dict, u_addqq, 2, "add", "");
+    ddouble_ufunc(dtype, module_dict, u_subqq, 2, "sub", "");
+    ddouble_ufunc(dtype, module_dict, u_mulqq, 2, "mul", "");
+    ddouble_ufunc(dtype, module_dict, u_divqq, 2, "div", "");
+
     ddouble_ufunc(dtype, module_dict, u_negq, 1, "neg", "");
+    ddouble_ufunc(dtype, module_dict, u_posq, 1, "pos", "");
+    ddouble_ufunc(dtype, module_dict, u_absq, 1, "abs", "");
 
     /* Store dtype in module and return */
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
