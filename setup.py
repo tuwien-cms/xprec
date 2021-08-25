@@ -105,7 +105,7 @@ setup(
         },
 
     ext_modules=[
-        Extension("quadruple._fma", ["csrc/fma.c"]),
+        Extension("quadruple._ddouble", ["csrc/ddouble.c"]),
         ],
     setup_requires=[
         'numpy',

@@ -105,7 +105,7 @@ static void ddouble_ufunc(PyArray_Descr *dtype, PyObject *module_dict,
 }
 
 // Init routine
-PyMODINIT_FUNC PyInit__fma(void)
+PyMODINIT_FUNC PyInit__ddouble(void)
 {
     static PyMethodDef no_methods[] = {
         {NULL, NULL, 0, NULL}    // No methods defined
@@ -137,10 +137,12 @@ PyMODINIT_FUNC PyInit__fma(void)
     import_umath();
 
     /* Build ufunc dtype */
-    dtype = make_ddouble_dtype();
+    dtype = make_ddouble_dtype(module_dict);
 
     /* Create ufuncs */
-    ddouble_ufunc(dtype, module_dict, add_ddouble, 1, "add_dd", "docstring");
+    ddouble_ufunc(dtype, module_dict, add_ddouble, 2, "add_dd", "docstring");
 
+    /* Store dtype in module and return */
+    PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
     return module;
 }
