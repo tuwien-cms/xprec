@@ -1,6 +1,5 @@
 #include "Python.h"
 #include "math.h"
-#include "stdio.h"
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarraytypes.h"
@@ -12,10 +11,10 @@
 /**
  * Type for double-double calculations
  */
-struct ddouble {
+typedef struct {
     double x;
     double e;
-};
+} ddouble;
 
 /**
  * Create ufunc loop routine for a unary operation
@@ -24,15 +23,15 @@ struct ddouble {
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp* steps, void* data)            \
     {                                                                   \
-        assert (sizeof(struct ddouble) == 2 * sizeof(double));          \
+        assert (sizeof(ddouble) == 2 * sizeof(double));                 \
         npy_intp i;                                                     \
         npy_intp n = dimensions[0];                                     \
         char *_in1 = args[0], *_out1 = args[1];                         \
         npy_intp is1 = steps[0], os1 = steps[1];                        \
                                                                         \
         for (i = 0; i < n; i++) {                                       \
-            const struct ddouble *in = (const struct ddouble *)_in1;    \
-            struct ddouble *out = (struct ddouble *)_out1;              \
+            const ddouble *in = (const ddouble *)_in1;                  \
+            ddouble *out = (ddouble *)_out1;                            \
             *out = func(*in);                                           \
                                                                         \
             _in1 += is1;                                                \
@@ -47,16 +46,16 @@ struct ddouble {
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp* steps, void* data)            \
     {                                                                   \
-        assert (sizeof(struct ddouble) == 2 * sizeof(double));          \
+        assert (sizeof(ddouble) == 2 * sizeof(double));                 \
         npy_intp i;                                                     \
         npy_intp n = dimensions[0];                                     \
         char *_in1 = args[0], *_in2 = args[1], *_out1 = args[2];        \
         npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];        \
                                                                         \
         for (i = 0; i < n; i++) {                                       \
-            const struct ddouble *lhs = (const struct ddouble *)_in1;   \
-            const struct ddouble *rhs = (const struct ddouble *)_in2;   \
-            struct ddouble *out = (struct ddouble *)_out1;              \
+            const ddouble *lhs = (const ddouble *)_in1;                 \
+            const ddouble *rhs = (const ddouble *)_in2;                 \
+            ddouble *out = (ddouble *)_out1;                            \
             *out = inner_func(*lhs, *rhs);                              \
                                                                         \
             _in1 += is1;                                                \
@@ -65,16 +64,14 @@ struct ddouble {
         }                                                               \
     }
 
-
-inline struct ddouble mytest(struct ddouble lhs, struct ddouble rhs)
+inline ddouble mytest(ddouble lhs, ddouble rhs)
 {
-    struct ddouble result;
+    ddouble result;
     result.x = lhs.x + rhs.x;
     result.e = lhs.e - rhs.e;
     return result;
 }
 DDOUBLE_BINARY_FUNCTION(add_ddouble, mytest)
-
 
 
 
