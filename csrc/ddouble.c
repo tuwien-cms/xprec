@@ -166,6 +166,10 @@ inline ddouble divdq(double x, ddouble y)
 }
 BINARY_FUNCTION(u_divdq, divdq, ddouble, double, ddouble)
 
+inline ddouble mul_pwr2(ddouble a, double b) {
+    return (ddouble){a.hi * b, a.lo * b};
+}
+
 /* -------------------- Combining quad/quad ------------------------- */
 
 inline ddouble addqq(ddouble x, ddouble y)
@@ -265,6 +269,10 @@ inline ddouble sqrtq(ddouble a)
     return two_sum(ax, diff);
 }
 DDOUBLE_UNARY_FUNCTION(u_sqrtq, sqrtq)
+
+
+
+
 
 /* ----------------------- Python stuff -------------------------- */
 
