@@ -517,6 +517,7 @@ inline ddouble ldexpq(ddouble a, int exp)
     return (ddouble) {ldexp(a.hi, exp), ldexp(a.lo, exp)};
 }
 
+static int _n_inv_fact = 15;
 static const ddouble _inv_fact[] = {
     {1.66666666666666657e-01, 9.25185853854297066e-18},
     {4.16666666666666644e-02, 2.31296463463574266e-18},
@@ -618,6 +619,286 @@ ddouble logq(ddouble a)
     return x;
 }
 UNARY_FUNCTION(u_logq, logq, ddouble, ddouble)
+
+static const ddouble _pi_16 =
+    {1.963495408493620697e-01, 7.654042494670957545e-18};
+
+/* Table of sin(k * pi/16) and cos(k * pi/16). */
+static const ddouble _sin_table[] = {
+    {1.950903220161282758e-01, -7.991079068461731263e-18},
+    {3.826834323650897818e-01, -1.005077269646158761e-17},
+    {5.555702330196021776e-01, 4.709410940561676821e-17},
+    {7.071067811865475727e-01, -4.833646656726456726e-17}
+    };
+
+static const ddouble _cos_table[] = {
+    {9.807852804032304306e-01, 1.854693999782500573e-17},
+    {9.238795325112867385e-01, 1.764504708433667706e-17},
+    {8.314696123025452357e-01, 1.407385698472802389e-18},
+    {7.071067811865475727e-01, -4.833646656726456726e-17}
+    };
+
+static ddouble sin_taylor(ddouble a)
+{
+    const double thresh = 0.5 * abs(a.hi) * Q_EPS.hi;
+    ddouble r, s, t, x;
+
+    if (iszeroq(a))
+        return Q_ZERO;
+
+    int i = 0;
+    x = negq(sqrq(a));
+    s = a;
+    r = a;
+    do {
+        r = mulqq(r, x);
+        t = mulqq(r, _inv_fact[i]);
+        s = addqq(s, t);
+        i += 2;
+    } while (i < _n_inv_fact && abs(t.hi) > thresh);
+
+    return s;
+}
+
+static ddouble cos_taylor(ddouble a)
+{
+    const double thresh = 0.5 * Q_EPS.hi;
+    ddouble r, s, t, x;
+
+    if (iszeroq(a))
+        return Q_ONE;
+
+    x = negq(sqrq(a));
+    r = x;
+    s = adddq(1.0, mul_pwr2(r, 0.5));
+    int i = 1;
+    do {
+        r = mulqq(r, x);
+        t = mulqq(r, _inv_fact[i]);
+        s = addqq(s, t);
+        i += 2;
+    } while (i < _n_inv_fact && abs(t.hi) > thresh);
+
+    return s;
+}
+
+static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
+{
+    if (iszeroq(a))
+    {
+        *sin_a = Q_ZERO;
+        *cos_a = Q_ONE;
+        return;
+    }
+
+    *sin_a = sin_taylor(a);
+    *cos_a = sqrtq(subdq(1.0, sqrq(*sin_a)));
+}
+
+ddouble sinq(ddouble a)
+{
+
+    /* Strategy.  To compute sin(x), we choose integers a, b so that
+     *
+     *   x = s + a * (pi/2) + b * (pi/16)
+     *
+     * and |s| <= pi/32.  Using the fact that
+     *
+     *   sin(pi/16) = 0.5 * sqrt(2 - sqrt(2 + sqrt(2)))
+     *
+     * we can compute sin(x) from sin(s), cos(s).  This greatly
+     * increases the convergence of the sine Taylor series.
+     */
+    if (iszeroq(a))
+        return Q_ZERO;
+
+    // approximately reduce modulo 2*pi
+    ddouble z = roundq(divqq(a, Q_2PI));
+    ddouble r = subqq(a, mulqq(Q_2PI, z));
+
+    // approximately reduce modulo pi/2 and then modulo pi/16.
+    ddouble t;
+    double q = floor(r.hi / Q_PI_2.hi + 0.5);
+    t = subqq(r, mulqd(Q_PI_2, q));
+    int j = (int)q;
+    q = floor(t.hi / _pi_16.hi + 0.5);
+    t = subqq(t, mulqd(_pi_16, q));
+    int k = (int)q;
+    int abs_k = abs(k);
+
+    if (j < -2 || j > 2)
+        return nanq();
+
+    if (abs_k > 4)
+        return nanq();
+
+    if (k == 0) {
+        switch (j)
+        {
+        case 0:
+            return sin_taylor(t);
+        case 1:
+            return cos_taylor(t);
+        case -1:
+            return negq(cos_taylor(t));
+        default:
+            return negq(sin_taylor(t));
+        }
+    }
+
+    ddouble u = _cos_table[abs_k - 1];
+    ddouble v = _sin_table[abs_k - 1];
+    ddouble sin_x, cos_x;
+    sincos_taylor(t, &sin_x, &cos_x);
+    if (j == 0) {
+        if (k > 0)
+            r = addqq(mulqq(u, sin_x), mulqq(v, cos_x));
+        else
+            r = subqq(mulqq(u, sin_x), mulqq(v, cos_x));
+    } else if (j == 1) {
+        if (k > 0)
+            r = subqq(mulqq(u, cos_x), mulqq(v, sin_x));
+        else
+            r = addqq(mulqq(u, cos_x), mulqq(v, sin_x));
+    } else if (j == -1) {
+        if (k > 0)
+            r = subqq(mulqq(v, sin_x), mulqq(u, cos_x));
+        else if (k < 0)   /* NOTE! */
+            r = subqq(mulqq(negq(u), cos_x), mulqq(v, sin_x));
+    } else {
+        if (k > 0)
+            r = subqq(mulqq(negq(u), sin_x), mulqq(v, cos_x));
+        else
+            r = subqq(mulqq(v, cos_x), mulqq(u, sin_x));
+    }
+    return r;
+}
+UNARY_FUNCTION(u_sinq, sinq, ddouble, ddouble)
+
+ddouble cosq(ddouble a)
+{
+    if (iszeroq(a))
+        return Q_ONE;
+
+    // approximately reduce modulo 2*pi
+    ddouble z = roundq(divqq(a, Q_2PI));
+    ddouble r = subqq(a, mulqq(Q_2PI, z));
+
+    // approximately reduce modulo pi/2 and then modulo pi/16.
+    ddouble t;
+    double q = floor(r.hi / Q_PI_2.hi + 0.5);
+    t = subqq(r, mulqd(Q_PI_2, q));
+    int j = (int)q;
+    q = floor(t.hi / _pi_16.hi + 0.5);
+    t = subqq(t, mulqd(_pi_16, q));
+    int k = (int)q;
+    int abs_k = abs(k);
+
+    if (j < -2 || j > 2)
+        return nanq();
+
+    if (abs_k > 4)
+        return nanq();
+
+    if (k == 0) {
+        switch (j) {
+        case 0:
+            return cos_taylor(t);
+        case 1:
+            return negq(sin_taylor(t));
+        case -1:
+            return sin_taylor(t);
+        default:
+            return negq(cos_taylor(t));
+        }
+    }
+
+    ddouble sin_x, cos_x;
+    sincos_taylor(t, &sin_x, &cos_x);
+    ddouble u = _cos_table[abs_k - 1];
+    ddouble v = _sin_table[abs_k - 1];
+
+    if (j == 0) {
+        if (k > 0)
+            r = subqq(mulqq(u, cos_x), mulqq(v, sin_x));
+        else
+            r = addqq(mulqq(u, cos_x), mulqq(v, sin_x));
+    } else if (j == 1) {
+        if (k > 0)
+            r = subqq(mulqq(negq(u), sin_x), mulqq(v, cos_x));
+        else
+            r = subqq(mulqq(v, cos_x), mulqq(u, sin_x));
+    } else if (j == -1) {
+        if (k > 0)
+            r = addqq(mulqq(u, sin_x), mulqq(v, cos_x));
+        else
+            r = subqq(mulqq(u, sin_x), mulqq(v, cos_x));
+    } else {
+        if (k > 0)
+            r = subqq(mulqq(v, sin_x), mulqq(u, cos_x));
+        else
+            r = subqq(mulqq(negq(u), cos_x), mulqq(v, sin_x));
+    }
+    return r;
+}
+UNARY_FUNCTION(u_cosq, cosq, ddouble, ddouble)
+
+ddouble sinhq(ddouble a)
+{
+    if (iszeroq(a))
+        return Q_ZERO;
+
+    if (absq(a).hi > 0.05) {
+        ddouble ea = expq(a);
+        return mul_pwr2(subqq(ea, invq(ea)), 0.5);
+    }
+
+    /* since a is small, using the above formula gives
+     * a lot of cancellation.  So use Taylor series.
+     */
+    ddouble s = a;
+    ddouble t = a;
+    ddouble r = sqrq(t);
+    double m = 1.0;
+    double thresh = abs((a.hi) * Q_EPS.hi);
+
+    do {
+        m += 2.0;
+        t = mulqq(t, r);
+        t = divqd(t, (m - 1) * m);
+        s = addqq(s, t);
+    } while (absq(t).hi > thresh);
+    return s;
+}
+UNARY_FUNCTION(u_sinhq, sinhq, ddouble, ddouble)
+
+ddouble coshq(ddouble a)
+{
+    if (iszeroq(a))
+        return Q_ONE;
+
+    ddouble ea = expq(a);
+    return mul_pwr2(addqq(ea, invq(ea)), 0.5);
+}
+UNARY_FUNCTION(u_coshq, coshq, ddouble, ddouble)
+
+ddouble tanhq(ddouble a)
+{
+    if (iszeroq(a))
+        return Q_ZERO;
+
+    if (abs(a.hi) > 0.05) {
+        ddouble ea = expq(a);
+        ddouble inv_ea = invq(ea);
+        return divqq(subqq(ea, inv_ea), addqq(ea, inv_ea));
+    }
+
+    ddouble s, c;
+    s = sinhq(a);
+    c = sqrtq(adddq(1.0, sqrq(s)));
+    return divqq(s, c);
+}
+UNARY_FUNCTION(u_tanhq, tanhq, ddouble, ddouble)
 
 /* ----------------------- Python stuff -------------------------- */
 
@@ -743,6 +1024,11 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     unary_ufunc(dtype, module_dict, u_ceilq, dtype, "ceil", "");
     unary_ufunc(dtype, module_dict, u_expq, dtype, "exp", "");
     unary_ufunc(dtype, module_dict, u_logq, dtype, "log", "");
+    unary_ufunc(dtype, module_dict, u_sinq, dtype, "sin", "");
+    unary_ufunc(dtype, module_dict, u_cosq, dtype, "cos", "");
+    unary_ufunc(dtype, module_dict, u_sinhq, dtype, "sinh", "");
+    unary_ufunc(dtype, module_dict, u_coshq, dtype, "cosh", "");
+    unary_ufunc(dtype, module_dict, u_tanhq, dtype, "tanh", "");
 
     unary_ufunc(dtype, module_dict, u_iszeroq, bool_dtype, "iszero", "");
     unary_ufunc(dtype, module_dict, u_isoneq, bool_dtype, "isone", "");
