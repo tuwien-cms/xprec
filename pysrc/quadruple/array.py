@@ -2,7 +2,10 @@ import numpy as np
 
 from . import raw
 
-_DTYPE = raw.dtype
+DTYPE = np.dtype([("hi", float), ("lo", float)])
+
+_RAW_DTYPE = raw.dtype
+
 _UFUNC_TABLE = {
     np.add: raw.add,
     np.subtract: raw.sub,
@@ -38,18 +41,22 @@ class DDArray(np.ndarray):
     def __array_ufunc__(self, ufunc, method, *in_, out=None, **kwds):
         """Override what happens when executing numpy ufunc."""
         ufunc = _UFUNC_TABLE[ufunc]
-        in_ = tuple(arr.view(np.ndarray) for arr in in_)
+        in_ = map(self._strip, in_)
         if out:
-            out = tuple(arr.view(np.ndarray) for arr in out)
+            out = tuple(map(self._strip, out))
 
         res = super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
         if ufunc.nout == 1:
-            return self._restore(res)
+            return self._dress(res)
         else:
-            return tuple(map(self._restore, res))
+            return tuple(map(self._dress, res))
 
-    def _restore(self, arr):
-        if arr.dtype == _DTYPE:
-            return arr.view(self.__class__)
-        else:
-            return arr
+    def _strip(self, arr):
+        if isinstance(arr, DDArray):
+            return arr.view(_RAW_DTYPE, np.ndarray)
+        return arr
+
+    def _dress(self, arr):
+        if arr.dtype == _RAW_DTYPE:
+            return arr.view(DTYPE, self.__class__)
+        return arr
