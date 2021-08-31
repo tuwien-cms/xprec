@@ -925,53 +925,58 @@ UNARY_FUNCTION(u_tanhq, tanhq, ddouble, ddouble)
 
 /* ----------------------- Python stuff -------------------------- */
 
-static PyArray_Descr *make_ddouble_dtype()
-{
-    PyObject *dtype_tuple;
-    PyArray_Descr *dtype;
+const char DDOUBLE_WRAP = NPY_CDOUBLE;
 
-    dtype_tuple = Py_BuildValue("[(s, s), (s, s)]", "hi", "d", "lo", "d");
-    PyArray_DescrConverter(dtype_tuple, &dtype);
-    Py_DECREF(dtype_tuple);
-    return dtype;
-}
-
-static void binary_ufunc(PyArray_Descr *q_dtype, PyObject *module_dict,
-        PyUFuncGenericFunction dq_func,
+static void binary_ufunc(PyObject *module_dict, PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
-        PyArray_Descr *ret_dtype, const char *name, const char *docstring)
+        char ret_dtype, const char *name, const char *docstring)
 {
+
     PyObject *ufunc;
-    PyArray_Descr *d_dtype = PyArray_DescrFromType(NPY_DOUBLE);
-    PyArray_Descr *dq_dtypes[] = {d_dtype, q_dtype, ret_dtype},
-                  *qd_dtypes[] = {q_dtype, d_dtype, ret_dtype},
-                  *qq_dtypes[] = {q_dtype, q_dtype, ret_dtype};
+    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 3);
+    char *dtypes = PyMem_New(char, 3 * 3);
+    void **data = PyMem_New(void *, 3);
+
+    loops[0] = dq_func;
+    data[0] = NULL;
+    dtypes[0] = NPY_DOUBLE;
+    dtypes[1] = DDOUBLE_WRAP;
+    dtypes[2] = ret_dtype;
+
+    loops[1] = qd_func;
+    data[1] = NULL;
+    dtypes[3] = DDOUBLE_WRAP;
+    dtypes[4] = NPY_DOUBLE;
+    dtypes[5] = ret_dtype;
+
+    loops[2] = qq_func;
+    data[2] = NULL;
+    dtypes[6] = DDOUBLE_WRAP;
+    dtypes[7] = DDOUBLE_WRAP;
+    dtypes[8] = ret_dtype;
 
     ufunc = PyUFunc_FromFuncAndData(
-                NULL, NULL, NULL, 0, 2, 1, PyUFunc_None, name, docstring, 0);
-    PyUFunc_RegisterLoopForDescr(
-                (PyUFuncObject *)ufunc, q_dtype, dq_func, dq_dtypes, NULL);
-    PyUFunc_RegisterLoopForDescr(
-                (PyUFuncObject *)ufunc, q_dtype, qd_func, qd_dtypes, NULL);
-    PyUFunc_RegisterLoopForDescr(
-                (PyUFuncObject *)ufunc, q_dtype, qq_func, qq_dtypes, NULL);
+                loops, data, dtypes, 3, 2, 1, PyUFunc_None, name, docstring, 0);
     PyDict_SetItemString(module_dict, name, ufunc);
-
     Py_DECREF(ufunc);
-    Py_DECREF(d_dtype);
 }
 
-static void unary_ufunc(PyArray_Descr *dtype, PyObject *module_dict,
-                        PyUFuncGenericFunction func, PyArray_Descr *ret_dtype,
+static void unary_ufunc(PyObject *module_dict,
+                        PyUFuncGenericFunction func, char ret_dtype,
                         const char *name, const char *docstring)
 {
     PyObject *ufunc;
-    PyArray_Descr *dtypes[] = {dtype, ret_dtype};
+    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
+    char *dtypes = PyMem_New(char, 1 * 2);
+    void **data = PyMem_New(void *, 1);
+
+    loops[0] = func;
+    data[0] = NULL;
+    dtypes[0] = DDOUBLE_WRAP;
+    dtypes[1] = ret_dtype;
 
     ufunc = PyUFunc_FromFuncAndData(
-                NULL, NULL, NULL, 0, 1, 1, PyUFunc_None, name, docstring, 0);
-    PyUFunc_RegisterLoopForDescr(
-                (PyUFuncObject *)ufunc, dtype, func, dtypes, NULL);
+                loops, data, dtypes, 1, 1, 1, PyUFunc_None, name, docstring, 0);
     PyDict_SetItemString(module_dict, name, ufunc);
     Py_DECREF(ufunc);
 }
@@ -996,7 +1001,7 @@ PyMODINIT_FUNC PyInit_raw(void)
 
     /* Module definition */
     PyObject *module, *module_dict;
-    PyArray_Descr *dtype, *bool_dtype;
+    PyArray_Descr *dtype;
 
     /* Create module */
     module = PyModule_Create(&module_def);
@@ -1008,60 +1013,57 @@ PyMODINIT_FUNC PyInit_raw(void)
     import_array();
     import_umath();
 
-    /* Build ufunc dtype */
-    dtype = make_ddouble_dtype(module_dict);
-    bool_dtype = PyArray_DescrFromType(NPY_BOOL);
-
     /* Create ufuncs */
-    binary_ufunc(dtype, module_dict, u_adddq, u_addqd, u_addqq,
-                 dtype, "add", "");
-    binary_ufunc(dtype, module_dict, u_subdq, u_subqd, u_subqq,
-                 dtype, "sub", "");
-    binary_ufunc(dtype, module_dict, u_muldq, u_mulqd, u_mulqq,
-                 dtype, "mul", "");
-    binary_ufunc(dtype, module_dict, u_divdq, u_divqd, u_divqq,
-                 dtype, "div", "");
+    binary_ufunc(module_dict, u_adddq, u_addqd, u_addqq,
+                 DDOUBLE_WRAP, "add", "");
+    binary_ufunc(module_dict, u_subdq, u_subqd, u_subqq,
+                 DDOUBLE_WRAP, "sub", "");
+    binary_ufunc(module_dict, u_muldq, u_mulqd, u_mulqq,
+                 DDOUBLE_WRAP, "mul", "");
+    binary_ufunc(module_dict, u_divdq, u_divqd, u_divqq,
+                 DDOUBLE_WRAP, "div", "");
 
-    binary_ufunc(dtype, module_dict, u_equaldq, u_equalqd, u_equalqq,
-                 bool_dtype, "equal", "");
-    binary_ufunc(dtype, module_dict, u_notequaldq, u_notequalqd, u_notequalqq,
-                 bool_dtype, "notequal", "");
-    binary_ufunc(dtype, module_dict, u_greaterdq, u_greaterqd, u_greaterqq,
-                 bool_dtype, "greater", "");
-    binary_ufunc(dtype, module_dict, u_lessdq, u_lessqd, u_lessqq,
-                 bool_dtype, "less", "");
-    binary_ufunc(dtype, module_dict, u_greaterequaldq, u_greaterequalqd,
-                 u_greaterequalqq, bool_dtype, "greaterequal", "");
-    binary_ufunc(dtype, module_dict, u_lessequaldq, u_lessequalqd,
-                 u_lessequalqq, bool_dtype, "lessequal", "");
+    binary_ufunc(module_dict, u_equaldq, u_equalqd, u_equalqq,
+                 NPY_BOOL, "equal", "");
+    binary_ufunc(module_dict, u_notequaldq, u_notequalqd, u_notequalqq,
+                 NPY_BOOL, "notequal", "");
+    binary_ufunc(module_dict, u_greaterdq, u_greaterqd, u_greaterqq,
+                 NPY_BOOL, "greater", "");
+    binary_ufunc(module_dict, u_lessdq, u_lessqd, u_lessqq,
+                 NPY_BOOL, "less", "");
+    binary_ufunc(module_dict, u_greaterequaldq, u_greaterequalqd, u_greaterequalqq,
+                 NPY_BOOL, "greaterequal", "");
+    binary_ufunc(module_dict, u_lessequaldq, u_lessequalqd, u_lessequalqq,
+                 NPY_BOOL, "lessequal", "");
 
-    unary_ufunc(dtype, module_dict, u_negq, dtype, "neg", "");
-    unary_ufunc(dtype, module_dict, u_posq, dtype, "pos", "");
-    unary_ufunc(dtype, module_dict, u_absq, dtype, "abs", "");
-    unary_ufunc(dtype, module_dict, u_invq, dtype, "inv", "");
-    unary_ufunc(dtype, module_dict, u_sqrq, dtype, "sqr", "");
-    unary_ufunc(dtype, module_dict, u_sqrtq, dtype, "sqrt", "");
+    unary_ufunc(module_dict, u_negq, DDOUBLE_WRAP, "neg", "");
+    unary_ufunc(module_dict, u_posq, DDOUBLE_WRAP, "pos", "");
+    unary_ufunc(module_dict, u_absq, DDOUBLE_WRAP, "abs", "");
+    unary_ufunc(module_dict, u_invq, DDOUBLE_WRAP, "inv", "");
+    unary_ufunc(module_dict, u_sqrq, DDOUBLE_WRAP, "sqr", "");
+    unary_ufunc(module_dict, u_sqrtq, DDOUBLE_WRAP, "sqrt", "");
 
-    unary_ufunc(dtype, module_dict, u_roundq, dtype, "round", "");
-    unary_ufunc(dtype, module_dict, u_floorq, dtype, "floor", "");
-    unary_ufunc(dtype, module_dict, u_ceilq, dtype, "ceil", "");
-    unary_ufunc(dtype, module_dict, u_expq, dtype, "exp", "");
-    unary_ufunc(dtype, module_dict, u_expm1q, dtype, "expm1", "");
-    unary_ufunc(dtype, module_dict, u_logq, dtype, "log", "");
-    unary_ufunc(dtype, module_dict, u_sinq, dtype, "sin", "");
-    unary_ufunc(dtype, module_dict, u_cosq, dtype, "cos", "");
-    unary_ufunc(dtype, module_dict, u_sinhq, dtype, "sinh", "");
-    unary_ufunc(dtype, module_dict, u_coshq, dtype, "cosh", "");
-    unary_ufunc(dtype, module_dict, u_tanhq, dtype, "tanh", "");
+    unary_ufunc(module_dict, u_roundq, DDOUBLE_WRAP, "round", "");
+    unary_ufunc(module_dict, u_floorq, DDOUBLE_WRAP, "floor", "");
+    unary_ufunc(module_dict, u_ceilq, DDOUBLE_WRAP, "ceil", "");
+    unary_ufunc(module_dict, u_expq, DDOUBLE_WRAP, "exp", "");
+    unary_ufunc(module_dict, u_expm1q, DDOUBLE_WRAP, "expm1", "");
+    unary_ufunc(module_dict, u_logq, DDOUBLE_WRAP, "log", "");
+    unary_ufunc(module_dict, u_sinq, DDOUBLE_WRAP, "sin", "");
+    unary_ufunc(module_dict, u_cosq, DDOUBLE_WRAP, "cos", "");
+    unary_ufunc(module_dict, u_sinhq, DDOUBLE_WRAP, "sinh", "");
+    unary_ufunc(module_dict, u_coshq, DDOUBLE_WRAP, "cosh", "");
+    unary_ufunc(module_dict, u_tanhq, DDOUBLE_WRAP, "tanh", "");
 
-    unary_ufunc(dtype, module_dict, u_iszeroq, bool_dtype, "iszero", "");
-    unary_ufunc(dtype, module_dict, u_isoneq, bool_dtype, "isone", "");
-    unary_ufunc(dtype, module_dict, u_ispositiveq, bool_dtype, "ispositive", "");
-    unary_ufunc(dtype, module_dict, u_isnegativeq, bool_dtype, "isnegative", "");
+    unary_ufunc(module_dict, u_iszeroq, NPY_BOOL, "iszero", "");
+    unary_ufunc(module_dict, u_isoneq, NPY_BOOL, "isone", "");
+    unary_ufunc(module_dict, u_ispositiveq, NPY_BOOL, "ispositive", "");
+    unary_ufunc(module_dict, u_isnegativeq, NPY_BOOL, "isnegative", "");
 
-    /* Store dtype in module and return */
+    /* Make dtype */
+    dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
 
-    Py_DECREF(bool_dtype);
+    /* Module is ready */
     return module;
 }
