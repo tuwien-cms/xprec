@@ -517,6 +517,7 @@ inline ddouble ldexpq(ddouble a, int exp)
     return (ddouble) {ldexp(a.hi, exp), ldexp(a.lo, exp)};
 }
 
+/* Inverse Factorials from 1/3!, 1/4!, asf. */
 static int _n_inv_fact = 15;
 static const ddouble _inv_fact[] = {
     {1.66666666666666657e-01, 9.25185853854297066e-18},
@@ -540,12 +541,10 @@ ddouble expq(ddouble a)
 {
     /* Strategy:  We first reduce the size of x by noting that
      *
-     *     exp(kr + m * log(2)) = 2^m * exp(r)^k
+     *     exp(k * r + m * log(2)) = 2^m * exp(r)^k
      *
      * where m and k are integers.  By choosing m appropriately
-     * we can make |kr| <= log(2) / 2 = 0.347.  Then exp(r) is
-     * evaluated using the familiar Taylor series.  Reducing the
-     * argument substantially speeds up the convergence.
+     * we can make |k * r| <= log(2) / 2 = 0.347.
      */
     const double k = 512.0;
     const double inv_k = 1.0 / k;
@@ -561,33 +560,43 @@ ddouble expq(ddouble a)
 
     double m = floor(a.hi / Q_LOG2.hi + 0.5);
     ddouble r = mul_pwr2(subqq(a, mulqd(Q_LOG2, m)), inv_k);
-    ddouble s, t, p;
+    ddouble sum, term, rpower;
 
-    p = sqrq(r);
-    s = addqq(r, mul_pwr2(p, 0.5));
-    p = mulqq(p, r);
-    t = mulqq(p, _inv_fact[0]);
+    /* Now, evaluate exp(r) using the familiar Taylor series.  Reducing the
+     * argument substantially speeds up the convergence.  First, we compute
+     * terms of order 1 and 2 and add it to the sum
+     */
+    rpower = sqrq(r);
+    sum = addqq(r, mul_pwr2(rpower, 0.5));
 
+    /* Next, compute terms of order 3 and up */
+    rpower = mulqq(rpower, r);
+    term = mulqq(rpower, _inv_fact[0]);
     int i = 0;
     do {
-        s = addqq(s, t);
-        p = mulqq(p, r);
+        sum = addqq(sum, term);
+        rpower = mulqq(rpower, r);
         ++i;
-        t = mulqq(p, _inv_fact[i]);
-    } while (abs(t.hi) > inv_k * Q_EPS.hi && i < 5);
+        term = mulqq(rpower, _inv_fact[i]);
+    } while (abs(term.hi) > inv_k * Q_EPS.hi && i < 5);
+    sum = addqq(sum, term);
 
-    s = addqq(s, t);
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
-    s = addqd(s, 1.0);
-    return ldexpq(s, (int)m);
+    /* We now have that approximately exp(r) == 1 + sum.  Raise that to
+     * the m'th (512) power by squaring the binomial nine times
+     */
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+
+    /** Add back the one and multiply by 2 to the m */
+    sum = addqd(sum, 1.0);
+    return ldexpq(sum, (int)m);
 }
 UNARY_FUNCTION(u_expq, expq, ddouble, ddouble)
 
@@ -619,6 +628,20 @@ ddouble logq(ddouble a)
     return x;
 }
 UNARY_FUNCTION(u_logq, logq, ddouble, ddouble)
+
+ddouble expm1q(ddouble x)
+{
+    ddouble u = expq(x);
+    ddouble u_minus_one = subqq(u, Q_ONE);
+    static const ddouble minus_one = (ddouble) {-1.0, 0.0};
+
+    if (isoneq(u))
+        return x;
+    if (equalqq(u_minus_one, minus_one))
+        return minus_one;
+    return divqq(mulqq(x, u_minus_one), logq(u));
+}
+UNARY_FUNCTION(u_expm1q, expm1q, ddouble, ddouble)
 
 static const ddouble _pi_16 =
     {1.963495408493620697e-01, 7.654042494670957545e-18};
@@ -954,14 +977,14 @@ static void unary_ufunc(PyArray_Descr *dtype, PyObject *module_dict,
 }
 
 // Init routine
-PyMODINIT_FUNC PyInit__ddouble(void)
+PyMODINIT_FUNC PyInit_raw(void)
 {
     static PyMethodDef no_methods[] = {
         {NULL, NULL, 0, NULL}    // No methods defined
     };
     static struct PyModuleDef module_def = {
         PyModuleDef_HEAD_INIT,
-        "_ddouble",
+        "raw",
         NULL,
         -1,
         no_methods,
@@ -1023,6 +1046,7 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     unary_ufunc(dtype, module_dict, u_floorq, dtype, "floor", "");
     unary_ufunc(dtype, module_dict, u_ceilq, dtype, "ceil", "");
     unary_ufunc(dtype, module_dict, u_expq, dtype, "exp", "");
+    unary_ufunc(dtype, module_dict, u_expm1q, dtype, "expm1", "");
     unary_ufunc(dtype, module_dict, u_logq, dtype, "log", "");
     unary_ufunc(dtype, module_dict, u_sinq, dtype, "sin", "");
     unary_ufunc(dtype, module_dict, u_cosq, dtype, "cos", "");
