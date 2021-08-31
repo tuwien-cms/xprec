@@ -306,7 +306,6 @@ inline ddouble dremq(ddouble a, ddouble b)
     ddouble n = roundq(divqq(a, b));
     return subqq(a, mulqq(n, b));
 }
-BINARY_FUNCTION(u_dremq, dremq, ddouble, ddouble, ddouble)
 
 inline ddouble divremq(ddouble a, ddouble b, ddouble *r)
 {
@@ -493,15 +492,15 @@ static void binary_ufunc(PyArray_Descr *q_dtype, PyObject *module_dict,
     Py_DECREF(d_dtype);
 }
 
-static void ddouble_ufunc(PyArray_Descr *dtype, PyObject *module_dict,
-                          PyUFuncGenericFunction func, int nargs,
-                          const char *name, const char *docstring)
+static void unary_ufunc(PyArray_Descr *dtype, PyObject *module_dict,
+                        PyUFuncGenericFunction func, PyArray_Descr *ret_dtype,
+                        const char *name, const char *docstring)
 {
     PyObject *ufunc;
-    PyArray_Descr *dtypes[] = {dtype, dtype, dtype};
+    PyArray_Descr *dtypes[] = {dtype, ret_dtype};
 
     ufunc = PyUFunc_FromFuncAndData(
-                NULL, NULL, NULL, 0, nargs, 1, PyUFunc_None, name, docstring, 0);
+                NULL, NULL, NULL, 0, 1, 1, PyUFunc_None, name, docstring, 0);
     PyUFunc_RegisterLoopForDescr(
                 (PyUFuncObject *)ufunc, dtype, func, dtypes, NULL);
     PyDict_SetItemString(module_dict, name, ufunc);
@@ -567,12 +566,18 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     binary_ufunc(dtype, module_dict, u_lessequaldq, u_lessequalqd,
                  u_lessequalqq, bool_dtype, "lessequal", "");
 
-    ddouble_ufunc(dtype, module_dict, u_negq, 1, "neg", "");
-    ddouble_ufunc(dtype, module_dict, u_posq, 1, "pos", "");
-    ddouble_ufunc(dtype, module_dict, u_absq, 1, "abs", "");
-    ddouble_ufunc(dtype, module_dict, u_invq, 1, "inv", "");
-    ddouble_ufunc(dtype, module_dict, u_sqrq, 1, "sqr", "");
-    ddouble_ufunc(dtype, module_dict, u_sqrtq, 1, "sqrt", "");
+    unary_ufunc(dtype, module_dict, u_negq, dtype, "neg", "");
+    unary_ufunc(dtype, module_dict, u_posq, dtype, "pos", "");
+    unary_ufunc(dtype, module_dict, u_absq, dtype, "abs", "");
+    unary_ufunc(dtype, module_dict, u_invq, dtype, "inv", "");
+    unary_ufunc(dtype, module_dict, u_sqrq, dtype, "sqr", "");
+    unary_ufunc(dtype, module_dict, u_sqrtq, dtype, "sqrt", "");
+    unary_ufunc(dtype, module_dict, u_roundq, dtype, "round", "");
+
+    unary_ufunc(dtype, module_dict, u_iszeroq, bool_dtype, "iszero", "");
+    unary_ufunc(dtype, module_dict, u_isoneq, bool_dtype, "isone", "");
+    unary_ufunc(dtype, module_dict, u_ispositiveq, bool_dtype, "ispositive", "");
+    unary_ufunc(dtype, module_dict, u_isnegativeq, bool_dtype, "isnegative", "");
 
     /* Store dtype in module and return */
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
