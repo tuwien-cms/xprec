@@ -52,7 +52,7 @@ class DDArray(np.ndarray):
             return tuple(map(self._dress, res))
 
     def _strip(self, arr):
-        if isinstance(arr, DDArray):
+        if arr.dtype == self.dtype:
             return arr.view(_RAW_DTYPE, np.ndarray)
         return arr
 
