@@ -37,17 +37,18 @@ _UFUNC_TABLE = {
 class DDArray(np.ndarray):
     def __array_ufunc__(self, ufunc, method, *in_, out=None, **kwds):
         """Override what happens when executing numpy ufunc."""
-        try:
-            ufunc = _UFUNC_TABLE[ufunc]
-        except KeyError:
-            pass
-
+        ufunc = _UFUNC_TABLE[ufunc]
         in_ = tuple(arr.view(np.ndarray) for arr in in_)
-        out = tuple(arr.view(np.ndarray) for arr in out) if out else None
-        return super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
+        if out:
+            out = tuple(arr.view(np.ndarray) for arr in out)
 
-    def __array_wrap__(self, arr, context=None):
-        print("IN CONTEXT", arr)
+        res = super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
+        if ufunc.nout == 1:
+            return self._restore(res)
+        else:
+            return tuple(map(self._restore, res))
+
+    def _restore(self, arr):
         if arr.dtype == _DTYPE:
             return arr.view(self.__class__)
         else:
