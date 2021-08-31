@@ -65,6 +65,7 @@ typedef struct {
         }                                                               \
     }
 
+
 /* ----------------------- Functions ----------------------------- */
 
 inline ddouble two_sum_quick(double a, double b)
@@ -270,9 +271,189 @@ inline ddouble sqrtq(ddouble a)
 }
 UNARY_FUNCTION(u_sqrtq, sqrtq, ddouble, ddouble)
 
+inline ddouble roundq(ddouble a)
+{
+    double hi = round(a.hi);
+    double lo;
 
+    if (hi == a.hi)
+    {
+        /* High word is an integer already.  Round the low word.*/
+        lo = round(a.lo);
 
+        /* Renormalize. This is needed if x[0] = some integer, x[1] = 1/2.*/
+        return two_sum_quick(hi, lo);
+    }
+    else
+    {
+        /* High word is not an integer. */
+        lo = 0.0;
+        if (abs(hi - a.hi) == 0.5 && a.lo < 0.0)
+        {
+            /* There is a tie in the high word, consult the low word
+             * to break the tie.
+             * NOTE: This does not cause INEXACT.
+             */
+            hi -= 1.0;
+        }
+        return (ddouble){hi, lo};
+    }
+}
+UNARY_FUNCTION(u_roundq, roundq, ddouble, ddouble)
 
+inline ddouble dremq(ddouble a, ddouble b)
+{
+    ddouble n = roundq(divqq(a, b));
+    return subqq(a, mulqq(n, b));
+}
+BINARY_FUNCTION(u_dremq, dremq, ddouble, ddouble, ddouble)
+
+inline ddouble divremq(ddouble a, ddouble b, ddouble *r)
+{
+    ddouble n = roundq(divqq(a, b));
+    *r = subqq(a, mulqq(n, b));
+    return n;
+}
+
+/*********************** Comparisons q/q ***************************/
+
+inline bool equalqq(ddouble a, ddouble b)
+{
+    return a.hi == b.hi && a.lo == b.lo;
+}
+BINARY_FUNCTION(u_equalqq, equalqq, bool, ddouble, ddouble)
+
+inline bool notequalqq(ddouble a, ddouble b)
+{
+    return a.hi != b.hi || a.lo != b.lo;
+}
+BINARY_FUNCTION(u_notequalqq, notequalqq, bool, ddouble, ddouble)
+
+inline bool greaterqq(ddouble a, ddouble b)
+{
+    return a.hi > b.hi || (a.hi == b.hi && a.lo > b.lo);
+}
+BINARY_FUNCTION(u_greaterqq, greaterqq, bool, ddouble, ddouble)
+
+inline bool lessqq(ddouble a, ddouble b)
+{
+    return a.hi < b.hi || (a.hi == b.hi && a.lo < b.lo);
+}
+BINARY_FUNCTION(u_lessqq, lessqq, bool, ddouble, ddouble)
+
+inline bool greaterequalqq(ddouble a, ddouble b)
+{
+    return a.hi > b.hi || (a.hi == b.hi && a.lo >= b.lo);
+}
+BINARY_FUNCTION(u_greaterequalqq, greaterqq, bool, ddouble, ddouble)
+
+inline bool lessequalqq(ddouble a, ddouble b)
+{
+    return a.hi < b.hi || (a.hi == b.hi && a.lo <= b.lo);
+}
+BINARY_FUNCTION(u_lessequalqq, lessqq, bool, ddouble, ddouble)
+
+/*********************** Comparisons q/d ***************************/
+
+inline bool equalqd(ddouble a, double b)
+{
+    return equalqq(a, (ddouble){b, 0});
+}
+BINARY_FUNCTION(u_equalqd, equalqd, bool, ddouble, double)
+
+inline bool notequalqd(ddouble a, double b)
+{
+    return notequalqq(a, (ddouble){b, 0});
+}
+BINARY_FUNCTION(u_notequalqd, notequalqd, bool, ddouble, double)
+
+inline bool greaterqd(ddouble a, double b)
+{
+    return greaterqq(a, (ddouble){b, 0});
+}
+BINARY_FUNCTION(u_greaterqd, greaterqd, bool, ddouble, double)
+
+inline bool lessqd(ddouble a, double b)
+{
+    return lessqq(a, (ddouble){b, 0});
+}
+BINARY_FUNCTION(u_lessqd, lessqd, bool, ddouble, double)
+
+inline bool greaterequalqd(ddouble a, double b)
+{
+    return greaterequalqq(a, (ddouble){b, 0});
+}
+BINARY_FUNCTION(u_greaterequalqd, greaterqd, bool, ddouble, double)
+
+inline bool lessequalqd(ddouble a, double b)
+{
+    return lessequalqq(a, (ddouble){b, 0});
+}
+BINARY_FUNCTION(u_lessequalqd, lessqd, bool, ddouble, double)
+
+/*********************** Comparisons d/q ***************************/
+
+inline bool equaldq(double a, ddouble b)
+{
+    return equalqq((ddouble){a, 0}, b);
+}
+BINARY_FUNCTION(u_equaldq, equaldq, bool, double, ddouble)
+
+inline bool notequaldq(double a, ddouble b)
+{
+    return notequalqq((ddouble){a, 0}, b);
+}
+BINARY_FUNCTION(u_notequaldq, notequaldq, bool, double, ddouble)
+
+inline bool greaterdq(double a, ddouble b)
+{
+    return greaterqq((ddouble){a, 0}, b);
+}
+BINARY_FUNCTION(u_greaterdq, greaterdq, bool, double, ddouble)
+
+inline bool lessdq(double a, ddouble b)
+{
+    return lessqq((ddouble){a, 0}, b);
+}
+BINARY_FUNCTION(u_lessdq, lessdq, bool, double, ddouble)
+
+inline bool greaterequaldq(double a, ddouble b)
+{
+    return greaterequalqq((ddouble){a, 0}, b);
+}
+BINARY_FUNCTION(u_greaterequaldq, greaterdq, bool, double, ddouble)
+
+inline bool lessequaldq(double a, ddouble b)
+{
+    return lessequalqq((ddouble){a, 0}, b);
+}
+BINARY_FUNCTION(u_lessequaldq, lessdq, bool, double, ddouble)
+
+/************************** Unary tests **************************/
+
+inline bool iszeroq(ddouble x)
+{
+    return x.hi == 0.0;
+}
+UNARY_FUNCTION(u_iszeroq, iszeroq, bool, ddouble)
+
+inline bool isoneq(ddouble x)
+{
+    return x.hi == 1.0 && x.lo == 0.0;
+}
+UNARY_FUNCTION(u_isoneq, isoneq, bool, ddouble)
+
+inline bool ispositiveq(ddouble x)
+{
+    return x.hi > 0.0;
+}
+UNARY_FUNCTION(u_ispositiveq, ispositiveq, bool, ddouble)
+
+inline bool isnegativeq(ddouble x)
+{
+    return x.hi < 0.0;
+}
+UNARY_FUNCTION(u_isnegativeq, isnegativeq, bool, ddouble)
 
 /* ----------------------- Python stuff -------------------------- */
 
@@ -290,13 +471,13 @@ static PyArray_Descr *make_ddouble_dtype()
 static void binary_ufunc(PyArray_Descr *q_dtype, PyObject *module_dict,
         PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
-        const char *name, const char *docstring)
+        PyArray_Descr *ret_dtype, const char *name, const char *docstring)
 {
     PyObject *ufunc;
     PyArray_Descr *d_dtype = PyArray_DescrFromType(NPY_DOUBLE);
-    PyArray_Descr *dq_dtypes[] = {d_dtype, q_dtype, q_dtype},
-                  *qd_dtypes[] = {q_dtype, d_dtype, q_dtype},
-                  *qq_dtypes[] = {q_dtype, q_dtype, q_dtype};
+    PyArray_Descr *dq_dtypes[] = {d_dtype, q_dtype, ret_dtype},
+                  *qd_dtypes[] = {q_dtype, d_dtype, ret_dtype},
+                  *qq_dtypes[] = {q_dtype, q_dtype, ret_dtype};
 
     ufunc = PyUFunc_FromFuncAndData(
                 NULL, NULL, NULL, 0, 2, 1, PyUFunc_None, name, docstring, 0);
@@ -347,7 +528,7 @@ PyMODINIT_FUNC PyInit__ddouble(void)
 
     /* Module definition */
     PyObject *module, *module_dict;
-    PyArray_Descr *dtype;
+    PyArray_Descr *dtype, *bool_dtype;
 
     /* Create module */
     module = PyModule_Create(&module_def);
@@ -361,13 +542,30 @@ PyMODINIT_FUNC PyInit__ddouble(void)
 
     /* Build ufunc dtype */
     dtype = make_ddouble_dtype(module_dict);
+    bool_dtype = PyArray_DescrFromType(NPY_BOOL);
 
     /* Create ufuncs */
-    //ddouble_ufunc(dtype, module_dict, u_addqq, 2, "add", "");
-    binary_ufunc(dtype, module_dict, u_adddq, u_addqd, u_addqq, "add", "");
-    binary_ufunc(dtype, module_dict, u_subdq, u_subqd, u_subqq, "sub", "");
-    binary_ufunc(dtype, module_dict, u_muldq, u_mulqd, u_mulqq, "mul", "");
-    binary_ufunc(dtype, module_dict, u_divdq, u_divqd, u_divqq, "div", "");
+    binary_ufunc(dtype, module_dict, u_adddq, u_addqd, u_addqq,
+                 dtype, "add", "");
+    binary_ufunc(dtype, module_dict, u_subdq, u_subqd, u_subqq,
+                 dtype, "sub", "");
+    binary_ufunc(dtype, module_dict, u_muldq, u_mulqd, u_mulqq,
+                 dtype, "mul", "");
+    binary_ufunc(dtype, module_dict, u_divdq, u_divqd, u_divqq,
+                 dtype, "div", "");
+
+    binary_ufunc(dtype, module_dict, u_equaldq, u_equalqd, u_equalqq,
+                 bool_dtype, "equal", "");
+    binary_ufunc(dtype, module_dict, u_notequaldq, u_notequalqd, u_notequalqq,
+                 bool_dtype, "notequal", "");
+    binary_ufunc(dtype, module_dict, u_greaterdq, u_greaterqd, u_greaterqq,
+                 bool_dtype, "greater", "");
+    binary_ufunc(dtype, module_dict, u_lessdq, u_lessqd, u_lessqq,
+                 bool_dtype, "less", "");
+    binary_ufunc(dtype, module_dict, u_greaterequaldq, u_greaterequalqd,
+                 u_greaterequalqq, bool_dtype, "greaterequal", "");
+    binary_ufunc(dtype, module_dict, u_lessequaldq, u_lessequalqd,
+                 u_lessequalqq, bool_dtype, "lessequal", "");
 
     ddouble_ufunc(dtype, module_dict, u_negq, 1, "neg", "");
     ddouble_ufunc(dtype, module_dict, u_posq, 1, "pos", "");
@@ -378,5 +576,7 @@ PyMODINIT_FUNC PyInit__ddouble(void)
 
     /* Store dtype in module and return */
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
+
+    Py_DECREF(bool_dtype);
     return module;
 }
