@@ -256,40 +256,21 @@ inline ddouble sqrq(ddouble a)
 }
 UNARY_FUNCTION(u_sqrq, sqrq, ddouble, ddouble)
 
-inline ddouble sqrtq(ddouble a)
-{
-    /* Algorithm from Karp (QD library) */
-    if (a.hi <= 0)
-        return (ddouble){.hi = sqrt(a.hi), .lo = 0};
-
-    double x = 1.0 / sqrt(a.hi);
-    double ax = a.hi * x;
-
-    ddouble ax_sqr = sqrq((ddouble){ax, 0});
-    double diff = subqq(a, ax_sqr).hi * x * 0.5;
-    return two_sum(ax, diff);
-}
-UNARY_FUNCTION(u_sqrtq, sqrtq, ddouble, ddouble)
-
 inline ddouble roundq(ddouble a)
 {
     double hi = round(a.hi);
     double lo;
 
-    if (hi == a.hi)
-    {
+    if (hi == a.hi) {
         /* High word is an integer already.  Round the low word.*/
         lo = round(a.lo);
 
         /* Renormalize. This is needed if x[0] = some integer, x[1] = 1/2.*/
         return two_sum_quick(hi, lo);
-    }
-    else
-    {
+    } else {
         /* High word is not an integer. */
         lo = 0.0;
-        if (abs(hi - a.hi) == 0.5 && a.lo < 0.0)
-        {
+        if (abs(hi - a.hi) == 0.5 && a.lo < 0.0) {
             /* There is a tie in the high word, consult the low word
              * to break the tie.
              * NOTE: This does not cause INEXACT.
@@ -300,6 +281,34 @@ inline ddouble roundq(ddouble a)
     }
 }
 UNARY_FUNCTION(u_roundq, roundq, ddouble, ddouble)
+
+inline ddouble floorq(ddouble a)
+{
+    double hi = floor(a.hi);
+    double lo = 0.0;
+
+    if (hi == a.hi) {
+        /* High word is integer already.  Round the low word. */
+        lo = floor(a.lo);
+        return two_sum_quick(hi, lo);
+    }
+    return (ddouble){hi, lo};
+}
+UNARY_FUNCTION(u_floorq, floorq, ddouble, ddouble)
+
+inline ddouble ceilq(ddouble a)
+{
+    double hi = ceil(a.hi);
+    double lo = 0.0;
+
+    if (hi == a.hi) {
+        /* High word is integer already.  Round the low word. */
+        lo = ceil(a.lo);
+        return two_sum_quick(hi, lo);
+    }
+    return (ddouble){hi, lo};
+}
+UNARY_FUNCTION(u_ceilq, ceilq, ddouble, ddouble)
 
 inline ddouble dremq(ddouble a, ddouble b)
 {
@@ -313,6 +322,38 @@ inline ddouble divremq(ddouble a, ddouble b, ddouble *r)
     *r = subqq(a, mulqq(n, b));
     return n;
 }
+
+/******************************** Constants *********************************/
+
+inline ddouble nanq()
+{
+    double nan = strtod("NaN", NULL);
+    return (ddouble){nan, nan};
+}
+
+inline ddouble infq()
+{
+    double inf = strtod("Inf", NULL);
+    return (ddouble){inf, inf};
+}
+
+static const ddouble Q_ZERO = {0.0, 0.0};
+static const ddouble Q_ONE = {1.0, 0.0};
+static const ddouble Q_2PI = {6.283185307179586232e+00, 2.449293598294706414e-16};
+static const ddouble Q_PI = {3.141592653589793116e+00, 1.224646799147353207e-16};
+static const ddouble Q_PI_2 = {1.570796326794896558e+00, 6.123233995736766036e-17};
+static const ddouble Q_PI_4 = {7.853981633974482790e-01, 3.061616997868383018e-17};
+static const ddouble Q_3PI_4 = {2.356194490192344837e+00, 9.1848509936051484375e-17};
+static const ddouble Q_E = {2.718281828459045091e+00, 1.445646891729250158e-16};
+static const ddouble Q_LOG2 = {6.931471805599452862e-01, 2.319046813846299558e-17};
+static const ddouble Q_LOG10 = {2.302585092994045901e+00, -2.170756223382249351e-16};
+
+static const ddouble Q_EPS = {4.93038065763132e-32, 0.0};
+static const ddouble Q_MINNORM = {2.0041683600089728e-292, 0.0};
+static const ddouble Q_MAXVAL =
+    {1.79769313486231570815e+308, 9.97920154767359795037e+291};
+static const ddouble Q_SAFE_MAX =
+    {1.7976931080746007281e+308, 9.97920154767359795037e+291};
 
 /*********************** Comparisons q/q ***************************/
 
@@ -454,6 +495,130 @@ inline bool isnegativeq(ddouble x)
 }
 UNARY_FUNCTION(u_isnegativeq, isnegativeq, bool, ddouble)
 
+/************************** Advanced math functions ********************/
+
+inline ddouble sqrtq(ddouble a)
+{
+    /* Algorithm from Karp (QD library) */
+    if (a.hi <= 0)
+        return (ddouble){.hi = sqrt(a.hi), .lo = 0};
+
+    double x = 1.0 / sqrt(a.hi);
+    double ax = a.hi * x;
+
+    ddouble ax_sqr = sqrq((ddouble){ax, 0});
+    double diff = subqq(a, ax_sqr).hi * x * 0.5;
+    return two_sum(ax, diff);
+}
+UNARY_FUNCTION(u_sqrtq, sqrtq, ddouble, ddouble)
+
+inline ddouble ldexpq(ddouble a, int exp)
+{
+    return (ddouble) {ldexp(a.hi, exp), ldexp(a.lo, exp)};
+}
+
+static const ddouble _inv_fact[] = {
+    {1.66666666666666657e-01, 9.25185853854297066e-18},
+    {4.16666666666666644e-02, 2.31296463463574266e-18},
+    {8.33333333333333322e-03, 1.15648231731787138e-19},
+    {1.38888888888888894e-03, -5.30054395437357706e-20},
+    {1.98412698412698413e-04, 1.72095582934207053e-22},
+    {2.48015873015873016e-05, 2.15119478667758816e-23},
+    {2.75573192239858925e-06, -1.85839327404647208e-22},
+    {2.75573192239858883e-07, 2.37677146222502973e-23},
+    {2.50521083854417202e-08, -1.44881407093591197e-24},
+    {2.08767569878681002e-09, -1.20734505911325997e-25},
+    {1.60590438368216133e-10, 1.25852945887520981e-26},
+    {1.14707455977297245e-11, 2.06555127528307454e-28},
+    {7.64716373181981641e-13, 7.03872877733453001e-30},
+    {4.77947733238738525e-14, 4.39920548583408126e-31},
+    {2.81145725434552060e-15, 1.65088427308614326e-31}
+    };
+
+ddouble expq(ddouble a)
+{
+    /* Strategy:  We first reduce the size of x by noting that
+     *
+     *     exp(kr + m * log(2)) = 2^m * exp(r)^k
+     *
+     * where m and k are integers.  By choosing m appropriately
+     * we can make |kr| <= log(2) / 2 = 0.347.  Then exp(r) is
+     * evaluated using the familiar Taylor series.  Reducing the
+     * argument substantially speeds up the convergence.
+     */
+    const double k = 512.0;
+    const double inv_k = 1.0 / k;
+
+    if (a.hi <= -709.0)
+        return Q_ZERO;
+    if (a.hi >= 709.0)
+        return infq();
+    if (iszeroq(a))
+        return Q_ONE;
+    if (isoneq(a))
+        return Q_E;
+
+    double m = floor(a.hi / Q_LOG2.hi + 0.5);
+    ddouble r = mul_pwr2(subqq(a, mulqd(Q_LOG2, m)), inv_k);
+    ddouble s, t, p;
+
+    p = sqrq(r);
+    s = addqq(r, mul_pwr2(p, 0.5));
+    p = mulqq(p, r);
+    t = mulqq(p, _inv_fact[0]);
+
+    int i = 0;
+    do {
+        s = addqq(s, t);
+        p = mulqq(p, r);
+        ++i;
+        t = mulqq(p, _inv_fact[i]);
+    } while (abs(t.hi) > inv_k * Q_EPS.hi && i < 5);
+
+    s = addqq(s, t);
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqq(mul_pwr2(s, 2.0), sqrq(s));
+    s = addqd(s, 1.0);
+    return ldexpq(s, (int)m);
+}
+UNARY_FUNCTION(u_expq, expq, ddouble, ddouble)
+
+ddouble logq(ddouble a)
+{
+    /* Strategy.  The Taylor series for log converges much more
+     * slowly than that of exp, due to the lack of the factorial
+     * term in the denominator.  Hence this routine instead tries
+     * to determine the root of the function
+     *
+     *     f(x) = exp(x) - a
+     *
+     * using Newton iteration.  The iteration is given by
+     *
+     *     x' = x - f(x)/f'(x)
+     *        = x - (1 - a * exp(-x))
+     *        = x + a * exp(-x) - 1.
+     *
+     * Only one iteration is needed, since Newton's iteration
+     * approximately doubles the number of digits per iteration.
+     */
+    if (isoneq(a))
+        return Q_ZERO;
+    if (a.hi <= 0.0)
+        return nanq();
+
+    ddouble x = {log(a.hi), 0.0}; /* Initial approximation */
+    x = subqd(addqq(x, mulqq(a, expq(negq(x)))), 1.0);
+    return x;
+}
+UNARY_FUNCTION(u_logq, logq, ddouble, ddouble)
+
 /* ----------------------- Python stuff -------------------------- */
 
 static PyArray_Descr *make_ddouble_dtype()
@@ -572,7 +737,12 @@ PyMODINIT_FUNC PyInit__ddouble(void)
     unary_ufunc(dtype, module_dict, u_invq, dtype, "inv", "");
     unary_ufunc(dtype, module_dict, u_sqrq, dtype, "sqr", "");
     unary_ufunc(dtype, module_dict, u_sqrtq, dtype, "sqrt", "");
+
     unary_ufunc(dtype, module_dict, u_roundq, dtype, "round", "");
+    unary_ufunc(dtype, module_dict, u_floorq, dtype, "floor", "");
+    unary_ufunc(dtype, module_dict, u_ceilq, dtype, "ceil", "");
+    unary_ufunc(dtype, module_dict, u_expq, dtype, "exp", "");
+    unary_ufunc(dtype, module_dict, u_logq, dtype, "log", "");
 
     unary_ufunc(dtype, module_dict, u_iszeroq, bool_dtype, "iszero", "");
     unary_ufunc(dtype, module_dict, u_isoneq, bool_dtype, "isone", "");
