@@ -20,7 +20,7 @@ typedef struct {
 /**
  * Create ufunc loop routine for a unary operation
  */
-#define DDOUBLE_UNARY_FUNCTION(func_name, inner_func)                   \
+#define UNARY_FUNCTION(func_name, inner_func, type_out, type_in)        \
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp* steps, void* data)            \
     {                                                                   \
@@ -31,8 +31,8 @@ typedef struct {
         npy_intp is1 = steps[0], os1 = steps[1];                        \
                                                                         \
         for (i = 0; i < n; i++) {                                       \
-            const ddouble *in = (const ddouble *)_in1;                  \
-            ddouble *out = (ddouble *)_out1;                            \
+            const type_in *in = (const type_in *)_in1;                  \
+            type_out *out = (type_out *)_out1;                          \
             *out = inner_func(*in);                                     \
                                                                         \
             _in1 += is1;                                                \
@@ -220,19 +220,19 @@ inline ddouble negq(ddouble a)
 {
     return (ddouble){-a.hi, -a.lo};
 }
-DDOUBLE_UNARY_FUNCTION(u_negq, negq)
+UNARY_FUNCTION(u_negq, negq, ddouble, ddouble)
 
 inline ddouble posq(ddouble a)
 {
     return (ddouble){-a.hi, -a.lo};
 }
-DDOUBLE_UNARY_FUNCTION(u_posq, posq)
+UNARY_FUNCTION(u_posq, posq, ddouble, ddouble)
 
 inline ddouble absq(ddouble a)
 {
     return signbit(a.hi) ? negq(a) : a;
 }
-DDOUBLE_UNARY_FUNCTION(u_absq, absq)
+UNARY_FUNCTION(u_absq, absq, ddouble, ddouble)
 
 inline ddouble invq(ddouble y)
 {
@@ -244,7 +244,7 @@ inline ddouble invq(ddouble y)
     double t_lo = d / y.hi;
     return two_sum_quick(t_hi, t_lo);
 }
-DDOUBLE_UNARY_FUNCTION(u_invq, invq)
+UNARY_FUNCTION(u_invq, invq, ddouble, ddouble)
 
 inline ddouble sqrq(ddouble a)
 {
@@ -253,7 +253,7 @@ inline ddouble sqrq(ddouble a)
     double t = 2 * a.hi * a.lo;
     return two_sum_quick(c.hi, c.lo + t);
 }
-DDOUBLE_UNARY_FUNCTION(u_sqrq, sqrq)
+UNARY_FUNCTION(u_sqrq, sqrq, ddouble, ddouble)
 
 inline ddouble sqrtq(ddouble a)
 {
@@ -268,7 +268,7 @@ inline ddouble sqrtq(ddouble a)
     double diff = subqq(a, ax_sqr).hi * x * 0.5;
     return two_sum(ax, diff);
 }
-DDOUBLE_UNARY_FUNCTION(u_sqrtq, sqrtq)
+UNARY_FUNCTION(u_sqrtq, sqrtq, ddouble, ddouble)
 
 
 
