@@ -105,7 +105,7 @@ setup(
         },
 
     ext_modules=[
-        Extension("quadruple.raw", ["csrc/raw.c"]),
+        Extension("quadruple._raw", ["csrc/_raw.c"]),
         ],
     setup_requires=[
         'numpy',

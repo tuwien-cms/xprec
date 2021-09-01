@@ -343,17 +343,14 @@ static const ddouble Q_2PI = {6.283185307179586232e+00, 2.449293598294706414e-16
 static const ddouble Q_PI = {3.141592653589793116e+00, 1.224646799147353207e-16};
 static const ddouble Q_PI_2 = {1.570796326794896558e+00, 6.123233995736766036e-17};
 static const ddouble Q_PI_4 = {7.853981633974482790e-01, 3.061616997868383018e-17};
-static const ddouble Q_3PI_4 = {2.356194490192344837e+00, 9.1848509936051484375e-17};
 static const ddouble Q_E = {2.718281828459045091e+00, 1.445646891729250158e-16};
 static const ddouble Q_LOG2 = {6.931471805599452862e-01, 2.319046813846299558e-17};
 static const ddouble Q_LOG10 = {2.302585092994045901e+00, -2.170756223382249351e-16};
 
 static const ddouble Q_EPS = {4.93038065763132e-32, 0.0};
-static const ddouble Q_MINNORM = {2.0041683600089728e-292, 0.0};
-static const ddouble Q_MAXVAL =
+static const ddouble Q_MIN = {2.0041683600089728e-292, 0.0};
+static const ddouble Q_MAX =
     {1.79769313486231570815e+308, 9.97920154767359795037e+291};
-static const ddouble Q_SAFE_MAX =
-    {1.7976931080746007281e+308, 9.97920154767359795037e+291};
 
 /*********************** Comparisons q/q ***************************/
 
@@ -981,15 +978,30 @@ static void unary_ufunc(PyObject *module_dict,
     Py_DECREF(ufunc);
 }
 
+static void constant(PyObject *module_dict, ddouble value, const char *name)
+{
+    // Note that data must be allocated using malloc, not python allocators!
+    ddouble *data = malloc(sizeof value);
+    *data = value;
+
+    PyArrayObject *array = (PyArrayObject *)
+        PyArray_SimpleNewFromData(0, NULL, DDOUBLE_WRAP, data);
+    PyArray_ENABLEFLAGS(array, NPY_ARRAY_OWNDATA);
+    PyArray_CLEARFLAGS(array, NPY_ARRAY_WRITEABLE);
+
+    PyDict_SetItemString(module_dict, name, (PyObject *)array);
+    Py_DECREF(array);
+}
+
 // Init routine
-PyMODINIT_FUNC PyInit_raw(void)
+PyMODINIT_FUNC PyInit__raw(void)
 {
     static PyMethodDef no_methods[] = {
         {NULL, NULL, 0, NULL}    // No methods defined
     };
     static struct PyModuleDef module_def = {
         PyModuleDef_HEAD_INIT,
-        "raw",
+        "_raw",
         NULL,
         -1,
         no_methods,
@@ -1059,6 +1071,17 @@ PyMODINIT_FUNC PyInit_raw(void)
     unary_ufunc(module_dict, u_isoneq, NPY_BOOL, "isone", "");
     unary_ufunc(module_dict, u_ispositiveq, NPY_BOOL, "ispositive", "");
     unary_ufunc(module_dict, u_isnegativeq, NPY_BOOL, "isnegative", "");
+
+    constant(module_dict, Q_MAX, "MAX");
+    constant(module_dict, Q_MIN, "MIN");
+    constant(module_dict, Q_EPS, "EPS");
+    constant(module_dict, Q_2PI, "TWOPI");
+    constant(module_dict, Q_PI, "PI");
+    constant(module_dict, Q_PI_2, "PI_2");
+    constant(module_dict, Q_PI_4, "PI_4");
+    constant(module_dict, Q_E, "E");
+    constant(module_dict, Q_LOG2, "LOG2");
+    constant(module_dict, Q_LOG10, "LOG10");
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
