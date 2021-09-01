@@ -95,10 +95,9 @@ setup(
         ]),
     author_email='markus.wallerberger@tuwien.ac.at',
 
-    python_requires='>=3, <4',
+    python_requires='>=3',
     install_requires=[
-        'numpy',
-        'scipy',
+        'numpy>=1.7',
         ],
     extras_require={
         'test': ['pytest'],
@@ -108,8 +107,7 @@ setup(
         Extension("quadruple._raw", ["csrc/_raw.c"]),
         ],
     setup_requires=[
-        'numpy',
-        'scipy',
+        'numpy>=1.7',
         ],
     cmdclass={
         'build_ext': BuildExtWithNumpy
