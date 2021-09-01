@@ -13,3 +13,10 @@ def _compare_ufunc(ufunc, x):
 def test_log():
     x = np.geomspace(1e-300, 1e300, 1953)
     _compare_ufunc(np.log, x)
+
+
+def test_exp():
+    x = np.geomspace(1e-300, 700, 4953)
+    x = np.hstack([-x[::-1], 0, x])
+    _compare_ufunc(np.exp, x)
+    _compare_ufunc(np.expm1, x)

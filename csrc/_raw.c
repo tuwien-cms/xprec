@@ -541,7 +541,15 @@ static const ddouble _inv_fact[] = {
     {2.81145725434552060e-15, 1.65088427308614326e-31}
     };
 
-ddouble expq(ddouble a)
+/**
+ * For the exponential of `a`, return compute tuple `x, m` such that:
+ *
+ *      exp(a) = ldexp(1 + x, m),
+ *
+ * where `m` is chosen such that `abs(x) < 1`.  The value `x` is returned,
+ * whereas the value `m` is given as an out parameter.
+ */
+static ddouble _exp_reduced(ddouble a, int *m)
 {
     /* Strategy:  We first reduce the size of x by noting that
      *
@@ -552,24 +560,15 @@ ddouble expq(ddouble a)
      */
     const double k = 512.0;
     const double inv_k = 1.0 / k;
-
-    if (a.hi <= -709.0)
-        return Q_ZERO;
-    if (a.hi >= 709.0)
-        return infq();
-    if (iszeroq(a))
-        return Q_ONE;
-    if (isoneq(a))
-        return Q_E;
-
-    double m = floor(a.hi / Q_LOG2.hi + 0.5);
-    ddouble r = mul_pwr2(subqq(a, mulqd(Q_LOG2, m)), inv_k);
-    ddouble sum, term, rpower;
+    double mm = floor(a.hi / Q_LOG2.hi + 0.5);
+    ddouble r = mul_pwr2(subqq(a, mulqd(Q_LOG2, mm)), inv_k);
+    *m = (int)mm;
 
     /* Now, evaluate exp(r) using the familiar Taylor series.  Reducing the
      * argument substantially speeds up the convergence.  First, we compute
      * terms of order 1 and 2 and add it to the sum
      */
+    ddouble sum, term, rpower;
     rpower = sqrq(r);
     sum = addqq(r, mul_pwr2(rpower, 0.5));
 
@@ -597,12 +596,51 @@ ddouble expq(ddouble a)
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    return sum;
+}
+
+ddouble expq(ddouble a)
+{
+    if (a.hi <= -709.0)
+        return Q_ZERO;
+    if (a.hi >= 709.0)
+        return infq();
+    if (iszeroq(a))
+        return Q_ONE;
+    if (isoneq(a))
+        return Q_E;
+
+    int m;
+    ddouble sum = _exp_reduced(a, &m);
 
     /** Add back the one and multiply by 2 to the m */
     sum = addqd(sum, 1.0);
     return ldexpq(sum, (int)m);
 }
 UNARY_FUNCTION(u_expq, expq, ddouble, ddouble)
+
+ddouble expm1q(ddouble a)
+{
+    if (a.hi <= -709.0)
+        return (ddouble){-1.0, 0.0};
+    if (a.hi >= 709.0)
+        return infq();
+    if (iszeroq(a))
+        return Q_ZERO;
+
+    int m;
+    ddouble sum = _exp_reduced(a, &m);
+
+    /* Truncation case: simply return sum */
+    if (m == 0)
+        return sum;
+
+    /* Non-truncation case: compute full exp, then remove the one */
+    sum = addqd(sum, 1.0);
+    sum = ldexpq(sum, (int)m);
+    return subqd(sum, 1.0);
+}
+UNARY_FUNCTION(u_expm1q, expm1q, ddouble, ddouble)
 
 ddouble logq(ddouble a)
 {
@@ -632,20 +670,6 @@ ddouble logq(ddouble a)
     return x;
 }
 UNARY_FUNCTION(u_logq, logq, ddouble, ddouble)
-
-ddouble expm1q(ddouble x)
-{
-    ddouble u = expq(x);
-    ddouble u_minus_one = subqq(u, Q_ONE);
-    static const ddouble minus_one = {-1.0, 0.0};
-
-    if (isoneq(u))
-        return x;
-    if (equalqq(u_minus_one, minus_one))
-        return minus_one;
-    return divqq(mulqq(x, u_minus_one), logq(u));
-}
-UNARY_FUNCTION(u_expm1q, expm1q, ddouble, ddouble)
 
 static const ddouble _pi_16 =
     {1.963495408493620697e-01, 7.654042494670957545e-18};
