@@ -6,36 +6,15 @@ DTYPE = np.dtype([("hi", float), ("lo", float)])
 
 _RAW_DTYPE = _raw.dtype
 
-_UFUNC_TABLE = {
-    np.add: _raw.add,
-    np.subtract: _raw.sub,
-    np.multiply: _raw.mul,
-    np.true_divide: _raw.div,
-    np.floor_divide: _raw.div,
-    np.positive: _raw.pos,
-    np.negative: _raw.neg,
-    np.absolute: _raw.abs,
-    #np.round: _raw.round,        # FIXME: Does not yet support decimals arg
-    np.floor: _raw.floor,
-    np.ceil: _raw.ceil,
-    np.equal: _raw.equal,
-    np.not_equal: _raw.notequal,
-    np.greater: _raw.greater,
-    np.greater_equal: _raw.greaterequal,
-    np.less: _raw.less,
-    np.less_equal: _raw.lessequal,
-    np.square: _raw.sqr,
-    np.sqrt: _raw.sqrt,
-    np.exp: _raw.exp,
-    np.expm1: _raw.expm1,
-    np.log: _raw.log,
-    np.sin: _raw.sin,
-    np.cos: _raw.cos,
-    np.sinh: _raw.sinh,
-    np.cosh: _raw.cosh,
-    np.tanh: _raw.tanh,
-    }
-
+_UFUNC_SUPPORTED = (
+    "add", "subtract", "multiply", "true_divide",
+    "positive", "negative", "absolute", "floor", "ceil",
+    "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
+    "square", "sqrt", "exp", "expm1", "log",
+    "sin", "cos", "sinh", "cosh", "tanh"
+    )
+_UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
+                for name in _UFUNC_SUPPORTED}
 
 class DDArray(np.ndarray):
     def __new__(cls, shape, buffer=None, offset=0, strides=None, order=None):
@@ -51,14 +30,17 @@ class DDArray(np.ndarray):
             out = tuple(map(self._strip, out))
 
         res = super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
+        if res is NotImplemented:
+            return res
         if ufunc.nout == 1:
             return self._dress(res)
         else:
             return tuple(map(self._dress, res))
 
     def _strip(self, arr):
-        if arr.dtype == self.dtype:
-            return arr.view(_RAW_DTYPE, np.ndarray)
+        arr = np.asarray(arr)
+        if arr.dtype == DTYPE:
+            return arr.view(_RAW_DTYPE)
         return arr
 
     def _dress(self, arr):

@@ -1027,50 +1027,71 @@ PyMODINIT_FUNC PyInit__raw(void)
 
     /* Create ufuncs */
     binary_ufunc(module_dict, u_adddq, u_addqd, u_addqq,
-                 DDOUBLE_WRAP, "add", "");
+                 DDOUBLE_WRAP, "add", "addition");
     binary_ufunc(module_dict, u_subdq, u_subqd, u_subqq,
-                 DDOUBLE_WRAP, "sub", "");
+                 DDOUBLE_WRAP, "subtract", "subtraction");
     binary_ufunc(module_dict, u_muldq, u_mulqd, u_mulqq,
-                 DDOUBLE_WRAP, "mul", "");
+                 DDOUBLE_WRAP, "multiply", "element-wise multiplication");
     binary_ufunc(module_dict, u_divdq, u_divqd, u_divqq,
-                 DDOUBLE_WRAP, "div", "");
+                 DDOUBLE_WRAP, "true_divide", "element-wise division");
 
     binary_ufunc(module_dict, u_equaldq, u_equalqd, u_equalqq,
-                 NPY_BOOL, "equal", "");
+                 NPY_BOOL, "equal", "equality comparison");
     binary_ufunc(module_dict, u_notequaldq, u_notequalqd, u_notequalqq,
-                 NPY_BOOL, "notequal", "");
+                 NPY_BOOL, "not_equal", "inequality comparison");
     binary_ufunc(module_dict, u_greaterdq, u_greaterqd, u_greaterqq,
-                 NPY_BOOL, "greater", "");
+                 NPY_BOOL, "greater", "element-wise greater");
     binary_ufunc(module_dict, u_lessdq, u_lessqd, u_lessqq,
-                 NPY_BOOL, "less", "");
+                 NPY_BOOL, "less", "element-wise less");
     binary_ufunc(module_dict, u_greaterequaldq, u_greaterequalqd, u_greaterequalqq,
-                 NPY_BOOL, "greaterequal", "");
+                 NPY_BOOL, "greater_equal", "element-wise greater or equal");
     binary_ufunc(module_dict, u_lessequaldq, u_lessequalqd, u_lessequalqq,
-                 NPY_BOOL, "lessequal", "");
+                 NPY_BOOL, "less_equal", "element-wise less or equal");
 
-    unary_ufunc(module_dict, u_negq, DDOUBLE_WRAP, "neg", "");
-    unary_ufunc(module_dict, u_posq, DDOUBLE_WRAP, "pos", "");
-    unary_ufunc(module_dict, u_absq, DDOUBLE_WRAP, "abs", "");
-    unary_ufunc(module_dict, u_invq, DDOUBLE_WRAP, "inv", "");
-    unary_ufunc(module_dict, u_sqrq, DDOUBLE_WRAP, "sqr", "");
-    unary_ufunc(module_dict, u_sqrtq, DDOUBLE_WRAP, "sqrt", "");
+    unary_ufunc(module_dict, u_negq, DDOUBLE_WRAP,
+                "negative", "negation (+ to -)");
+    unary_ufunc(module_dict, u_posq, DDOUBLE_WRAP,
+                "positive", "explicit + sign");
+    unary_ufunc(module_dict, u_absq, DDOUBLE_WRAP,
+                "absolute", "absolute value");
+    unary_ufunc(module_dict, u_invq, DDOUBLE_WRAP,
+                "invert", "reciprocal value");
+    unary_ufunc(module_dict, u_sqrq, DDOUBLE_WRAP,
+                "square", "element-wise square");
+    unary_ufunc(module_dict, u_sqrtq, DDOUBLE_WRAP,
+                "sqrt", "element-wise square root");
 
-    unary_ufunc(module_dict, u_roundq, DDOUBLE_WRAP, "round", "");
-    unary_ufunc(module_dict, u_floorq, DDOUBLE_WRAP, "floor", "");
-    unary_ufunc(module_dict, u_ceilq, DDOUBLE_WRAP, "ceil", "");
-    unary_ufunc(module_dict, u_expq, DDOUBLE_WRAP, "exp", "");
-    unary_ufunc(module_dict, u_expm1q, DDOUBLE_WRAP, "expm1", "");
-    unary_ufunc(module_dict, u_logq, DDOUBLE_WRAP, "log", "");
-    unary_ufunc(module_dict, u_sinq, DDOUBLE_WRAP, "sin", "");
-    unary_ufunc(module_dict, u_cosq, DDOUBLE_WRAP, "cos", "");
-    unary_ufunc(module_dict, u_sinhq, DDOUBLE_WRAP, "sinh", "");
-    unary_ufunc(module_dict, u_coshq, DDOUBLE_WRAP, "cosh", "");
-    unary_ufunc(module_dict, u_tanhq, DDOUBLE_WRAP, "tanh", "");
+    unary_ufunc(module_dict, u_roundq, DDOUBLE_WRAP,
+                "round", "round to nearest integer");
+    unary_ufunc(module_dict, u_floorq, DDOUBLE_WRAP,
+                "floor", "round down to next integer");
+    unary_ufunc(module_dict, u_ceilq, DDOUBLE_WRAP,
+                "ceil", "round up to next integer");
+    unary_ufunc(module_dict, u_expq, DDOUBLE_WRAP,
+                "exp", "exponential function");
+    unary_ufunc(module_dict, u_expm1q, DDOUBLE_WRAP,
+                "expm1", "exponential function minus one");
+    unary_ufunc(module_dict, u_logq, DDOUBLE_WRAP,
+                "log", "natural logarithm");
+    unary_ufunc(module_dict, u_sinq, DDOUBLE_WRAP,
+                "sin", "sine");
+    unary_ufunc(module_dict, u_cosq, DDOUBLE_WRAP,
+                "cos", "cosine");
+    unary_ufunc(module_dict, u_sinhq, DDOUBLE_WRAP,
+                "sinh", "hyperbolic sine");
+    unary_ufunc(module_dict, u_coshq, DDOUBLE_WRAP,
+                "cosh", "hyperbolic cosine");
+    unary_ufunc(module_dict, u_tanhq, DDOUBLE_WRAP,
+                "tanh", "hyperbolic tangent");
 
-    unary_ufunc(module_dict, u_iszeroq, NPY_BOOL, "iszero", "");
-    unary_ufunc(module_dict, u_isoneq, NPY_BOOL, "isone", "");
-    unary_ufunc(module_dict, u_ispositiveq, NPY_BOOL, "ispositive", "");
-    unary_ufunc(module_dict, u_isnegativeq, NPY_BOOL, "isnegative", "");
+    unary_ufunc(module_dict, u_iszeroq, NPY_BOOL,
+                "iszero", "element-wise test for zero");
+    unary_ufunc(module_dict, u_isoneq, NPY_BOOL,
+                "isone", "element-wise test for one");
+    unary_ufunc(module_dict, u_ispositiveq, NPY_BOOL,
+                "ispositive", "element-wise test for positive values");
+    unary_ufunc(module_dict, u_isnegativeq, NPY_BOOL,
+                "isnegative", "element-wise test for negative values");
 
     constant(module_dict, Q_MAX, "MAX");
     constant(module_dict, Q_MIN, "MIN");
