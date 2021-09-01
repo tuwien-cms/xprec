@@ -49,7 +49,7 @@ class BuildExtWithNumpy(build_ext):
 
     def initialize_options(self):
         super().initialize_options()
-        self.with_openmp = "true"
+        self.with_openmp = "false"
         self.numpy_include_dir = None
 
     def finalize_options(self):
