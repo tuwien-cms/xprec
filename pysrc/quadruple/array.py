@@ -1,6 +1,11 @@
 import numpy as np
+from warnings import warn
 
 from . import _raw
+
+if not _raw.HAVE_FAST_FMA:
+    warn("No fast FMA compiled in ... expect slow double-double arithmetic")
+
 
 DTYPE = np.dtype([("hi", float), ("lo", float)])
 
