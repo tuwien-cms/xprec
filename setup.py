@@ -109,7 +109,7 @@ setup(
 
     python_requires='>=3',
     install_requires=[
-        'numpy>=1.7',
+        'numpy>=1.16',      # we need matmul to be an ufunc -> 1.16
         ],
     extras_require={
         'test': ['pytest'],
@@ -119,7 +119,7 @@ setup(
         Extension("quadruple._raw", ["csrc/_raw.c"]),
         ],
     setup_requires=[
-        'numpy>=1.7',
+        'numpy>=1.16',
         ],
     cmdclass={
         'build_ext': BuildExtWithNumpy

@@ -37,6 +37,14 @@ class DDArray(np.ndarray):
         else:
             return tuple(map(self._dress, res))
 
+    @property
+    def hi(self):
+        return self["hi"].view(np.ndarray)
+
+    @property
+    def lo(self):
+        return self["lo"].view(np.ndarray)
+
     def _strip(self, arr):
         arr = np.asarray(arr)
         if arr.dtype == DTYPE:
@@ -49,8 +57,12 @@ class DDArray(np.ndarray):
         return arr
 
 
-def asdoubledouble(arr, copy=False):
-    arr = np.array(arr, copy=copy, subok=True)
+def asddarray(arr, copy=False):
+    return ddarray(arr, copy)
+
+
+def ddarray(arr_like, copy=True, order='K', ndmin=0):
+    arr = np.array(arr_like, copy=copy, order=order, ndmin=ndmin)
     if arr.dtype == DTYPE:
         return arr.view(DDArray)
 
