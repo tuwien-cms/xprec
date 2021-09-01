@@ -270,7 +270,7 @@ inline ddouble roundq(ddouble a)
     } else {
         /* High word is not an integer. */
         lo = 0.0;
-        if (abs(hi - a.hi) == 0.5 && a.lo < 0.0) {
+        if (fabs(hi - a.hi) == 0.5 && a.lo < 0.0) {
             /* There is a tie in the high word, consult the low word
              * to break the tie.
              * NOTE: This does not cause INEXACT.
@@ -575,7 +575,7 @@ ddouble expq(ddouble a)
         rpower = mulqq(rpower, r);
         ++i;
         term = mulqq(rpower, _inv_fact[i]);
-    } while (abs(term.hi) > inv_k * Q_EPS.hi && i < 5);
+    } while (fabs(term.hi) > inv_k * Q_EPS.hi && i < 5);
     sum = addqq(sum, term);
 
     /* We now have that approximately exp(r) == 1 + sum.  Raise that to
@@ -630,7 +630,7 @@ ddouble expm1q(ddouble x)
 {
     ddouble u = expq(x);
     ddouble u_minus_one = subqq(u, Q_ONE);
-    static const ddouble minus_one = (ddouble) {-1.0, 0.0};
+    static const ddouble minus_one = {-1.0, 0.0};
 
     if (isoneq(u))
         return x;
@@ -660,7 +660,7 @@ static const ddouble _cos_table[] = {
 
 static ddouble sin_taylor(ddouble a)
 {
-    const double thresh = 0.5 * abs(a.hi) * Q_EPS.hi;
+    const double thresh = 0.5 * fabs(a.hi) * Q_EPS.hi;
     ddouble r, s, t, x;
 
     if (iszeroq(a))
@@ -675,7 +675,7 @@ static ddouble sin_taylor(ddouble a)
         t = mulqq(r, _inv_fact[i]);
         s = addqq(s, t);
         i += 2;
-    } while (i < _n_inv_fact && abs(t.hi) > thresh);
+    } while (i < _n_inv_fact && fabs(t.hi) > thresh);
 
     return s;
 }
@@ -697,7 +697,7 @@ static ddouble cos_taylor(ddouble a)
         t = mulqq(r, _inv_fact[i]);
         s = addqq(s, t);
         i += 2;
-    } while (i < _n_inv_fact && abs(t.hi) > thresh);
+    } while (i < _n_inv_fact && fabs(t.hi) > thresh);
 
     return s;
 }
@@ -880,7 +880,7 @@ ddouble sinhq(ddouble a)
     ddouble t = a;
     ddouble r = sqrq(t);
     double m = 1.0;
-    double thresh = abs((a.hi) * Q_EPS.hi);
+    double thresh = fabs((a.hi) * Q_EPS.hi);
 
     do {
         m += 2.0;
@@ -907,7 +907,7 @@ ddouble tanhq(ddouble a)
     if (iszeroq(a))
         return Q_ZERO;
 
-    if (abs(a.hi) > 0.05) {
+    if (fabs(a.hi) > 0.05) {
         ddouble ea = expq(a);
         ddouble inv_ea = invq(ea);
         return divqq(subqq(ea, inv_ea), addqq(ea, inv_ea));
