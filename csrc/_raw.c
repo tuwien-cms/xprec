@@ -18,11 +18,16 @@ typedef struct {
 
 
 /**
+ * Allows parameter to be marked unused
+ */
+#define MARK_UNUSED(x)  do { (void)(x); } while(false)
+
+/**
  * Create ufunc loop routine for a unary operation
  */
 #define UNARY_FUNCTION(func_name, inner_func, type_out, type_in)        \
     static void func_name(char **args, const npy_intp *dimensions,      \
-                          const npy_intp* steps, void* data)            \
+                          const npy_intp *steps, void *data)            \
     {                                                                   \
         assert (sizeof(ddouble) == 2 * sizeof(double));                 \
         npy_intp i;                                                     \
@@ -38,6 +43,7 @@ typedef struct {
             _in1 += is1;                                                \
             _out1 += os1;                                               \
         }                                                               \
+        MARK_UNUSED(data);                                              \
     }
 
 /**
@@ -45,7 +51,7 @@ typedef struct {
  */
 #define BINARY_FUNCTION(func_name, inner_func, type_r, type_a, type_b)  \
     static void func_name(char **args, const npy_intp *dimensions,      \
-                          const npy_intp* steps, void* data)            \
+                          const npy_intp* steps, void *data)            \
     {                                                                   \
         assert (sizeof(ddouble) == 2 * sizeof(double));                 \
         npy_intp i;                                                     \
@@ -63,6 +69,7 @@ typedef struct {
             _in2 += is2;                                                \
             _out1 += os1;                                               \
         }                                                               \
+        MARK_UNUSED(data);                                              \
     }
 
 
