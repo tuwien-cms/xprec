@@ -34,37 +34,49 @@ def rebase_links(text, base_url):
     return result
 
 
+def append_if_absent(list, arg):
+    """Append argument to list if absent"""
+    if arg not in list:
+        list.append(arg)
+
+
 class BuildExtWithNumpy(build_ext):
     """Wrapper class for building numpy extensions"""
-    def __init__(self, *args, **kwds):
-        super().__init__(*args, **kwds)
-        self._link_openmp = True
+    user_options = build_ext.user_options + [
+        ("with-openmp=", None, "use openmp to build (default: true)"),
+        ("numpy-include-dir=", None, "numpy include directory"),
+        ]
 
-    def check_extensions_list(self, extensions):
-        """Strip out all cython extensions that need not be recompiled.
-
-        Cython monkey-patches this method in distutils's build_ext class,
-        such that it compiles all out-of-date cython modules.  However, we
-        do not want to require Cython in, e.g., a source tarball, so we
-        duplicate that functionality here.
-        """
-        for ext in extensions:
-            if '-fopenmp' not in ext.extra_compile_args:
-                ext.extra_compile_args.append('-fopenmp')
-            if '-g' not in ext.extra_compile_args:
-                ext.extra_compile_args.append('-g')
-            if self._link_openmp and '-fopenmp' not in ext.extra_link_args:
-                ext.extra_link_args.append('-fopenmp')
-
-        return super().check_extensions_list(extensions)
+    def initialize_options(self):
+        super().initialize_options()
+        self.with_openmp = "true"
+        self.numpy_include_dir = None
 
     def finalize_options(self):
         """Add numpy and scipy include directories to the include paths."""
         super().finalize_options()
 
-        # Add numpy headers
-        import numpy
-        self.include_dirs.append(numpy.get_include())
+        # options are always passed as stings
+        _convert_to_bool = {"true": True, "false": False}
+        self.with_openmp = _convert_to_bool[self.with_openmp.lower()]
+
+        # Numpy headers: numpy must be imported here rather than
+        # globally, because otherwise it may not be available at the time
+        # when the setup script is run.
+        if self.numpy_include_dir is None:
+            import numpy
+            self.numpy_include_dir = numpy.get_include()
+
+        self._augment_build()
+
+    def _augment_build(self):
+        """Modify paths according to options"""
+        append_if_absent(self.include_dirs, self.numpy_include_dir)
+
+        for ext in self.extensions:
+            if self.with_openmp:
+                append_if_absent(ext.extra_compile_args, '-fopenmp')
+                append_if_absent(ext.extra_link_args, '-fopenmp')
 
 
 VERSION = extract_version('pysrc', 'quadruple', '__init__.py')

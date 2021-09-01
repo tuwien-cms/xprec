@@ -993,9 +993,9 @@ static void constant(PyObject *module_dict, ddouble value, const char *name)
     Py_DECREF(array);
 }
 
-// Init routine
 PyMODINIT_FUNC PyInit__raw(void)
 {
+    // Defitions
     static PyMethodDef no_methods[] = {
         {NULL, NULL, 0, NULL}    // No methods defined
     };
