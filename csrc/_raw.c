@@ -17,12 +17,6 @@ typedef struct {
 } ddouble;
 
 
-#ifdef FP_FAST_FMA
-static const bool HAVE_FAST_FMA = true;
-#else
-static const bool HAVE_FAST_FMA = false;
-#endif
-
 /**
  * Allows parameter to be marked unused
  */
@@ -57,7 +51,7 @@ static const bool HAVE_FAST_FMA = false;
  */
 #define BINARY_FUNCTION(func_name, inner_func, type_r, type_a, type_b)  \
     static void func_name(char **args, const npy_intp *dimensions,      \
-                          const npy_intp *steps, void *data)            \
+                          const npy_intp* steps, void *data)            \
     {                                                                   \
         assert (sizeof(ddouble) == 2 * sizeof(double));                 \
         npy_intp i;                                                     \
@@ -754,6 +748,7 @@ static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
 
 ddouble sinq(ddouble a)
 {
+
     /* Strategy.  To compute sin(x), we choose integers a, b so that
      *
      *   x = s + a * (pi/2) + b * (pi/16)
@@ -1139,8 +1134,6 @@ PyMODINIT_FUNC PyInit__raw(void)
     constant(module_dict, Q_E, "E");
     constant(module_dict, Q_LOG2, "LOG2");
     constant(module_dict, Q_LOG10, "LOG10");
-
-    PyModule_AddIntConstant(module, "HAVE_FAST_FMA", HAVE_FAST_FMA);
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
