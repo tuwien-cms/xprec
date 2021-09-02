@@ -65,6 +65,10 @@ class BuildExtWithNumpy(build_ext):
 
     def build_extensions(self):
         """Modify paths according to options"""
+        # This must be deferred to build time, because that is when
+        # self.compiler starts being a compiler instance
+        platform = self.compiler.compiler_type
+
         # First, let us clean up the mess of compiler options a little bit:
         # Move flags out into a dictionary, thereby removing the myriad of
         # duplicates
@@ -78,19 +82,16 @@ class BuildExtWithNumpy(build_ext):
 
         # Replace architecture flag with native to take advantage of the
         # intrinsics
-        if '-march' in cflags_so:
+        if platform == 'unix':
             cflags_so["-march"] = "native"
-        if '-mtune' in cflags_so:
             cflags_so["-mtune"] = "native"
         cflags_so = [k + ("=" + v if v is not None else "")
                      for (k,v) in cflags_so.items()]
         self.compiler.compiler_so = [cc_so] + cflags_so
 
-        # This must be deferred to build time, because that is when
-        # self.compiler starts being a compiler instance
-        platform = self.compiler.compiler_type
+        # This has to be set to false because MacOS does not ship openmp
         if self.with_openmp is None:
-            self.with_openmp = (platform == 'unix')
+            self.with_openmp = False
 
         # Numpy headers: numpy must be imported here rather than
         # globally, because otherwise it may not be available at the time
