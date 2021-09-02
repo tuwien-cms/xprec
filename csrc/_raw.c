@@ -1030,9 +1030,15 @@ static void binary_ufunc(PyObject *module_dict, PyUFuncGenericFunction dq_func,
 static void matmul_ufunc(PyObject *module_dict)
 {
     PyObject *ufunc;
-    static PyUFuncGenericFunction loops[] = {matmulq};
-    static char dtypes[] = {DDOUBLE_WRAP, DDOUBLE_WRAP, DDOUBLE_WRAP};
-    static void *data[] = {NULL};
+    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
+    char *dtypes = PyMem_New(char, 3);
+    void **data = PyMem_New(void *, 1);
+
+    loops[0] = matmulq;
+    data[0] = NULL;
+    dtypes[0] = DDOUBLE_WRAP;
+    dtypes[1] = DDOUBLE_WRAP;
+    dtypes[2] = DDOUBLE_WRAP;
 
     ufunc = PyUFunc_FromFuncAndDataAndSignature(
                 loops, data, dtypes, 1, 2, 1, PyUFunc_None, "matmul",

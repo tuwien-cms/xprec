@@ -55,7 +55,7 @@ def update_flags(exec, update):
     cflags_so.update(update)
     cflags_so = [k + ("=" + v if v is not None else "")
                  for (k,v) in cflags_so.items()]
-    return exec
+    return [cc_so] + cflags_so
 
 
 class BuildExtWithNumpy(build_ext):
