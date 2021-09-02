@@ -40,6 +40,24 @@ def append_if_absent(list, arg):
         list.append(arg)
 
 
+def update_flags(exec, update):
+    # First, let us clean up the mess of compiler options a little bit:  Move
+    # flags out into a dictionary, thereby removing the myriad of duplicates
+    cc_so, *cflags_so = exec
+    def _splitflag(arg):
+        arg = arg.split("=", 1)
+        if len(arg) == 1:
+            arg = arg + [None]
+        return arg
+    cflags_so = {k: v for (k,v) in map(_splitflag, cflags_so)}
+
+    # Now update the flags
+    cflags_so.update(update)
+    cflags_so = [k + ("=" + v if v is not None else "")
+                 for (k,v) in cflags_so.items()]
+    return exec
+
+
 class BuildExtWithNumpy(build_ext):
     """Wrapper class for building numpy extensions"""
     user_options = build_ext.user_options + [
@@ -66,28 +84,17 @@ class BuildExtWithNumpy(build_ext):
     def build_extensions(self):
         """Modify paths according to options"""
         # This must be deferred to build time, because that is when
-        # self.compiler starts being a compiler instance
+        # self.compiler starts being a compiler instance (before, it is
+        # a flag)  *slow-clap*
         platform = self.compiler.compiler_type
 
-        # First, let us clean up the mess of compiler options a little bit:
-        # Move flags out into a dictionary, thereby removing the myriad of
-        # duplicates
-        cc_so, *cflags_so = self.compiler.compiler_so
-        def _splitflag(arg):
-            arg = arg.split("=", 1)
-            if len(arg) == 1:
-                arg = arg + [None]
-            return arg
-        cflags_so = {k: v for (k,v) in map(_splitflag, cflags_so)}
-
-        # Replace architecture flag with native to take advantage of the
-        # intrinsics
+        # See msvccompiler.py:206 - a comment worth reading in its entirety.
+        # distutils sets up an abstraction which it immediately break with its
+        # own derived classes.  *slow-clap*
         if platform == 'unix':
-            cflags_so["-march"] = "native"
-            cflags_so["-mtune"] = "native"
-        cflags_so = [k + ("=" + v if v is not None else "")
-                     for (k,v) in cflags_so.items()]
-        self.compiler.compiler_so = [cc_so] + cflags_so
+            new_flags =  {"-march": "native", "-mtune": "native"}
+            self.compiler.compiler_so = update_flags(
+                                self.compiler.compiler_so, new_flags)
 
         # This has to be set to false because MacOS does not ship openmp
         if self.with_openmp is None:
@@ -95,7 +102,7 @@ class BuildExtWithNumpy(build_ext):
 
         # Numpy headers: numpy must be imported here rather than
         # globally, because otherwise it may not be available at the time
-        # when the setup script is run.
+        # when the setup script is run.  *slow-cl ... ah, f*ck it.
         if self.numpy_include_dir is None:
             import numpy
             self.numpy_include_dir = numpy.get_include()
