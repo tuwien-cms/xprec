@@ -49,16 +49,48 @@ class BuildExtWithNumpy(build_ext):
 
     def initialize_options(self):
         super().initialize_options()
-        self.with_openmp = "false"
+        self.with_openmp = None
         self.numpy_include_dir = None
 
     def finalize_options(self):
         """Add numpy and scipy include directories to the include paths."""
         super().finalize_options()
 
-        # options are always passed as stings
-        _convert_to_bool = {"true": True, "false": False}
-        self.with_openmp = _convert_to_bool[self.with_openmp.lower()]
+        _convert_to_bool = {None: None, "true": True, "false": False}
+        if self.with_openmp is not None:
+            self.with_openmp = _convert_to_bool[self.with_openmp.lower()]
+        if self.numpy_include_dir is not None:
+            if not os.path.isdir(self.numpy_include_dir):
+                raise ValueError("include directory must exist")
+
+    def build_extensions(self):
+        """Modify paths according to options"""
+        # First, let us clean up the mess of compiler options a little bit:
+        # Move flags out into a dictionary, thereby removing the myriad of
+        # duplicates
+        cc_so, *cflags_so = self.compiler.compiler_so
+        def _splitflag(arg):
+            arg = arg.split("=", 1)
+            if len(arg) == 1:
+                arg = arg + [None]
+            return arg
+        cflags_so = {k: v for (k,v) in map(_splitflag, cflags_so)}
+
+        # Replace architecture flag with native to take advantage of the
+        # intrinsics
+        if '-march' in cflags_so:
+            cflags_so["-march"] = "native"
+        if '-mtune' in cflags_so:
+            cflags_so["-mtune"] = "native"
+        cflags_so = [k + ("=" + v if v is not None else "")
+                     for (k,v) in cflags_so.items()]
+        self.compiler.compiler_so = [cc_so] + cflags_so
+
+        # This must be deferred to build time, because that is when
+        # self.compiler starts being a compiler instance
+        platform = self.compiler.compiler_type
+        if self.with_openmp is None:
+            self.with_openmp = (platform == 'unix')
 
         # Numpy headers: numpy must be imported here rather than
         # globally, because otherwise it may not be available at the time
@@ -67,16 +99,13 @@ class BuildExtWithNumpy(build_ext):
             import numpy
             self.numpy_include_dir = numpy.get_include()
 
-        self._augment_build()
-
-    def _augment_build(self):
-        """Modify paths according to options"""
-        append_if_absent(self.include_dirs, self.numpy_include_dir)
-
         for ext in self.extensions:
+            append_if_absent(ext.include_dirs, self.numpy_include_dir)
             if self.with_openmp:
                 append_if_absent(ext.extra_compile_args, '-fopenmp')
                 append_if_absent(ext.extra_link_args, '-fopenmp')
+
+        super().build_extensions()
 
 
 VERSION = extract_version('pysrc', 'quadruple', '__init__.py')
