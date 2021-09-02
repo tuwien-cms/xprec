@@ -11,7 +11,8 @@ _UFUNC_SUPPORTED = (
     "positive", "negative", "absolute", "floor", "ceil",
     "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
     "square", "sqrt", "exp", "expm1", "log",
-    "sin", "cos", "sinh", "cosh", "tanh"
+    "sin", "cos", "sinh", "cosh", "tanh",
+    "matmul"
     )
 _UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
                 for name in _UFUNC_SUPPORTED}

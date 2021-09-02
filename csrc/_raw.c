@@ -1,6 +1,7 @@
 #include "Python.h"
 #include "math.h"
 #include "stdbool.h"
+//#include "stdio.h"
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarraytypes.h"
@@ -30,12 +31,11 @@ typedef struct {
                           const npy_intp *steps, void *data)            \
     {                                                                   \
         assert (sizeof(ddouble) == 2 * sizeof(double));                 \
-        npy_intp i;                                                     \
-        npy_intp n = dimensions[0];                                     \
+        const npy_intp n = dimensions[0];                               \
+        const npy_intp is1 = steps[0], os1 = steps[1];                  \
         char *_in1 = args[0], *_out1 = args[1];                         \
-        npy_intp is1 = steps[0], os1 = steps[1];                        \
                                                                         \
-        for (i = 0; i < n; i++) {                                       \
+        for (npy_intp i = 0; i < n; i++) {                              \
             const type_in *in = (const type_in *)_in1;                  \
             type_out *out = (type_out *)_out1;                          \
             *out = inner_func(*in);                                     \
@@ -54,12 +54,11 @@ typedef struct {
                           const npy_intp* steps, void *data)            \
     {                                                                   \
         assert (sizeof(ddouble) == 2 * sizeof(double));                 \
-        npy_intp i;                                                     \
-        npy_intp n = dimensions[0];                                     \
+        const npy_intp n = dimensions[0];                               \
+        const npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];  \
         char *_in1 = args[0], *_in2 = args[1], *_out1 = args[2];        \
-        npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];        \
                                                                         \
-        for (i = 0; i < n; i++) {                                       \
+        for (npy_intp i = 0; i < n; i++) {                              \
             const type_a *lhs = (const type_a *)_in1;                   \
             const type_b *rhs = (const type_b *)_in2;                   \
             type_r *out = (type_r *)_out1;                              \
@@ -951,6 +950,45 @@ ddouble tanhq(ddouble a)
 }
 UNARY_FUNCTION(u_tanhq, tanhq, ddouble, ddouble)
 
+/************************ Linear algebra ***************************/
+
+void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
+             void *data)
+{
+    const npy_intp nn = dims[0], ii = dims[1], jj = dims[2], kk = dims[3];
+    const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
+                   sai = steps[3], saj = steps[4], sbj = steps[5],
+                   sbk = steps[6], sci = steps[7], sck = steps[8];
+    char *_a = args[0], *_b = args[1], *_c = args[2];
+
+    //fprintf(stderr, "A[%ld;%ld,%ld] x B[%ld;%ld,%ld] -> C[%ld;%ld,%ld]\n",
+    //        nn, ii, jj, nn, ii, kk, nn, jj, kk);
+    //fprintf(stderr, "A[%ld;%ld,%ld] x B[%ld;%ld,%ld] -> C[%ld;%ld,%ld]\n",
+    //        san, sai, saj, sbn, sbj, sbk, scn, sci, sck);
+    for (npy_intp n = 0; n != nn; ++n) {
+        for (npy_intp i = 0; i != ii; ++i) {
+            for (npy_intp k = 0; k != kk; ++k) {
+                ddouble val = Q_ZERO;
+                for (npy_intp j = 0; j != jj; ++j) {
+                    const ddouble *a_ij =
+                            (const ddouble *) (_a + i * sai + j * saj);
+                    const ddouble *b_jk =
+                            (const ddouble *) (_b + j * sbj + k * sbk);
+                    val = addqq(val, mulqq(*a_ij, *b_jk));
+
+                }
+                ddouble *c_ik = (ddouble *) (_c + i * sci + k * sck);
+                *c_ik = val;
+            }
+        }
+        _a += san;
+        _b += sbn;
+        _c += scn;
+    }
+    MARK_UNUSED(data);
+}
+
+
 /* ----------------------- Python stuff -------------------------- */
 
 const char DDOUBLE_WRAP = NPY_CDOUBLE;
@@ -986,6 +1024,20 @@ static void binary_ufunc(PyObject *module_dict, PyUFuncGenericFunction dq_func,
     ufunc = PyUFunc_FromFuncAndData(
                 loops, data, dtypes, 3, 2, 1, PyUFunc_None, name, docstring, 0);
     PyDict_SetItemString(module_dict, name, ufunc);
+    Py_DECREF(ufunc);
+}
+
+static void matmul_ufunc(PyObject *module_dict)
+{
+    PyObject *ufunc;
+    static PyUFuncGenericFunction loops[] = {matmulq};
+    static char dtypes[] = {DDOUBLE_WRAP, DDOUBLE_WRAP, DDOUBLE_WRAP};
+    static void *data[] = {NULL};
+
+    ufunc = PyUFunc_FromFuncAndDataAndSignature(
+                loops, data, dtypes, 1, 2, 1, PyUFunc_None, "matmul",
+                "matrix multiplication", 0, "(i?,j),(j,k?)->(i?,k?)");
+    PyDict_SetItemString(module_dict, "matmul", ufunc);
     Py_DECREF(ufunc);
 }
 
@@ -1134,6 +1186,8 @@ PyMODINIT_FUNC PyInit__raw(void)
     constant(module_dict, Q_E, "E");
     constant(module_dict, Q_LOG2, "LOG2");
     constant(module_dict, Q_LOG10, "LOG10");
+
+    matmul_ufunc(module_dict);
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
