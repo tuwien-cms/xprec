@@ -502,13 +502,20 @@ UNARY_FUNCTION(u_isnegativeq, isnegativeq, bool, ddouble)
 
 inline ddouble sqrtq(ddouble a)
 {
-    /* Algorithm from Karp (QD library) */
+    /* Given approximation x to 1/sqrt(a), perform a single Newton step:
+     *
+     *    sqrt(a) = a*x + [a - (a*x)^2] * x / 2   (approx)
+     *
+     * The approximation is accurate to twice the accuracy of x.
+     * Also, the multiplication (a*x) and [-]*x can be done with
+     * only half the precision.
+     * From: Karp, High Precision Division and Square Root, 1993
+     */
     if (a.hi <= 0)
-        return (ddouble){.hi = sqrt(a.hi), .lo = 0};
+        return (ddouble){sqrt(a.hi), 0};
 
     double x = 1.0 / sqrt(a.hi);
     double ax = a.hi * x;
-
     ddouble ax_sqr = sqrq((ddouble){ax, 0});
     double diff = subqq(a, ax_sqr).hi * x * 0.5;
     return two_sum(ax, diff);
@@ -950,6 +957,26 @@ ddouble tanhq(ddouble a)
 }
 UNARY_FUNCTION(u_tanhq, tanhq, ddouble, ddouble)
 
+/************************* Binary functions ************************/
+
+inline ddouble hypotqq(ddouble x, ddouble y)
+{
+    return sqrtq(addqq(sqrq(x), sqrq(y)));
+}
+BINARY_FUNCTION(u_hypotqq, hypotqq, ddouble, ddouble, ddouble)
+
+inline ddouble hypotdq(double x, ddouble y)
+{
+    return hypotqq((ddouble){x, 0}, y);
+}
+BINARY_FUNCTION(u_hypotdq, hypotdq, ddouble, double, ddouble)
+
+inline ddouble hypotqd(ddouble x, double y)
+{
+    return hypotqq(x, (ddouble){y, 0});
+}
+BINARY_FUNCTION(u_hypotqd, hypotqd, ddouble, ddouble, double)
+
 /************************ Linear algebra ***************************/
 
 void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
@@ -1181,6 +1208,10 @@ PyMODINIT_FUNC PyInit__raw(void)
                 "ispositive", "element-wise test for positive values");
     unary_ufunc(module_dict, u_isnegativeq, NPY_BOOL,
                 "isnegative", "element-wise test for negative values");
+
+    binary_ufunc(module_dict, u_hypotdq, u_hypotqd, u_hypotqq,
+                 DDOUBLE_WRAP, "hypot", "hypothenuse calculation");
+
 
     constant(module_dict, Q_MAX, "MAX");
     constant(module_dict, Q_MIN, "MIN");
