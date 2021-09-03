@@ -5,7 +5,7 @@ import quadruple.linalg
 
 
 def test_householder_vec():
-    rng = np.random.default_rng(4711)
+    rng = np.random.RandomState(4711)
     xd = rng.random(20)
     xq = quadruple.ddarray(xd)
 
