@@ -982,16 +982,13 @@ BINARY_FUNCTION(u_hypotqd, hypotqd, ddouble, ddouble, double)
 static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
                     void *data)
 {
+    // signature (n;i,j),(n;j,k)->(n;i,k)
     const npy_intp nn = dims[0], ii = dims[1], jj = dims[2], kk = dims[3];
     const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
                    sai = steps[3], saj = steps[4], sbj = steps[5],
                    sbk = steps[6], sci = steps[7], sck = steps[8];
     char *_a = args[0], *_b = args[1], *_c = args[2];
 
-    //fprintf(stderr, "A[%ld;%ld,%ld] x B[%ld;%ld,%ld] -> C[%ld;%ld,%ld]\n",
-    //        nn, ii, jj, nn, ii, kk, nn, jj, kk);
-    //fprintf(stderr, "A[%ld;%ld,%ld] x B[%ld;%ld,%ld] -> C[%ld;%ld,%ld]\n",
-    //        san, sai, saj, sbn, sbj, sbk, scn, sci, sck);
     for (npy_intp n = 0; n != nn; ++n) {
         for (npy_intp i = 0; i != ii; ++i) {
             for (npy_intp k = 0; k != kk; ++k) {
@@ -1014,7 +1011,6 @@ static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
     }
     MARK_UNUSED(data);
 }
-
 
 /* ----------------------- Python stuff -------------------------- */
 
@@ -1178,7 +1174,7 @@ PyMODINIT_FUNC PyInit__raw(void)
                 "sqrt", "element-wise square root");
 
     unary_ufunc(module_dict, u_roundq, DDOUBLE_WRAP,
-                "round", "round to nearest integer");
+                "rint", "round to nearest integer");
     unary_ufunc(module_dict, u_floorq, DDOUBLE_WRAP,
                 "floor", "round down to next integer");
     unary_ufunc(module_dict, u_ceilq, DDOUBLE_WRAP,

@@ -8,7 +8,7 @@ _RAW_DTYPE = _raw.dtype
 
 _UFUNC_SUPPORTED = (
     "add", "subtract", "multiply", "true_divide",
-    "positive", "negative", "absolute", "floor", "ceil",
+    "positive", "negative", "absolute", "floor", "ceil", "rint",
     "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
     "square", "sqrt", "exp", "expm1", "log",
     "sin", "cos", "sinh", "cosh", "tanh", "hypot",
@@ -38,13 +38,21 @@ class DDArray(np.ndarray):
         else:
             return tuple(map(self._dress, res))
 
+    #def __getitem__(self, item):
+    #    Breaks printing...
+    #    arr = super().__getitem__(item)
+    #    return self.__class__(arr.shape, arr.data, 0, arr.strides)
+
+    def __setitem__(self, item, value):
+        super().__setitem__(item, asddarray(value))
+
     @property
     def hi(self):
-        return self["hi"].view(np.ndarray)
+        return self.view(np.ndarray)["hi"]
 
     @property
     def lo(self):
-        return self["lo"].view(np.ndarray)
+        return self.view(np.ndarray)["lo"]
 
     def _strip(self, arr):
         arr = np.asarray(arr)
@@ -54,7 +62,9 @@ class DDArray(np.ndarray):
 
     def _dress(self, arr):
         if arr.dtype == _RAW_DTYPE:
-            return arr.view(DTYPE, self.__class__)
+            # Here, we have to construct an array rather than return.  This
+            # is because
+            return self.__class__(arr.shape, arr.data, 0, arr.strides)
         return arr
 
 
@@ -67,7 +77,7 @@ def ddarray(arr_like, copy=True, order='K', ndmin=0):
     if arr.dtype == DTYPE:
         return arr.view(DDArray)
 
-    dd_arr = DDArray(arr.shape)
+    dd_arr = np.empty(arr.shape, DTYPE)
     dd_arr["hi"] = arr
     dd_arr["lo"] = 0
-    return dd_arr
+    return dd_arr.view(DDArray)
