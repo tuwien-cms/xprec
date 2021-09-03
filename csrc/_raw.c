@@ -144,8 +144,8 @@ BINARY_FUNCTION(u_divqd, divqd, ddouble, ddouble, double)
 
 /* -------------------- Combining double/quad ------------------------- */
 
-ddouble negq(ddouble);
-ddouble invq(ddouble);
+inline ddouble negq(ddouble);
+inline ddouble invq(ddouble);
 
 inline ddouble adddq(double x, ddouble y)
 {
@@ -605,7 +605,7 @@ static ddouble _exp_reduced(ddouble a, int *m)
     return sum;
 }
 
-ddouble expq(ddouble a)
+static ddouble expq(ddouble a)
 {
     if (a.hi <= -709.0)
         return Q_ZERO;
@@ -625,7 +625,7 @@ ddouble expq(ddouble a)
 }
 UNARY_FUNCTION(u_expq, expq, ddouble, ddouble)
 
-ddouble expm1q(ddouble a)
+static ddouble expm1q(ddouble a)
 {
     if (a.hi <= -709.0)
         return (ddouble){-1.0, 0.0};
@@ -648,7 +648,7 @@ ddouble expm1q(ddouble a)
 }
 UNARY_FUNCTION(u_expm1q, expm1q, ddouble, ddouble)
 
-ddouble logq(ddouble a)
+static ddouble logq(ddouble a)
 {
     /* Strategy.  The Taylor series for log converges much more
      * slowly than that of exp, due to the lack of the factorial
@@ -752,7 +752,7 @@ static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
     *cos_a = sqrtq(subdq(1.0, sqrq(*sin_a)));
 }
 
-ddouble sinq(ddouble a)
+static ddouble sinq(ddouble a)
 {
 
     /* Strategy.  To compute sin(x), we choose integers a, b so that
@@ -832,7 +832,7 @@ ddouble sinq(ddouble a)
 }
 UNARY_FUNCTION(u_sinq, sinq, ddouble, ddouble)
 
-ddouble cosq(ddouble a)
+static ddouble cosq(ddouble a)
 {
     if (iszeroq(a))
         return Q_ONE;
@@ -900,7 +900,7 @@ ddouble cosq(ddouble a)
 }
 UNARY_FUNCTION(u_cosq, cosq, ddouble, ddouble)
 
-ddouble sinhq(ddouble a)
+static ddouble sinhq(ddouble a)
 {
     if (iszeroq(a))
         return Q_ZERO;
@@ -929,7 +929,7 @@ ddouble sinhq(ddouble a)
 }
 UNARY_FUNCTION(u_sinhq, sinhq, ddouble, ddouble)
 
-ddouble coshq(ddouble a)
+static ddouble coshq(ddouble a)
 {
     if (iszeroq(a))
         return Q_ONE;
@@ -939,7 +939,7 @@ ddouble coshq(ddouble a)
 }
 UNARY_FUNCTION(u_coshq, coshq, ddouble, ddouble)
 
-ddouble tanhq(ddouble a)
+static ddouble tanhq(ddouble a)
 {
     if (iszeroq(a))
         return Q_ZERO;
@@ -979,8 +979,8 @@ BINARY_FUNCTION(u_hypotqd, hypotqd, ddouble, ddouble, double)
 
 /************************ Linear algebra ***************************/
 
-void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
-             void *data)
+static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
+                    void *data)
 {
     const npy_intp nn = dims[0], ii = dims[1], jj = dims[2], kk = dims[3];
     const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
@@ -1018,7 +1018,7 @@ void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
 
 /* ----------------------- Python stuff -------------------------- */
 
-const char DDOUBLE_WRAP = NPY_CDOUBLE;
+static const char DDOUBLE_WRAP = NPY_CDOUBLE;
 
 static void binary_ufunc(PyObject *module_dict, PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
