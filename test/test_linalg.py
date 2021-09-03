@@ -6,7 +6,7 @@ import quadruple.linalg
 
 def test_householder_vec():
     rng = np.random.RandomState(4711)
-    xd = rng.random(20)
+    xd = rng.random_sample(20)
     xq = quadruple.ddarray(xd)
 
     betad, vd = quadruple.linalg.householder_vector(xd)
