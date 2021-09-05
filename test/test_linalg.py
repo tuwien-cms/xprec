@@ -15,7 +15,7 @@ def test_householder_vec():
     np.testing.assert_array_almost_equal_nulp(vq.hi, vd, 4)
 
     ed = xd - betad * vd * (vd @ xd)
-    np.testing.assert_allclose(ed[1:], 0, atol=4e-16)
+    np.testing.assert_allclose(ed[1:], 0, atol=5e-16)
 
     eq = xq - betaq * vq * (vq @ xq)
     np.testing.assert_allclose(eq[1:].hi, 0, atol=1e-31)
