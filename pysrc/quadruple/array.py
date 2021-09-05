@@ -17,7 +17,8 @@ _UFUNC_SUPPORTED = (
 _UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
                 for name in _UFUNC_SUPPORTED}
 
-class DDArray(np.ndarray):
+
+class Array(np.ndarray):
     def __new__(cls, shape, buffer=None, offset=0, strides=None, order=None):
         """Create new ndarray instance (needs to be done using __new__)"""
         return super().__new__(cls, shape, DTYPE, buffer, offset, strides,
@@ -26,22 +27,23 @@ class DDArray(np.ndarray):
     def __array_ufunc__(self, ufunc, method, *in_, out=None, **kwds):
         """Override what happens when executing numpy ufunc."""
         ufunc = _UFUNC_TABLE[ufunc]
-        in_ = map(self._strip, in_)
+        in_ = map(_strip, in_)
         if out:
-            out = tuple(map(self._strip, out))
+            out = tuple(map(_strip, out))
 
         res = super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
         if res is NotImplemented:
             return res
         if ufunc.nout == 1:
-            return self._dress(res)
+            return _dress(res)
         else:
-            return tuple(map(self._dress, res))
+            return tuple(map(_dress, res))
 
-    #def __getitem__(self, item):
-    #    Breaks printing...
-    #    arr = super().__getitem__(item)
-    #    return self.__class__(arr.shape, arr.data, 0, arr.strides)
+    def __getitem__(self, item):
+        arr = super().__getitem__(item)
+        if isinstance(arr, np.void):
+            return Scalar(arr)
+        return arr
 
     def __setitem__(self, item, value):
         super().__setitem__(item, asddarray(value))
@@ -54,18 +56,55 @@ class DDArray(np.ndarray):
     def lo(self):
         return self.view(np.ndarray)["lo"]
 
-    def _strip(self, arr):
-        arr = np.asarray(arr)
-        if arr.dtype == DTYPE:
-            return arr.view(_RAW_DTYPE)
-        return arr
 
-    def _dress(self, arr):
-        if arr.dtype == _RAW_DTYPE:
-            # Here, we have to construct an array rather than return.  This
-            # is because
-            return self.__class__(arr.shape, arr.data, 0, arr.strides)
-        return arr
+class Scalar(np.ndarray):
+    def __new__(cls, obj):
+        """Create new ndarray instance (needs to be done using __new__)"""
+        return super().__new__(cls, (), DTYPE, obj)
+
+    def __array_ufunc__(self, ufunc, method, *in_, out=None, **kwds):
+        """Override what happens when executing numpy ufunc."""
+        ufunc = _UFUNC_TABLE[ufunc]
+        in_ = map(_strip, in_)
+        if out:
+            out = tuple(map(_strip, out))
+
+        res = super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
+        if res is NotImplemented:
+            return res
+        if ufunc.nout == 1:
+            return _dress(res)
+        else:
+            return tuple(map(_dress, res))
+
+    @property
+    def _data(self):
+        return self.view(np.ndarray)[()]
+
+    @property
+    def hi(self):
+        return self._data[0]
+
+    @property
+    def lo(self):
+        return self._data[1]
+
+    def __getitem__(self, indx):
+        return self._data[indx]
+
+    def __setitem__(self, indx, value):
+        self._data[indx] = value
+
+    def __str__(self):
+        return self._data.__str__()
+
+    __repr__ = __str__
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return self._data.__len__()
 
 
 def asddarray(arr, copy=False):
@@ -75,9 +114,26 @@ def asddarray(arr, copy=False):
 def ddarray(arr_like, copy=True, order='K', ndmin=0):
     arr = np.array(arr_like, copy=copy, order=order, ndmin=ndmin)
     if arr.dtype == DTYPE:
-        return arr.view(DDArray)
+        return arr.view(Array)
 
     dd_arr = np.empty(arr.shape, DTYPE)
     dd_arr["hi"] = arr
     dd_arr["lo"] = 0
-    return dd_arr.view(DDArray)
+    return dd_arr.view(Array)
+
+
+def _strip(arr):
+    arr = np.asarray(arr)
+    if arr.dtype == DTYPE:
+        return arr.view(_RAW_DTYPE)
+    return arr
+
+
+def _dress(arr):
+    if arr.dtype == _RAW_DTYPE:
+        arr = Array(arr.shape, arr.data, 0, arr.strides)
+        if isinstance(arr, np.void):
+            arr = Scalar(arr)
+    return arr
+
+
