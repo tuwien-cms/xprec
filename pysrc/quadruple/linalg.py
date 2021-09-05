@@ -23,3 +23,25 @@ def householder_vector(x):
         v[1:] /= vhead
 
     return beta, v
+
+
+def householder_update(A):
+    beta, v = householder_vector(A[:,0])
+    w = beta * (A.T @ v)
+    A -= v[:,None] * w[None,:]
+    return v
+
+
+def householder_bidiag(A):
+    A = np.array(A, copy=True, subok=True)
+    m, n = A.shape
+    vs = []
+    ws = []
+    if m < n:
+        raise NotImplementedError("must be tall matrix")
+    for j in range(n-1):
+        vs.append(householder_update(A[j:,j:]))
+        ws.append(householder_update(A[j:,j+1:].T))
+    if m > n:
+        vs.append(householder_update(A[n-1:,n-1:]))
+    return A, vs, ws
