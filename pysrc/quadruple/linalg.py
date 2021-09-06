@@ -81,3 +81,18 @@ def givens_rotation(f, g):
     r = np.copysign(np.hypot(f, g), f)
     inv_r = np.reciprocal(r)
     return f * inv_r, g * inv_r, r
+
+
+def jacobi_symm2x2(a_pp, a_pq, a_qq):
+    # 8.4.1
+    if np.equal(a_pq, 0):  # already diagonal
+        return np.ones_like(a_pp), np.zeros_like(a_pp)
+
+    tau = (a_qq - a_pp) / (2 * a_pq)
+    if np.greater_equal(tau, 0):
+        t = np.reciprocal(tau + np.hypot(1, tau))
+    else:
+        t = -np.reciprocal(-tau + np.hypot(1, tau))
+
+    c = np.reciprocal(np.hypot(1, t))
+    return c, t * c

@@ -44,3 +44,12 @@ def test_givens():
     w = np.hstack([r, np.zeros_like(r)])
     res = R @ v - w
     np.testing.assert_allclose(res.hi, 0, atol=1e-31)
+
+
+def test_symmschur():
+    X = quadruple.ddarray([3., -2., -2., 5.]).reshape(2, 2)
+    c, s = quadruple.linalg.jacobi_symm2x2(X[0,0], X[0,1], X[1,1])
+    R = np.array([c, s, -s, c]).reshape(2, 2)
+    res = R.T @ X @ R
+    np.testing.assert_allclose(res[1,0], 0, atol=1e-31)
+    np.testing.assert_allclose(res[0,1], 0, atol=1e-31)
