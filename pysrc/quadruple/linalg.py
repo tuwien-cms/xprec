@@ -72,6 +72,13 @@ def householder_apply(H, Q):
 
 
 def givens_rotation(f, g):
+    """Compute the Givens rotation.
+
+    For a vector `[f, g]`, determine parameters `c, s, r` such that:
+
+                [  c,  s ]  @  [ f ]  =  [ r ]
+                [ -s,  c ]     [ g ]     [ 0 ]
+    """
     # ACM Trans. Math. Softw. 28(2), 206, Alg 1.
     if np.equal(g, 0):
         return np.ones_like(f), np.zeros_like(g), f
@@ -96,3 +103,48 @@ def jacobi_symm2x2(a_pp, a_pq, a_qq):
 
     c = np.reciprocal(np.hypot(1, t))
     return c, t * c
+
+
+def eigval_symm2x2_closeqq(a_pp, a_pq, a_qq):
+    # Alg. 8.3.2
+    d = .5 * (a_pp - a_qq)
+    t = d + np.copysign(np.hypot(d, a_pq), d)
+    return a_qq - np.square(a_pq) / t
+
+
+def square_bidiag(d, f):
+    # Suppose we have a bidiagonal matrix with
+    #   B[i,i] == d[i],  B[i,i+1] == f[i]
+    # Now, note that for T = B^T B, we have:
+    #   T[i,i]   == d[i]**2 + f[i-1]**2
+    #   T[i,i+1] == d[i] * f[i]
+    a = np.square(d)
+    a[1:] += np.square(f)
+    b = d[:-1] * f
+    return a, b
+
+
+# def bidiag_rotate_row(f, d, k, c, s):
+#     fk = f[k]
+#     dk = d[k]
+#     d[k] = dk * c - fk * s
+#     f[k] = dk * s + fk * c
+
+
+# def golub_kahan_svd_step(d, f):
+#     # Alg 8.6.1
+#     n = d.size
+#     t_d, t_f = square_bidiag(d, f)
+#     mu = eigval_symm2x2_closeqq(t_d[-2], t_f[-1], t_d[-1])
+
+#     # First step: generate "unwanted element"
+#     y = t_d[0] - mu
+#     z = t_f[0]
+#     c, s, _ = givens_rotation(y, z)
+#     bidiag_rotate_row(f, d, 0, c, s)
+#     y = d[0]
+#     z = -d[1] * s
+#     d[1] = d[1] * c
+#     for k in range(n - 1):
+#     T_11 = np.square(d[0]) + np.square(f[0])
+#     T_12 = d[0] * f[0]
