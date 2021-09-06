@@ -324,17 +324,17 @@ ULOOP_UNARY(u_signbitq, signbitq, bool, ddouble)
 
 static ddouble copysignqq(ddouble x, ddouble y)
 {
-    /* The sign is determined by the hi part, and flipping signs means
-     * flipping both hi and lo part
+    /* The sign is determined by the hi part, however, the sign of hi and lo
+     * need not be the same, so we cannot merely broadcast copysign to both
+     * parts.
      */
-    double y_sign = y.hi;
-    return (ddouble) {copysign(x.hi, y_sign), copysign(x.lo, y_sign)};
+    return signbitq(x) != signbitq(y) ? negq(x) : x;
 }
 ULOOP_BINARY(u_copysignqq, copysignqq, ddouble, ddouble, ddouble)
 
 static ddouble copysignqd(ddouble x, double y)
 {
-    return (ddouble) {copysign(x.hi, y), copysign(x.lo, y)};
+    return signbitq(x) != signbit(y) ? negq(x) : x;
 }
 ULOOP_BINARY(u_copysignqd, copysignqd, ddouble, ddouble, double)
 
