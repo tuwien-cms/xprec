@@ -26,7 +26,7 @@ typedef struct {
 /**
  * Create ufunc loop routine for a unary operation
  */
-#define UNARY_FUNCTION(func_name, inner_func, type_out, type_in)        \
+#define ULOOP_UNARY(func_name, inner_func, type_out, type_in)           \
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp *steps, void *data)            \
     {                                                                   \
@@ -49,7 +49,7 @@ typedef struct {
 /**
  * Create ufunc loop routine for a binary operation
  */
-#define BINARY_FUNCTION(func_name, inner_func, type_r, type_a, type_b)  \
+#define ULOOP_BINARY(func_name, inner_func, type_r, type_a, type_b)     \
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp* steps, void *data)            \
     {                                                                   \
@@ -112,7 +112,7 @@ static ddouble addqd(ddouble x, double y)
     double v = x.lo + s.lo;
     return two_sum_quick(s.hi, v);
 }
-BINARY_FUNCTION(u_addqd, addqd, ddouble, ddouble, double)
+ULOOP_BINARY(u_addqd, addqd, ddouble, ddouble, double)
 
 static ddouble subqd(ddouble x, double y)
 {
@@ -120,7 +120,7 @@ static ddouble subqd(ddouble x, double y)
     double v = x.lo + s.lo;
     return two_sum_quick(s.hi, v);
 }
-BINARY_FUNCTION(u_subqd, subqd, ddouble, ddouble, double)
+ULOOP_BINARY(u_subqd, subqd, ddouble, ddouble, double)
 
 static ddouble mulqd(ddouble x, double y)
 {
@@ -128,7 +128,7 @@ static ddouble mulqd(ddouble x, double y)
     double v = fma(x.lo, y, c.lo);
     return two_sum_quick(c.hi, v);
 }
-BINARY_FUNCTION(u_mulqd, mulqd, ddouble, ddouble, double)
+ULOOP_BINARY(u_mulqd, mulqd, ddouble, ddouble, double)
 
 static ddouble divqd(ddouble x, double y)
 {
@@ -140,7 +140,7 @@ static ddouble divqd(ddouble x, double y)
     double t_lo = (d_hi + d_lo) / y;
     return two_sum_quick(t_hi, t_lo);
 }
-BINARY_FUNCTION(u_divqd, divqd, ddouble, ddouble, double)
+ULOOP_BINARY(u_divqd, divqd, ddouble, ddouble, double)
 
 /* -------------------- Combining double/quad ------------------------- */
 
@@ -151,27 +151,27 @@ static ddouble adddq(double x, ddouble y)
 {
     return addqd(y, x);
 }
-BINARY_FUNCTION(u_adddq, adddq, ddouble, double, ddouble)
+ULOOP_BINARY(u_adddq, adddq, ddouble, double, ddouble)
 
 static ddouble subdq(double x, ddouble y)
 {
     /* TODO: Probably not ideal */
     return addqd(negq(y), x);
 }
-BINARY_FUNCTION(u_subdq, subdq, ddouble, double, ddouble)
+ULOOP_BINARY(u_subdq, subdq, ddouble, double, ddouble)
 
 static ddouble muldq(double x, ddouble y)
 {
     return mulqd(y, x);
 }
-BINARY_FUNCTION(u_muldq, muldq, ddouble, double, ddouble)
+ULOOP_BINARY(u_muldq, muldq, ddouble, double, ddouble)
 
 static ddouble divdq(double x, ddouble y)
 {
     /* TODO: Probably not ideal */
     return mulqd(reciprocalq(y), x);
 }
-BINARY_FUNCTION(u_divdq, divdq, ddouble, double, ddouble)
+ULOOP_BINARY(u_divdq, divdq, ddouble, double, ddouble)
 
 static ddouble mul_pwr2(ddouble a, double b) {
     return (ddouble){a.hi * b, a.lo * b};
@@ -187,7 +187,7 @@ static ddouble addqq(ddouble x, ddouble y)
     ddouble z = two_sum_quick(v.hi, t.lo + v.lo);
     return z;
 }
-BINARY_FUNCTION(u_addqq, addqq, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_addqq, addqq, ddouble, ddouble, ddouble)
 
 static ddouble subqq(ddouble x, ddouble y)
 {
@@ -197,7 +197,7 @@ static ddouble subqq(ddouble x, ddouble y)
     ddouble z = two_sum_quick(v.hi, t.lo + v.lo);
     return z;
 }
-BINARY_FUNCTION(u_subqq, subqq, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_subqq, subqq, ddouble, ddouble, ddouble)
 
 static ddouble mulqq(ddouble a, ddouble b)
 {
@@ -207,7 +207,7 @@ static ddouble mulqq(ddouble a, ddouble b)
     t = fma(a.lo, b.hi, t);
     return two_sum_quick(c.hi, c.lo + t);
 }
-BINARY_FUNCTION(u_mulqq, mulqq, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_mulqq, mulqq, ddouble, ddouble, ddouble)
 
 static ddouble divqq(ddouble x, ddouble y)
 {
@@ -219,7 +219,7 @@ static ddouble divqq(ddouble x, ddouble y)
     double t_lo = d / y.hi;
     return two_sum_quick(t_hi, t_lo);
 }
-BINARY_FUNCTION(u_divqq, divqq, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_divqq, divqq, ddouble, ddouble, ddouble)
 
 /* -------------------- Unary functions ------------------------- */
 
@@ -227,19 +227,19 @@ static ddouble negq(ddouble a)
 {
     return (ddouble){-a.hi, -a.lo};
 }
-UNARY_FUNCTION(u_negq, negq, ddouble, ddouble)
+ULOOP_UNARY(u_negq, negq, ddouble, ddouble)
 
 static ddouble posq(ddouble a)
 {
     return (ddouble){-a.hi, -a.lo};
 }
-UNARY_FUNCTION(u_posq, posq, ddouble, ddouble)
+ULOOP_UNARY(u_posq, posq, ddouble, ddouble)
 
 static ddouble absq(ddouble a)
 {
     return signbit(a.hi) ? negq(a) : a;
 }
-UNARY_FUNCTION(u_absq, absq, ddouble, ddouble)
+ULOOP_UNARY(u_absq, absq, ddouble, ddouble)
 
 static ddouble reciprocalq(ddouble y)
 {
@@ -251,7 +251,7 @@ static ddouble reciprocalq(ddouble y)
     double t_lo = d / y.hi;
     return two_sum_quick(t_hi, t_lo);
 }
-UNARY_FUNCTION(u_reciprocalq, reciprocalq, ddouble, ddouble)
+ULOOP_UNARY(u_reciprocalq, reciprocalq, ddouble, ddouble)
 
 static ddouble sqrq(ddouble a)
 {
@@ -260,7 +260,7 @@ static ddouble sqrq(ddouble a)
     double t = 2 * a.hi * a.lo;
     return two_sum_quick(c.hi, c.lo + t);
 }
-UNARY_FUNCTION(u_sqrq, sqrq, ddouble, ddouble)
+ULOOP_UNARY(u_sqrq, sqrq, ddouble, ddouble)
 
 static ddouble roundq(ddouble a)
 {
@@ -286,7 +286,7 @@ static ddouble roundq(ddouble a)
         return (ddouble){hi, lo};
     }
 }
-UNARY_FUNCTION(u_roundq, roundq, ddouble, ddouble)
+ULOOP_UNARY(u_roundq, roundq, ddouble, ddouble)
 
 static ddouble floorq(ddouble a)
 {
@@ -300,7 +300,7 @@ static ddouble floorq(ddouble a)
     }
     return (ddouble){hi, lo};
 }
-UNARY_FUNCTION(u_floorq, floorq, ddouble, ddouble)
+ULOOP_UNARY(u_floorq, floorq, ddouble, ddouble)
 
 static ddouble ceilq(ddouble a)
 {
@@ -314,13 +314,13 @@ static ddouble ceilq(ddouble a)
     }
     return (ddouble){hi, lo};
 }
-UNARY_FUNCTION(u_ceilq, ceilq, ddouble, ddouble)
+ULOOP_UNARY(u_ceilq, ceilq, ddouble, ddouble)
 
 static bool signbitq(ddouble x)
 {
     return signbit(x.hi);
 }
-UNARY_FUNCTION(u_signbitq, signbitq, bool, ddouble)
+ULOOP_UNARY(u_signbitq, signbitq, bool, ddouble)
 
 static ddouble copysignqq(ddouble x, ddouble y)
 {
@@ -330,13 +330,13 @@ static ddouble copysignqq(ddouble x, ddouble y)
     double y_sign = y.hi;
     return (ddouble) {copysign(x.hi, y_sign), copysign(x.lo, y_sign)};
 }
-BINARY_FUNCTION(u_copysignqq, copysignqq, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_copysignqq, copysignqq, ddouble, ddouble, ddouble)
 
 static ddouble copysignqd(ddouble x, double y)
 {
     return (ddouble) {copysign(x.hi, y), copysign(x.lo, y)};
 }
-BINARY_FUNCTION(u_copysignqd, copysignqd, ddouble, ddouble, double)
+ULOOP_BINARY(u_copysignqd, copysignqd, ddouble, ddouble, double)
 
 static ddouble copysigndq(double x, ddouble y)
 {
@@ -344,7 +344,7 @@ static ddouble copysigndq(double x, ddouble y)
     double res = copysign(x, y.hi);
     return (ddouble) {res, 0.0};
 }
-BINARY_FUNCTION(u_copysigndq, copysigndq, ddouble, double, ddouble)
+ULOOP_BINARY(u_copysigndq, copysigndq, ddouble, double, ddouble)
 
 static bool iszeroq(ddouble x);
 
@@ -355,7 +355,7 @@ static ddouble signq(ddouble x)
         return x;
     return copysigndq(1.0, x);
 }
-UNARY_FUNCTION(u_signq, signq, ddouble, ddouble)
+ULOOP_UNARY(u_signq, signq, ddouble, ddouble)
 
 /******************************** Constants *********************************/
 
@@ -392,37 +392,37 @@ static bool equalqq(ddouble a, ddouble b)
 {
     return a.hi == b.hi && a.lo == b.lo;
 }
-BINARY_FUNCTION(u_equalqq, equalqq, bool, ddouble, ddouble)
+ULOOP_BINARY(u_equalqq, equalqq, bool, ddouble, ddouble)
 
 static bool notequalqq(ddouble a, ddouble b)
 {
     return a.hi != b.hi || a.lo != b.lo;
 }
-BINARY_FUNCTION(u_notequalqq, notequalqq, bool, ddouble, ddouble)
+ULOOP_BINARY(u_notequalqq, notequalqq, bool, ddouble, ddouble)
 
 static bool greaterqq(ddouble a, ddouble b)
 {
     return a.hi > b.hi || (a.hi == b.hi && a.lo > b.lo);
 }
-BINARY_FUNCTION(u_greaterqq, greaterqq, bool, ddouble, ddouble)
+ULOOP_BINARY(u_greaterqq, greaterqq, bool, ddouble, ddouble)
 
 static bool lessqq(ddouble a, ddouble b)
 {
     return a.hi < b.hi || (a.hi == b.hi && a.lo < b.lo);
 }
-BINARY_FUNCTION(u_lessqq, lessqq, bool, ddouble, ddouble)
+ULOOP_BINARY(u_lessqq, lessqq, bool, ddouble, ddouble)
 
 static bool greaterequalqq(ddouble a, ddouble b)
 {
     return a.hi > b.hi || (a.hi == b.hi && a.lo >= b.lo);
 }
-BINARY_FUNCTION(u_greaterequalqq, greaterqq, bool, ddouble, ddouble)
+ULOOP_BINARY(u_greaterequalqq, greaterqq, bool, ddouble, ddouble)
 
 static bool lessequalqq(ddouble a, ddouble b)
 {
     return a.hi < b.hi || (a.hi == b.hi && a.lo <= b.lo);
 }
-BINARY_FUNCTION(u_lessequalqq, lessqq, bool, ddouble, ddouble)
+ULOOP_BINARY(u_lessequalqq, lessqq, bool, ddouble, ddouble)
 
 /*********************** Comparisons q/d ***************************/
 
@@ -430,37 +430,37 @@ static bool equalqd(ddouble a, double b)
 {
     return equalqq(a, (ddouble){b, 0});
 }
-BINARY_FUNCTION(u_equalqd, equalqd, bool, ddouble, double)
+ULOOP_BINARY(u_equalqd, equalqd, bool, ddouble, double)
 
 static bool notequalqd(ddouble a, double b)
 {
     return notequalqq(a, (ddouble){b, 0});
 }
-BINARY_FUNCTION(u_notequalqd, notequalqd, bool, ddouble, double)
+ULOOP_BINARY(u_notequalqd, notequalqd, bool, ddouble, double)
 
 static bool greaterqd(ddouble a, double b)
 {
     return greaterqq(a, (ddouble){b, 0});
 }
-BINARY_FUNCTION(u_greaterqd, greaterqd, bool, ddouble, double)
+ULOOP_BINARY(u_greaterqd, greaterqd, bool, ddouble, double)
 
 static bool lessqd(ddouble a, double b)
 {
     return lessqq(a, (ddouble){b, 0});
 }
-BINARY_FUNCTION(u_lessqd, lessqd, bool, ddouble, double)
+ULOOP_BINARY(u_lessqd, lessqd, bool, ddouble, double)
 
 static bool greaterequalqd(ddouble a, double b)
 {
     return greaterequalqq(a, (ddouble){b, 0});
 }
-BINARY_FUNCTION(u_greaterequalqd, greaterequalqd, bool, ddouble, double)
+ULOOP_BINARY(u_greaterequalqd, greaterequalqd, bool, ddouble, double)
 
 static bool lessequalqd(ddouble a, double b)
 {
     return lessequalqq(a, (ddouble){b, 0});
 }
-BINARY_FUNCTION(u_lessequalqd, lessequalqd, bool, ddouble, double)
+ULOOP_BINARY(u_lessequalqd, lessequalqd, bool, ddouble, double)
 
 /*********************** Comparisons d/q ***************************/
 
@@ -468,37 +468,37 @@ static bool equaldq(double a, ddouble b)
 {
     return equalqq((ddouble){a, 0}, b);
 }
-BINARY_FUNCTION(u_equaldq, equaldq, bool, double, ddouble)
+ULOOP_BINARY(u_equaldq, equaldq, bool, double, ddouble)
 
 static bool notequaldq(double a, ddouble b)
 {
     return notequalqq((ddouble){a, 0}, b);
 }
-BINARY_FUNCTION(u_notequaldq, notequaldq, bool, double, ddouble)
+ULOOP_BINARY(u_notequaldq, notequaldq, bool, double, ddouble)
 
 static bool greaterdq(double a, ddouble b)
 {
     return greaterqq((ddouble){a, 0}, b);
 }
-BINARY_FUNCTION(u_greaterdq, greaterdq, bool, double, ddouble)
+ULOOP_BINARY(u_greaterdq, greaterdq, bool, double, ddouble)
 
 static bool lessdq(double a, ddouble b)
 {
     return lessqq((ddouble){a, 0}, b);
 }
-BINARY_FUNCTION(u_lessdq, lessdq, bool, double, ddouble)
+ULOOP_BINARY(u_lessdq, lessdq, bool, double, ddouble)
 
 static bool greaterequaldq(double a, ddouble b)
 {
     return greaterequalqq((ddouble){a, 0}, b);
 }
-BINARY_FUNCTION(u_greaterequaldq, greaterequaldq, bool, double, ddouble)
+ULOOP_BINARY(u_greaterequaldq, greaterequaldq, bool, double, ddouble)
 
 static bool lessequaldq(double a, ddouble b)
 {
     return lessequalqq((ddouble){a, 0}, b);
 }
-BINARY_FUNCTION(u_lessequaldq, lessequaldq, bool, double, ddouble)
+ULOOP_BINARY(u_lessequaldq, lessequaldq, bool, double, ddouble)
 
 /************************** Unary tests **************************/
 
@@ -506,25 +506,25 @@ static bool iszeroq(ddouble x)
 {
     return x.hi == 0.0;
 }
-UNARY_FUNCTION(u_iszeroq, iszeroq, bool, ddouble)
+ULOOP_UNARY(u_iszeroq, iszeroq, bool, ddouble)
 
 static bool isoneq(ddouble x)
 {
     return x.hi == 1.0 && x.lo == 0.0;
 }
-UNARY_FUNCTION(u_isoneq, isoneq, bool, ddouble)
+ULOOP_UNARY(u_isoneq, isoneq, bool, ddouble)
 
 static bool ispositiveq(ddouble x)
 {
     return x.hi > 0.0;
 }
-UNARY_FUNCTION(u_ispositiveq, ispositiveq, bool, ddouble)
+ULOOP_UNARY(u_ispositiveq, ispositiveq, bool, ddouble)
 
 static bool isnegativeq(ddouble x)
 {
     return x.hi < 0.0;
 }
-UNARY_FUNCTION(u_isnegativeq, isnegativeq, bool, ddouble)
+ULOOP_UNARY(u_isnegativeq, isnegativeq, bool, ddouble)
 
 /************************** Advanced math functions ********************/
 
@@ -548,7 +548,7 @@ static ddouble sqrtq(ddouble a)
     double diff = subqq(a, ax_sqr).hi * x * 0.5;
     return two_sum(ax, diff);
 }
-UNARY_FUNCTION(u_sqrtq, sqrtq, ddouble, ddouble)
+ULOOP_UNARY(u_sqrtq, sqrtq, ddouble, ddouble)
 
 static ddouble ldexpq(ddouble a, int exp)
 {
@@ -651,7 +651,7 @@ static ddouble expq(ddouble a)
     sum = addqd(sum, 1.0);
     return ldexpq(sum, (int)m);
 }
-UNARY_FUNCTION(u_expq, expq, ddouble, ddouble)
+ULOOP_UNARY(u_expq, expq, ddouble, ddouble)
 
 static ddouble expm1q(ddouble a)
 {
@@ -674,7 +674,7 @@ static ddouble expm1q(ddouble a)
     sum = ldexpq(sum, (int)m);
     return subqd(sum, 1.0);
 }
-UNARY_FUNCTION(u_expm1q, expm1q, ddouble, ddouble)
+ULOOP_UNARY(u_expm1q, expm1q, ddouble, ddouble)
 
 static ddouble logq(ddouble a)
 {
@@ -703,7 +703,7 @@ static ddouble logq(ddouble a)
     x = subqd(addqq(x, mulqq(a, expq(negq(x)))), 1.0);
     return x;
 }
-UNARY_FUNCTION(u_logq, logq, ddouble, ddouble)
+ULOOP_UNARY(u_logq, logq, ddouble, ddouble)
 
 static const ddouble _pi_16 =
     {1.963495408493620697e-01, 7.654042494670957545e-18};
@@ -858,7 +858,7 @@ static ddouble sinq(ddouble a)
     }
     return r;
 }
-UNARY_FUNCTION(u_sinq, sinq, ddouble, ddouble)
+ULOOP_UNARY(u_sinq, sinq, ddouble, ddouble)
 
 static ddouble cosq(ddouble a)
 {
@@ -926,7 +926,7 @@ static ddouble cosq(ddouble a)
     }
     return r;
 }
-UNARY_FUNCTION(u_cosq, cosq, ddouble, ddouble)
+ULOOP_UNARY(u_cosq, cosq, ddouble, ddouble)
 
 static ddouble sinhq(ddouble a)
 {
@@ -955,7 +955,7 @@ static ddouble sinhq(ddouble a)
     } while (absq(t).hi > thresh);
     return s;
 }
-UNARY_FUNCTION(u_sinhq, sinhq, ddouble, ddouble)
+ULOOP_UNARY(u_sinhq, sinhq, ddouble, ddouble)
 
 static ddouble coshq(ddouble a)
 {
@@ -965,7 +965,7 @@ static ddouble coshq(ddouble a)
     ddouble ea = expq(a);
     return mul_pwr2(addqq(ea, reciprocalq(ea)), 0.5);
 }
-UNARY_FUNCTION(u_coshq, coshq, ddouble, ddouble)
+ULOOP_UNARY(u_coshq, coshq, ddouble, ddouble)
 
 static ddouble tanhq(ddouble a)
 {
@@ -983,27 +983,28 @@ static ddouble tanhq(ddouble a)
     c = sqrtq(adddq(1.0, sqrq(s)));
     return divqq(s, c);
 }
-UNARY_FUNCTION(u_tanhq, tanhq, ddouble, ddouble)
+ULOOP_UNARY(u_tanhq, tanhq, ddouble, ddouble)
 
 /************************* Binary functions ************************/
 
 static ddouble hypotqq(ddouble x, ddouble y)
 {
+    /* FIXME: this expression may under- or overflow */
     return sqrtq(addqq(sqrq(x), sqrq(y)));
 }
-BINARY_FUNCTION(u_hypotqq, hypotqq, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_hypotqq, hypotqq, ddouble, ddouble, ddouble)
 
 static ddouble hypotdq(double x, ddouble y)
 {
     return hypotqq((ddouble){x, 0}, y);
 }
-BINARY_FUNCTION(u_hypotdq, hypotdq, ddouble, double, ddouble)
+ULOOP_BINARY(u_hypotdq, hypotdq, ddouble, double, ddouble)
 
 static ddouble hypotqd(ddouble x, double y)
 {
     return hypotqq(x, (ddouble){y, 0});
 }
-BINARY_FUNCTION(u_hypotqd, hypotqd, ddouble, ddouble, double)
+ULOOP_BINARY(u_hypotqd, hypotqd, ddouble, ddouble, double)
 
 /************************ Linear algebra ***************************/
 
@@ -1039,6 +1040,33 @@ static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
     }
     MARK_UNUSED(data);
 }
+
+/*************************** More complicated ***********************/
+
+static void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
+{
+    /* ACM Trans. Math. Softw. 28(2), 206, Alg 1 */
+    if (iszeroq(g)) {
+        *c = Q_ONE;
+        *s = Q_ZERO;
+        *r = f;
+    } else if (iszeroq(f)) {
+        *c = Q_ZERO;
+        *s = (ddouble) {signbitq(g), 0.0};
+        *r = absq(g);
+    } else {
+        *r = copysignqq(hypotqq(f, g), f);
+
+        /* This may come at a slight loss of precision, however, we should
+         * not really have to care ...
+         */
+        ddouble inv_r = reciprocalq(*r);
+        *c = mulqq(f, inv_r);
+        *s = mulqq(g, inv_r);
+    }
+}
+
+
 
 /* ----------------------- Python stuff -------------------------- */
 

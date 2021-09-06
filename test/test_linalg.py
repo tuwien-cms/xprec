@@ -21,6 +21,20 @@ def test_householder_vec():
     np.testing.assert_allclose(eq[1:].hi, 0, atol=1e-31)
 
 
+def test_bidiag():
+    rng = np.random.RandomState(4711)
+    m, n = 7, 5
+    A = quadruple.ddarray(rng.normal(size=(m,n)))
+    Q_h, B, R_h = quadruple.linalg.householder_bidiag(A)
+
+    Q = quadruple.ddarray(np.eye(m))
+    Q = quadruple.linalg.householder_apply(Q_h, Q)
+    R = quadruple.ddarray(np.eye(n))
+    R = quadruple.linalg.householder_apply(R_h, R)
+    diff = Q @ B @ R.T - A
+    np.testing.assert_allclose(diff.hi, 0, atol=5e-31)
+
+
 def test_givens():
     f, g = quadruple.ddarray([3.0, -2.0])
     c, s, r = quadruple.linalg.givens_rotation(f, g)

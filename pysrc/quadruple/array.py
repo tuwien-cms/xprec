@@ -146,7 +146,7 @@ def _strip(arr):
 
 def _dress(arr):
     if arr.dtype == _RAW_DTYPE:
-        arr = Array(arr.shape, arr.data, 0, arr.strides)
+        arr = arr.view(DTYPE, Array)
         if isinstance(arr, np.void):
             arr = Scalar(arr)
     return arr
