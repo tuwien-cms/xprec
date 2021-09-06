@@ -316,18 +316,46 @@ static ddouble ceilq(ddouble a)
 }
 UNARY_FUNCTION(u_ceilq, ceilq, ddouble, ddouble)
 
-// static ddouble dremq(ddouble a, ddouble b)
-// {
-//     ddouble n = roundq(divqq(a, b));
-//     return subqq(a, mulqq(n, b));
-// }
+static bool signbitq(ddouble x)
+{
+    return signbit(x.hi);
+}
+UNARY_FUNCTION(u_signbitq, signbitq, bool, ddouble)
 
-// static ddouble divremq(ddouble a, ddouble b, ddouble *r)
-// {
-//     ddouble n = roundq(divqq(a, b));
-//     *r = subqq(a, mulqq(n, b));
-//     return n;
-// }
+static ddouble copysignqq(ddouble x, ddouble y)
+{
+    /* The sign is determined by the hi part, and flipping signs means
+     * flipping both hi and lo part
+     */
+    double y_sign = y.hi;
+    return (ddouble) {copysign(x.hi, y_sign), copysign(x.lo, y_sign)};
+}
+BINARY_FUNCTION(u_copysignqq, copysignqq, ddouble, ddouble, ddouble)
+
+static ddouble copysignqd(ddouble x, double y)
+{
+    return (ddouble) {copysign(x.hi, y), copysign(x.lo, y)};
+}
+BINARY_FUNCTION(u_copysignqd, copysignqd, ddouble, ddouble, double)
+
+static ddouble copysigndq(double x, ddouble y)
+{
+    /* It is less surprising to return a ddouble here */
+    double res = copysign(x, y.hi);
+    return (ddouble) {res, 0.0};
+}
+BINARY_FUNCTION(u_copysigndq, copysigndq, ddouble, double, ddouble)
+
+static bool iszeroq(ddouble x);
+
+static ddouble signq(ddouble x)
+{
+    /* The numpy sign function does not respect signed zeros.  We do. */
+    if (iszeroq(x))
+        return x;
+    return copysigndq(1.0, x);
+}
+UNARY_FUNCTION(u_signq, signq, ddouble, ddouble)
 
 /******************************** Constants *********************************/
 
@@ -1172,6 +1200,8 @@ PyMODINIT_FUNC PyInit__raw(void)
                 "square", "element-wise square");
     unary_ufunc(module_dict, u_sqrtq, DDOUBLE_WRAP,
                 "sqrt", "element-wise square root");
+    unary_ufunc(module_dict, u_signbitq, NPY_BOOL,
+                "signbit", "sign bit of number");
 
     unary_ufunc(module_dict, u_roundq, DDOUBLE_WRAP,
                 "rint", "round to nearest integer");
@@ -1204,7 +1234,11 @@ PyMODINIT_FUNC PyInit__raw(void)
                 "ispositive", "element-wise test for positive values");
     unary_ufunc(module_dict, u_isnegativeq, NPY_BOOL,
                 "isnegative", "element-wise test for negative values");
+    unary_ufunc(module_dict, u_signq, DDOUBLE_WRAP,
+                "sign", "element-wise sign computation");
 
+    binary_ufunc(module_dict, u_copysigndq, u_copysignqd, u_copysignqq,
+                 DDOUBLE_WRAP, "copysign", "overrides sign of x with that of y");
     binary_ufunc(module_dict, u_hypotdq, u_hypotqd, u_hypotqq,
                  DDOUBLE_WRAP, "hypot", "hypothenuse calculation");
 

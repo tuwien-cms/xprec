@@ -9,6 +9,7 @@ _RAW_DTYPE = _raw.dtype
 _UFUNC_SUPPORTED = (
     "add", "subtract", "multiply", "true_divide",
     "positive", "negative", "absolute", "floor", "ceil", "rint",
+    "copysign", "sign", "signbit",
     "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
     "square", "sqrt", "exp", "expm1", "log",
     "sin", "cos", "sinh", "cosh", "tanh", "hypot",
@@ -135,5 +136,3 @@ def _dress(arr):
         if isinstance(arr, np.void):
             arr = Scalar(arr)
     return arr
-
-
