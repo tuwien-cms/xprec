@@ -145,7 +145,7 @@ BINARY_FUNCTION(u_divqd, divqd, ddouble, ddouble, double)
 /* -------------------- Combining double/quad ------------------------- */
 
 static ddouble negq(ddouble);
-static ddouble invq(ddouble);
+static ddouble reciprocalq(ddouble);
 
 static ddouble adddq(double x, ddouble y)
 {
@@ -169,7 +169,7 @@ BINARY_FUNCTION(u_muldq, muldq, ddouble, double, ddouble)
 static ddouble divdq(double x, ddouble y)
 {
     /* TODO: Probably not ideal */
-    return mulqd(invq(y), x);
+    return mulqd(reciprocalq(y), x);
 }
 BINARY_FUNCTION(u_divdq, divdq, ddouble, double, ddouble)
 
@@ -241,7 +241,7 @@ static ddouble absq(ddouble a)
 }
 UNARY_FUNCTION(u_absq, absq, ddouble, ddouble)
 
-static ddouble invq(ddouble y)
+static ddouble reciprocalq(ddouble y)
 {
     /* Alg 17 with x = 1 */
     double t_hi = 1.0 / y.hi;
@@ -251,7 +251,7 @@ static ddouble invq(ddouble y)
     double t_lo = d / y.hi;
     return two_sum_quick(t_hi, t_lo);
 }
-UNARY_FUNCTION(u_invq, invq, ddouble, ddouble)
+UNARY_FUNCTION(u_reciprocalq, reciprocalq, ddouble, ddouble)
 
 static ddouble sqrq(ddouble a)
 {
@@ -935,7 +935,7 @@ static ddouble sinhq(ddouble a)
 
     if (absq(a).hi > 0.05) {
         ddouble ea = expq(a);
-        return mul_pwr2(subqq(ea, invq(ea)), 0.5);
+        return mul_pwr2(subqq(ea, reciprocalq(ea)), 0.5);
     }
 
     /* since a is small, using the above formula gives
@@ -963,7 +963,7 @@ static ddouble coshq(ddouble a)
         return Q_ONE;
 
     ddouble ea = expq(a);
-    return mul_pwr2(addqq(ea, invq(ea)), 0.5);
+    return mul_pwr2(addqq(ea, reciprocalq(ea)), 0.5);
 }
 UNARY_FUNCTION(u_coshq, coshq, ddouble, ddouble)
 
@@ -974,7 +974,7 @@ static ddouble tanhq(ddouble a)
 
     if (fabs(a.hi) > 0.05) {
         ddouble ea = expq(a);
-        ddouble inv_ea = invq(ea);
+        ddouble inv_ea = reciprocalq(ea);
         return divqq(subqq(ea, inv_ea), addqq(ea, inv_ea));
     }
 
@@ -1194,8 +1194,8 @@ PyMODINIT_FUNC PyInit__raw(void)
                 "positive", "explicit + sign");
     unary_ufunc(module_dict, u_absq, DDOUBLE_WRAP,
                 "absolute", "absolute value");
-    unary_ufunc(module_dict, u_invq, DDOUBLE_WRAP,
-                "invert", "reciprocal value");
+    unary_ufunc(module_dict, u_reciprocalq, DDOUBLE_WRAP,
+                "reciprocal", "element-wise reciprocal value");
     unary_ufunc(module_dict, u_sqrq, DDOUBLE_WRAP,
                 "square", "element-wise square");
     unary_ufunc(module_dict, u_sqrtq, DDOUBLE_WRAP,

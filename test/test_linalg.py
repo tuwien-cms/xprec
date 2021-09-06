@@ -19,3 +19,14 @@ def test_householder_vec():
 
     eq = xq - betaq * vq * (vq @ xq)
     np.testing.assert_allclose(eq[1:].hi, 0, atol=1e-31)
+
+
+def test_givens():
+    f, g = quadruple.ddarray([3.0, -2.0])
+    c, s, r = quadruple.linalg.givens_rotation(f, g)
+
+    R = quadruple.ddarray((c, s, -s, c)).reshape(2, 2)
+    v = np.hstack((f, g))
+    w = np.hstack((r, np.zeros_like(r)))
+    res = R @ v - w
+    np.testing.assert_allclose(res.hi, 0, atol=1e-31)

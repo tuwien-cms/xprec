@@ -45,3 +45,15 @@ def householder_bidiag(A):
     if m > n:
         vs.append(householder_update(A[n-1:,n-1:]))
     return A, vs, ws
+
+
+def givens_rotation(f, g):
+    # ACM Trans. Math. Softw. 28(2), 206, Alg 1.
+    if np.equal(g, 0):
+        return np.ones_like(f), np.zeros_like(g), f
+    if np.equal(f, 0):
+        return np.zeros_like(f), np.sign(g), np.abs(g)
+
+    r = np.copysign(np.hypot(f, g), f)
+    inv_r = np.reciprocal(r)
+    return f * inv_r, g * inv_r, r

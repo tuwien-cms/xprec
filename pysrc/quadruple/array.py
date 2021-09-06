@@ -11,7 +11,7 @@ _UFUNC_SUPPORTED = (
     "positive", "negative", "absolute", "floor", "ceil", "rint",
     "copysign", "sign", "signbit",
     "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
-    "square", "sqrt", "exp", "expm1", "log",
+    "square", "sqrt", "reciprocal", "exp", "expm1", "log",
     "sin", "cos", "sinh", "cosh", "tanh", "hypot",
     "matmul"
     )
@@ -39,6 +39,13 @@ class Array(np.ndarray):
             return _dress(res)
         else:
             return tuple(map(_dress, res))
+
+    def __array_function__(self, func, types, in_, kwds):
+        res = func(*map(_strip, in_), **kwds)
+        if isinstance(res, tuple):
+            return tuple(map(_dress, res))
+        else:
+            return _dress(res)
 
     def __getitem__(self, item):
         arr = super().__getitem__(item)
@@ -77,6 +84,13 @@ class Scalar(np.ndarray):
             return _dress(res)
         else:
             return tuple(map(_dress, res))
+
+    def __array_function__(self, func, types, in_, kwds):
+        res = func(*map(_strip, in_), **kwds)
+        if isinstance(res, tuple):
+            return tuple(map(_dress, res))
+        else:
+            return _dress(res)
 
     @property
     def _data(self):
