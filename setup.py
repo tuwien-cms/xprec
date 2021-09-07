@@ -92,7 +92,7 @@ class BuildExtWithNumpy(build_ext):
         # distutils sets up an abstraction which it immediately break with its
         # own derived classes.  *slow-clap*
         if platform == 'unix':
-            new_flags =  {"-march": "native", "-mtune": "native"}
+            new_flags =  {"-march": "native", "-mtune": "native", "-Wextra": None}
             self.compiler.compiler_so = update_flags(
                                 self.compiler.compiler_so, new_flags)
 

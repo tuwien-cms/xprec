@@ -1316,83 +1316,24 @@ static void binary_ufunc(PyObject *module_dict, PyUFuncGenericFunction dq_func,
     Py_DECREF(ufunc);
 }
 
-static void matmul_ufunc(PyObject *module_dict)
+static void gufunc(PyObject *module_dict, PyUFuncGenericFunction uloop,
+                   int nin, int nout, const char *signature, const char *name,
+                   const char *docstring)
 {
     PyObject *ufunc;
     PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
-    char *dtypes = PyMem_New(char, 3);
+    char *dtypes = PyMem_New(char, nin + nout);
     void **data = PyMem_New(void *, 1);
 
-    loops[0] = matmulq;
+    loops[0] = uloop;
     data[0] = NULL;
-    dtypes[0] = DDOUBLE_WRAP;
-    dtypes[1] = DDOUBLE_WRAP;
-    dtypes[2] = DDOUBLE_WRAP;
+    for (int i = 0; i != nin + nout; ++i)
+        dtypes[i] = DDOUBLE_WRAP;
 
     ufunc = PyUFunc_FromFuncAndDataAndSignature(
-                loops, data, dtypes, 1, 2, 1, PyUFunc_None, "matmul",
-                "matrix multiplication", 0, "(i?,j),(j,k?)->(i?,k?)");
-    PyDict_SetItemString(module_dict, "matmul", ufunc);
-    Py_DECREF(ufunc);
-}
-
-static void givens_ufunc(PyObject *module_dict)
-{
-    PyObject *ufunc;
-    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
-    char *dtypes = PyMem_New(char, 3);
-    void **data = PyMem_New(void *, 1);
-
-    loops[0] = u_givensq;
-    data[0] = NULL;
-    dtypes[0] = DDOUBLE_WRAP;
-    dtypes[1] = DDOUBLE_WRAP;
-    dtypes[2] = DDOUBLE_WRAP;
-
-    ufunc = PyUFunc_FromFuncAndDataAndSignature(
-                loops, data, dtypes, 1, 1, 2, PyUFunc_None, "givens",
-                "Givens rotation", 0, "(2)->(2),(2,2)");
-    PyDict_SetItemString(module_dict, "givens", ufunc);
-    Py_DECREF(ufunc);
-}
-
-static void svd2x2_ufunc(PyObject *module_dict)
-{
-    PyObject *ufunc;
-    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
-    char *dtypes = PyMem_New(char, 4);
-    void **data = PyMem_New(void *, 1);
-
-    loops[0] = u_svd_tri2x2;
-    data[0] = NULL;
-    dtypes[0] = DDOUBLE_WRAP;
-    dtypes[1] = DDOUBLE_WRAP;
-    dtypes[2] = DDOUBLE_WRAP;
-    dtypes[3] = DDOUBLE_WRAP;
-
-    ufunc = PyUFunc_FromFuncAndDataAndSignature(
-                loops, data, dtypes, 1, 1, 3, PyUFunc_None, "svd_tri2x2",
-                "SVD of 2x2 problem", 0, "(2,2)->(2,2),(2),(2,2)");
-    PyDict_SetItemString(module_dict, "svd_tri2x2", ufunc);
-    Py_DECREF(ufunc);
-}
-
-static void svvals2x2_ufunc(PyObject *module_dict)
-{
-    PyObject *ufunc;
-    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
-    char *dtypes = PyMem_New(char, 2);
-    void **data = PyMem_New(void *, 1);
-
-    loops[0] = u_svvals_tri2x2;
-    data[0] = NULL;
-    dtypes[0] = DDOUBLE_WRAP;
-    dtypes[1] = DDOUBLE_WRAP;
-
-    ufunc = PyUFunc_FromFuncAndDataAndSignature(
-                loops, data, dtypes, 1, 1, 1, PyUFunc_None, "svvals_tri2x2",
-                "SV of 2x2 problem", 0, "(2,2)->(2)");
-    PyDict_SetItemString(module_dict, "svvals_tri2x2", ufunc);
+                loops, data, dtypes, 1, nin, nout, PyUFunc_None, name,
+                docstring, 0, signature);
+    PyDict_SetItemString(module_dict, name, ufunc);
     Py_DECREF(ufunc);
 }
 
@@ -1562,10 +1503,14 @@ PyMODINIT_FUNC PyInit__raw(void)
     constant(module_dict, Q_LOG2, "LOG2");
     constant(module_dict, Q_LOG10, "LOG10");
 
-    matmul_ufunc(module_dict);
-    givens_ufunc(module_dict);
-    svd2x2_ufunc(module_dict);
-    svvals2x2_ufunc(module_dict);
+    gufunc(module_dict, matmulq, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
+           "matmul", "Matrix multiplication");
+    gufunc(module_dict, u_givensq, 1, 2, "(2)->(2),(2,2)",
+           "givens", "Generate Givens rotation");
+    gufunc(module_dict, u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
+           "svd_tri2x2", "SVD of upper triangular 2x2 problem");
+    gufunc(module_dict, u_svvals_tri2x2, 1, 1, "(2,2)->(2)",
+           "svvals_tri2x2", "singular values of upper triangular 2x2 problem");
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
