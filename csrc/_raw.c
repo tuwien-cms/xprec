@@ -518,6 +518,44 @@ static bool lessequaldq(double a, ddouble b)
 }
 ULOOP_BINARY(u_lessequaldq, lessequaldq, bool, double, ddouble)
 
+/************************ Minimum/maximum ************************/
+
+static ddouble fminqq(ddouble a, ddouble b)
+{
+    return lessqq(a, b) ? a : b;
+}
+ULOOP_BINARY(u_fminqq, fminqq, ddouble, ddouble, ddouble)
+
+static ddouble fmaxqq(ddouble a, ddouble b)
+{
+    return greaterqq(a, b) ? a : b;
+}
+ULOOP_BINARY(u_fmaxqq, fmaxqq, ddouble, ddouble, ddouble)
+
+static ddouble fminqd(ddouble a, double b)
+{
+    return lessqd(a, b) ? a : (ddouble) {b, 0};
+}
+ULOOP_BINARY(u_fminqd, fminqd, ddouble, ddouble, double)
+
+static ddouble fmaxqd(ddouble a, double b)
+{
+    return greaterqd(a, b) ? a : (ddouble) {b, 0};
+}
+ULOOP_BINARY(u_fmaxqd, fmaxqd, ddouble, ddouble, double)
+
+static ddouble fmindq(double a, ddouble b)
+{
+    return lessdq(a, b) ? (ddouble) {a, 0} : b;
+}
+ULOOP_BINARY(u_fmindq, fmindq, ddouble, double, ddouble)
+
+static ddouble fmaxdq(double a, ddouble b)
+{
+    return greaterdq(a, b) ? (ddouble) {a, 0} : b;
+}
+ULOOP_BINARY(u_fmaxdq, fmaxdq, ddouble, double, ddouble)
+
 /************************** Unary tests **************************/
 
 static bool iszeroq(ddouble x)
@@ -1083,6 +1121,7 @@ static void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
 
 
 
+
 /* ----------------------- Python stuff -------------------------- */
 
 static const char DDOUBLE_WRAP = NPY_CDOUBLE;
@@ -1230,6 +1269,10 @@ PyMODINIT_FUNC PyInit__raw(void)
                  NPY_BOOL, "greater_equal", "element-wise greater or equal");
     binary_ufunc(module_dict, u_lessequaldq, u_lessequalqd, u_lessequalqq,
                  NPY_BOOL, "less_equal", "element-wise less or equal");
+    binary_ufunc(module_dict, u_fmindq, u_fminqd, u_fminqq,
+                 DDOUBLE_WRAP, "fmin", "element-wise minimum");
+    binary_ufunc(module_dict, u_fmaxdq, u_fmaxqd, u_fmaxqq,
+                 DDOUBLE_WRAP, "fmax", "element-wise minimum");
 
     unary_ufunc(module_dict, u_negq, DDOUBLE_WRAP,
                 "negative", "negation (+ to -)");

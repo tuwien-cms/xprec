@@ -12,7 +12,7 @@ _UFUNC_SUPPORTED = (
     "copysign", "sign", "signbit", "isfinite", "isinf", "isnan",
     "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
     "square", "sqrt", "reciprocal", "exp", "expm1", "log",
-    "sin", "cos", "sinh", "cosh", "tanh", "hypot",
+    "sin", "cos", "sinh", "cosh", "tanh", "hypot", "fmin", "fmax",
     "matmul"
     )
 _UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
