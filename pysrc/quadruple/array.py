@@ -18,12 +18,13 @@ _UFUNC_SUPPORTED = (
 _UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
                 for name in _UFUNC_SUPPORTED}
 
-_UFUNC_IMPORTED = (_raw.givens, _raw.svd_tri2x2)
+_UFUNC_IMPORTED = (_raw.givens, _raw.svd_tri2x2, _raw.svvals_tri2x2)
 _UFUNC_TABLE.update({x: x for x in _UFUNC_IMPORTED})
 
 # TODO: not sure where to put those...
 givens = _raw.givens
 svd_tri2x2 = _raw.svd_tri2x2
+svvals_tri2x2 = _raw.svvals_tri2x2
 
 
 class Array(np.ndarray):

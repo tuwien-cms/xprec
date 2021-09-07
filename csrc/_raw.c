@@ -1150,6 +1150,7 @@ static void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin,
     ddouble fa = absq(f);
     ddouble ga = absq(g);
     ddouble ha = absq(h);
+    bool compute_uv = cv != NULL;
 
     if (lessqq(fa, ha)) {
         // switch h <-> f, cu <-> sv, cv <-> su
@@ -1160,10 +1161,12 @@ static void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin,
         // already diagonal
         *smin = ha;
         *smax = fa;
-        *cu = Q_ONE;
-        *su = Q_ZERO;
-        *cv = Q_ONE;
-        *sv = Q_ZERO;
+        if (compute_uv) {
+            *cu = Q_ONE;
+            *su = Q_ZERO;
+            *cv = Q_ONE;
+            *sv = Q_ZERO;
+        }
         return;
     }
     if (fa.hi < Q_EPS.hi * ga.hi) {
@@ -1173,11 +1176,12 @@ static void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin,
             *smin = divqq(fa, divqq(ga, ha));
         else
             *smin = mulqq(divqq(fa, ga), ha);
-
-        *cu = Q_ONE;
-        *su = divqq(h, g);
-        *cv = Q_ONE;
-        *sv = divqq(f, g);
+        if (compute_uv) {
+            *cu = Q_ONE;
+            *su = divqq(h, g);
+            *cv = Q_ONE;
+            *sv = divqq(f, g);
+        }
         return;
     }
     // normal case
@@ -1191,14 +1195,16 @@ static void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin,
     *smin = absq(divqq(ha, a));
     *smax = absq(mulqq(fa, a));
 
-    ddouble tmp = addqq(divqq(q, addqq(spq, s)),
-                        divqq(q, addqq(dpq, d)));
-    tmp = mulqq(tmp, adddq(1.0, a));
-    ddouble tt = hypotqd(tmp, 2.0);
-    *cv = divdq(2.0, tt);
-    *sv = divqq(tmp, tt);
-    *cu = divqq(addqq(*cv, mulqq(*sv, q)), a);
-    *su = divqq(mulqq(divqq(h, f), *sv), a);
+    if (compute_uv) {
+        ddouble tmp = addqq(divqq(q, addqq(spq, s)),
+                            divqq(q, addqq(dpq, d)));
+        tmp = mulqq(tmp, adddq(1.0, a));
+        ddouble tt = hypotqd(tmp, 2.0);
+        *cv = divdq(2.0, tt);
+        *sv = divqq(tmp, tt);
+        *cu = divqq(addqq(*cv, mulqq(*sv, q)), a);
+        *su = divqq(mulqq(divqq(h, f), *sv), a);
+    }
 }
 
 static void u_svd_tri2x2(char **args, const npy_intp *dims,
@@ -1239,6 +1245,35 @@ static void u_svd_tri2x2(char **args, const npy_intp *dims,
         *(ddouble *)(_d + sdj) = sv;
         *(ddouble *)(_d + sdi) = negq(sv);
         *(ddouble *)(_d + sdi + sdj) = cv;
+    }
+    MARK_UNUSED(data);
+}
+
+static void u_svvals_tri2x2(char **args, const npy_intp *dims,
+                            const npy_intp* steps, void *data)
+{
+    // signature (n;2,2)->(n;2)
+    const npy_intp nn = dims[0];
+    const npy_intp san = steps[0], sbn = steps[1], sai = steps[2],
+                   saj = steps[3], sbi = steps[4];
+    char *_a = args[0], *_b = args[1];
+
+    for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn) {
+        ddouble f = *(ddouble *) _a;
+        ddouble z = *(ddouble *) (_a + sai);
+        ddouble g = *(ddouble *) (_a + saj);
+        ddouble h = *(ddouble *) (_a + sai + saj);
+
+        ddouble smin, smax;
+        if (!iszeroq(z)) {
+            fprintf(stderr, "svd_tri2x2: matrix is not upper triagonal\n");
+            smin = smax = nanq();
+        } else {
+            svd_tri2x2(f, g, h, &smin, &smax, NULL, NULL, NULL, NULL);
+        }
+
+        *(ddouble *)_b = smax;
+        *(ddouble *)(_b + sbi) = smin;
     }
     MARK_UNUSED(data);
 }
@@ -1337,8 +1372,27 @@ static void svd2x2_ufunc(PyObject *module_dict)
 
     ufunc = PyUFunc_FromFuncAndDataAndSignature(
                 loops, data, dtypes, 1, 1, 3, PyUFunc_None, "svd_tri2x2",
-                "Givens rotation", 0, "(2,2)->(2,2),(2),(2,2)");
+                "SVD of 2x2 problem", 0, "(2,2)->(2,2),(2),(2,2)");
     PyDict_SetItemString(module_dict, "svd_tri2x2", ufunc);
+    Py_DECREF(ufunc);
+}
+
+static void svvals2x2_ufunc(PyObject *module_dict)
+{
+    PyObject *ufunc;
+    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
+    char *dtypes = PyMem_New(char, 2);
+    void **data = PyMem_New(void *, 1);
+
+    loops[0] = u_svvals_tri2x2;
+    data[0] = NULL;
+    dtypes[0] = DDOUBLE_WRAP;
+    dtypes[1] = DDOUBLE_WRAP;
+
+    ufunc = PyUFunc_FromFuncAndDataAndSignature(
+                loops, data, dtypes, 1, 1, 1, PyUFunc_None, "svvals_tri2x2",
+                "SV of 2x2 problem", 0, "(2,2)->(2)");
+    PyDict_SetItemString(module_dict, "svvals_tri2x2", ufunc);
     Py_DECREF(ufunc);
 }
 
@@ -1511,6 +1565,7 @@ PyMODINIT_FUNC PyInit__raw(void)
     matmul_ufunc(module_dict);
     givens_ufunc(module_dict);
     svd2x2_ufunc(module_dict);
+    svvals2x2_ufunc(module_dict);
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
