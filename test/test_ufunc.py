@@ -42,3 +42,10 @@ def test_givens():
     r, G = quadruple.array.givens(a)
     diff = r - G @ a
     np.testing.assert_allclose(diff.hi, 0, atol=1e-31)
+
+
+def test_svd_tri2x2():
+    A = quadruple.ddarray([[2.0, -3.0], [0.0, 4.0]])
+    U, s, VH = quadruple.array.svd_tri2x2(A)
+    diff = A - (U * s) @ VH
+    np.testing.assert_allclose(diff.hi, 0, atol=2e-31)

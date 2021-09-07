@@ -1,7 +1,7 @@
 #include "Python.h"
 #include "math.h"
 #include "stdbool.h"
-//#include "stdio.h"
+#include "stdio.h"
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarraytypes.h"
@@ -1071,7 +1071,7 @@ static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
                    sbk = steps[6], sci = steps[7], sck = steps[8];
     char *_a = args[0], *_b = args[1], *_c = args[2];
 
-    for (npy_intp n = 0; n != nn; ++n) {
+    for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn, _c += scn) {
         for (npy_intp i = 0; i != ii; ++i) {
             for (npy_intp k = 0; k != kk; ++k) {
                 ddouble val = Q_ZERO;
@@ -1087,9 +1087,6 @@ static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
                 *c_ik = val;
             }
         }
-        _a += san;
-        _b += sbn;
-        _c += scn;
     }
     MARK_UNUSED(data);
 }
@@ -1129,7 +1126,7 @@ static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
                    scj = steps[6];
     char *_a = args[0], *_b = args[1], *_c = args[2];
 
-    for (npy_intp n = 0; n != nn; ++n) {
+    for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn, _c += scn) {
         ddouble f = *(ddouble *) _a;
         ddouble g = *(ddouble *) (_a + sai);
 
@@ -1142,9 +1139,6 @@ static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
         *(ddouble *)(_c + scj) = s;
         *(ddouble *)(_c + sci) = negq(s);
         *(ddouble *)(_c + sci + scj) = c;
-        _a += san;
-        _b += sbn;
-        _c += scn;
     }
     MARK_UNUSED(data);
 }
@@ -1205,6 +1199,48 @@ static void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin,
     *sv = divqq(tmp, tt);
     *cu = divqq(addqq(*cv, mulqq(*sv, q)), a);
     *su = divqq(mulqq(divqq(h, f), *sv), a);
+}
+
+static void u_svd_tri2x2(char **args, const npy_intp *dims,
+                         const npy_intp* steps, void *data)
+{
+    // signature (n;2,2)->(n;2,2),(n;2),(n;2,2)
+    const npy_intp nn = dims[0];
+    const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
+                   sdn = steps[3], sai = steps[4], saj = steps[5],
+                   sbi = steps[6], sbj = steps[7], sci = steps[8],
+                   sdi = steps[9], sdj = steps[10];
+    char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3];
+
+    for (npy_intp n = 0; n != nn;
+                ++n, _a += san, _b += sbn, _c += scn, _d += sdn) {
+        ddouble f = *(ddouble *) _a;
+        ddouble z = *(ddouble *) (_a + sai);
+        ddouble g = *(ddouble *) (_a + saj);
+        ddouble h = *(ddouble *) (_a + sai + saj);
+
+        ddouble smin, smax, cu, su, cv, sv;
+        if (!iszeroq(z)) {
+            fprintf(stderr, "svd_tri2x2: matrix is not upper triagonal\n");
+            smin = smax = cu = su = cv = sv = nanq();
+        } else {
+            svd_tri2x2(f, g, h, &smin, &smax, &cv, &sv, &cu, &su);
+        }
+
+        *(ddouble *)_b = cu;
+        *(ddouble *)(_b + sbj) = negq(su);
+        *(ddouble *)(_b + sbi) = su;
+        *(ddouble *)(_b + sbi + sbj) = cu;
+
+        *(ddouble *)_c = smax;
+        *(ddouble *)(_c + sci) = smin;
+
+        *(ddouble *)_d = cv;
+        *(ddouble *)(_d + sdj) = sv;
+        *(ddouble *)(_d + sdi) = negq(sv);
+        *(ddouble *)(_d + sdi + sdj) = cv;
+    }
+    MARK_UNUSED(data);
 }
 
 /* ----------------------- Python stuff -------------------------- */
@@ -1282,6 +1318,27 @@ static void givens_ufunc(PyObject *module_dict)
                 loops, data, dtypes, 1, 1, 2, PyUFunc_None, "givens",
                 "Givens rotation", 0, "(2)->(2),(2,2)");
     PyDict_SetItemString(module_dict, "givens", ufunc);
+    Py_DECREF(ufunc);
+}
+
+static void svd2x2_ufunc(PyObject *module_dict)
+{
+    PyObject *ufunc;
+    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
+    char *dtypes = PyMem_New(char, 4);
+    void **data = PyMem_New(void *, 1);
+
+    loops[0] = u_svd_tri2x2;
+    data[0] = NULL;
+    dtypes[0] = DDOUBLE_WRAP;
+    dtypes[1] = DDOUBLE_WRAP;
+    dtypes[2] = DDOUBLE_WRAP;
+    dtypes[3] = DDOUBLE_WRAP;
+
+    ufunc = PyUFunc_FromFuncAndDataAndSignature(
+                loops, data, dtypes, 1, 1, 3, PyUFunc_None, "svd_tri2x2",
+                "Givens rotation", 0, "(2,2)->(2,2),(2),(2,2)");
+    PyDict_SetItemString(module_dict, "svd_tri2x2", ufunc);
     Py_DECREF(ufunc);
 }
 
@@ -1453,6 +1510,7 @@ PyMODINIT_FUNC PyInit__raw(void)
 
     matmul_ufunc(module_dict);
     givens_ufunc(module_dict);
+    svd2x2_ufunc(module_dict);
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
