@@ -18,6 +18,11 @@ _UFUNC_SUPPORTED = (
 _UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
                 for name in _UFUNC_SUPPORTED}
 
+givens = _raw.givens
+
+_UFUNC_IMPORTED = (givens,)
+_UFUNC_TABLE.update({x: x for x in _UFUNC_IMPORTED})
+
 
 class Array(np.ndarray):
     def __new__(cls, shape, buffer=None, offset=0, strides=None, order=None):
@@ -25,14 +30,18 @@ class Array(np.ndarray):
         return super().__new__(cls, shape, DTYPE, buffer, offset, strides,
                                order)
 
-    def __array_ufunc__(self, ufunc, method, *in_, out=None, **kwds):
+    def __array_ufunc__(self, ufunc, method, *in_, **kwds):
         """Override what happens when executing numpy ufunc."""
         ufunc = _UFUNC_TABLE[ufunc]
         in_ = map(_strip, in_)
-        if out:
-            out = tuple(map(_strip, out))
+        try:
+            out = kwds["out"]
+        except KeyError:
+            pass
+        else:
+            kwds["out"] = tuple(map(_strip_or_none, out))
 
-        res = super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
+        res = super().__array_ufunc__(ufunc, method, *in_, **kwds)
         if res is NotImplemented:
             return res
         if ufunc.nout == 1:
@@ -70,14 +79,18 @@ class Scalar(np.ndarray):
         """Create new ndarray instance (needs to be done using __new__)"""
         return super().__new__(cls, (), DTYPE, obj)
 
-    def __array_ufunc__(self, ufunc, method, *in_, out=None, **kwds):
+    def __array_ufunc__(self, ufunc, method, *in_, **kwds):
         """Override what happens when executing numpy ufunc."""
         ufunc = _UFUNC_TABLE[ufunc]
         in_ = map(_strip, in_)
-        if out:
-            out = tuple(map(_strip, out))
+        try:
+            out = kwds["out"]
+        except KeyError:
+            pass
+        else:
+            kwds["out"] = tuple(map(_strip_or_none, out))
 
-        res = super().__array_ufunc__(ufunc, method, *in_, out=out, **kwds)
+        res = super().__array_ufunc__(ufunc, method, *in_, **kwds)
         if res is NotImplemented:
             return res
         if ufunc.nout == 1:
@@ -135,6 +148,15 @@ def ddarray(arr_like, copy=True, order='K', ndmin=0):
     dd_arr["hi"] = arr
     dd_arr["lo"] = 0
     return dd_arr.view(Array)
+
+
+def _strip_or_none(arr):
+    if arr is None:
+        return None
+    arr = np.asarray(arr)
+    if arr.dtype == DTYPE:
+        return arr.view(_RAW_DTYPE)
+    return arr
 
 
 def _strip(arr):

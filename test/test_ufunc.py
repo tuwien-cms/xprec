@@ -1,5 +1,6 @@
 import numpy as np
 import quadruple
+import quadruple.array
 
 
 def _compare_ufunc(ufunc, *args, ulps=1):
@@ -35,3 +36,9 @@ def test_hypot():
     x = np.hstack([-x[::-1], 0, x])
     _compare_ufunc(np.hypot, x, x)
 
+
+def test_givens():
+    a = quadruple.ddarray([2.0, -3.0])
+    r, G = quadruple.array.givens(a)
+    diff = r - G @ a
+    np.testing.assert_allclose(diff.hi, 0, atol=1e-31)

@@ -1119,6 +1119,36 @@ static void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
     }
 }
 
+static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
+                      void *data)
+{
+    // signature (n;2)->(n;2),(n;2,2)
+    const npy_intp nn = dims[0];
+    const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
+                   sai = steps[3], sbi = steps[4], sci = steps[5],
+                   scj = steps[6];
+    char *_a = args[0], *_b = args[1], *_c = args[2];
+
+    for (npy_intp n = 0; n != nn; ++n) {
+        ddouble f = *(ddouble *) _a;
+        ddouble g = *(ddouble *) (_a + sai);
+
+        ddouble c, s, r;
+        givensq(f, g, &c, &s, &r);
+
+        *(ddouble *)_b = r;
+        *(ddouble *)(_b + sbi) = Q_ZERO;
+        *(ddouble *)_c = c;
+        *(ddouble *)(_c + scj) = s;
+        *(ddouble *)(_c + sci) = negq(s);
+        *(ddouble *)(_c + sci + scj) = c;
+        _a += san;
+        _b += sbn;
+        _c += scn;
+    }
+    MARK_UNUSED(data);
+}
+
 static void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin,
                        ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu,
                        ddouble *su)
@@ -1232,6 +1262,26 @@ static void matmul_ufunc(PyObject *module_dict)
                 loops, data, dtypes, 1, 2, 1, PyUFunc_None, "matmul",
                 "matrix multiplication", 0, "(i?,j),(j,k?)->(i?,k?)");
     PyDict_SetItemString(module_dict, "matmul", ufunc);
+    Py_DECREF(ufunc);
+}
+
+static void givens_ufunc(PyObject *module_dict)
+{
+    PyObject *ufunc;
+    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
+    char *dtypes = PyMem_New(char, 3);
+    void **data = PyMem_New(void *, 1);
+
+    loops[0] = u_givensq;
+    data[0] = NULL;
+    dtypes[0] = DDOUBLE_WRAP;
+    dtypes[1] = DDOUBLE_WRAP;
+    dtypes[2] = DDOUBLE_WRAP;
+
+    ufunc = PyUFunc_FromFuncAndDataAndSignature(
+                loops, data, dtypes, 1, 1, 2, PyUFunc_None, "givens",
+                "Givens rotation", 0, "(2)->(2),(2,2)");
+    PyDict_SetItemString(module_dict, "givens", ufunc);
     Py_DECREF(ufunc);
 }
 
@@ -1402,6 +1452,7 @@ PyMODINIT_FUNC PyInit__raw(void)
     constant(module_dict, Q_LOG10, "LOG10");
 
     matmul_ufunc(module_dict);
+    givens_ufunc(module_dict);
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
