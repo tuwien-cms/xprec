@@ -90,6 +90,22 @@ def givens_rotation(f, g):
     return f * inv_r, g * inv_r, r
 
 
+def apply_givens_left(k, q, c, s, A):
+    """Apply givens rotation `G` to a matrix `A` from the left: `G @ A`"""
+    a_k = A[k,:].copy()
+    a_q = A[q,:].copy()
+    A[k,:] = c * a_k + s * a_q
+    A[q,:] = c * a_q - s * a_k
+
+
+def apply_givens_right(A, k, q, c, s):
+    """Apply givens rotation `G` to a matrix `A` from the left: `A @ G`"""
+    a_k = A[:,k].copy()
+    a_q = A[:,q].copy()
+    A[:,k] = c * a_k - s * a_q
+    A[:,q] = c * a_q + s * a_k
+
+
 def jacobi_symm2x2(a_pp, a_pq, a_qq):
     # 8.4.1
     if np.equal(a_pq, 0):  # already diagonal
