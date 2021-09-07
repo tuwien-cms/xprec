@@ -386,6 +386,24 @@ static const ddouble Q_MIN = {2.0041683600089728e-292, 0.0};
 static const ddouble Q_MAX =
     {1.79769313486231570815e+308, 9.97920154767359795037e+291};
 
+static bool isfiniteq(ddouble x)
+{
+    return isfinite(x.hi);
+}
+ULOOP_UNARY(u_isfiniteq, isfiniteq, bool, ddouble)
+
+static bool isinfq(ddouble x)
+{
+    return isinf(x.hi);
+}
+ULOOP_UNARY(u_isinfq, isinfq, bool, ddouble)
+
+static bool isnanq(ddouble x)
+{
+    return isnan(x.hi);
+}
+ULOOP_UNARY(u_isnanq, isnanq, bool, ddouble)
+
 /*********************** Comparisons q/q ***************************/
 
 static bool equalqq(ddouble a, ddouble b)
@@ -769,20 +787,17 @@ static ddouble cos_taylor(ddouble a)
 
 static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
 {
-    if (iszeroq(a))
-    {
+    if (iszeroq(a)) {
         *sin_a = Q_ZERO;
         *cos_a = Q_ONE;
-        return;
+    } else {
+        *sin_a = sin_taylor(a);
+        *cos_a = sqrtq(subdq(1.0, sqrq(*sin_a)));
     }
-
-    *sin_a = sin_taylor(a);
-    *cos_a = sqrtq(subdq(1.0, sqrq(*sin_a)));
 }
 
 static ddouble sinq(ddouble a)
 {
-
     /* Strategy.  To compute sin(x), we choose integers a, b so that
      *
      *   x = s + a * (pi/2) + b * (pi/16)
@@ -1230,6 +1245,12 @@ PyMODINIT_FUNC PyInit__raw(void)
                 "sqrt", "element-wise square root");
     unary_ufunc(module_dict, u_signbitq, NPY_BOOL,
                 "signbit", "sign bit of number");
+    unary_ufunc(module_dict, u_isfiniteq, NPY_BOOL,
+                "isfinite", "whether number is finite");
+    unary_ufunc(module_dict, u_isinfq, NPY_BOOL,
+                "isinf", "whether number is infinity");
+    unary_ufunc(module_dict, u_isnanq, NPY_BOOL,
+                "isnan", "test for not-a-number");
 
     unary_ufunc(module_dict, u_roundq, DDOUBLE_WRAP,
                 "rint", "round to nearest integer");
