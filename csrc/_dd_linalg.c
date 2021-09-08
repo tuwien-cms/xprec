@@ -85,29 +85,6 @@ static void u_normq(char **args, const npy_intp *dims,
 //     MARK_UNUSED(data);
 // }
 
-static void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
-{
-    /* ACM Trans. Math. Softw. 28(2), 206, Alg 1 */
-    if (iszeroq(g)) {
-        *c = Q_ONE;
-        *s = Q_ZERO;
-        *r = f;
-    } else if (iszeroq(f)) {
-        *c = Q_ZERO;
-        *s = (ddouble) {signbitq(g), 0.0};
-        *r = absq(g);
-    } else {
-        *r = copysignqq(hypotqq(f, g), f);
-
-        /* This may come at a slight loss of precision, however, we should
-         * not really have to care ...
-         */
-        ddouble inv_r = reciprocalq(*r);
-        *c = mulqq(f, inv_r);
-        *s = mulqq(g, inv_r);
-    }
-}
-
 static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
                       void *data)
 {
@@ -133,70 +110,6 @@ static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
         *(ddouble *)(_c + sci + scj) = c;
     }
     MARK_UNUSED(data);
-}
-
-static void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin,
-                       ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu,
-                       ddouble *su)
-{
-    ddouble fa = absq(f);
-    ddouble ga = absq(g);
-    ddouble ha = absq(h);
-    bool compute_uv = cv != NULL;
-
-    if (lessqq(fa, ha)) {
-        // switch h <-> f, cu <-> sv, cv <-> su
-        svd_tri2x2(h, g, f, smin, smax, su, cu, sv, cv);
-        return;
-    }
-    if (iszeroq(ga)) {
-        // already diagonal
-        *smin = ha;
-        *smax = fa;
-        if (compute_uv) {
-            *cu = Q_ONE;
-            *su = Q_ZERO;
-            *cv = Q_ONE;
-            *sv = Q_ZERO;
-        }
-        return;
-    }
-    if (fa.hi < Q_EPS.hi * ga.hi) {
-        // ga is very large
-        *smax = ga;
-        if (ha.hi > 1.0)
-            *smin = divqq(fa, divqq(ga, ha));
-        else
-            *smin = mulqq(divqq(fa, ga), ha);
-        if (compute_uv) {
-            *cu = Q_ONE;
-            *su = divqq(h, g);
-            *cv = Q_ONE;
-            *sv = divqq(f, g);
-        }
-        return;
-    }
-    // normal case
-    ddouble fmh = subqq(fa, ha);
-    ddouble d = divqq(fmh, fa);
-    ddouble q = divqq(g, f);
-    ddouble s = subdq(2.0, d);
-    ddouble spq = hypotqq(q, s);
-    ddouble dpq = hypotqq(d, q);
-    ddouble a = mul_pwr2(addqq(spq, dpq), 0.5);
-    *smin = absq(divqq(ha, a));
-    *smax = absq(mulqq(fa, a));
-
-    if (compute_uv) {
-        ddouble tmp = addqq(divqq(q, addqq(spq, s)),
-                            divqq(q, addqq(dpq, d)));
-        tmp = mulqq(tmp, adddq(1.0, a));
-        ddouble tt = hypotqd(tmp, 2.0);
-        *cv = divdq(2.0, tt);
-        *sv = divqq(tmp, tt);
-        *cu = divqq(addqq(*cv, mulqq(*sv, q)), a);
-        *su = divqq(mulqq(divqq(h, f), *sv), a);
-    }
 }
 
 static void u_svd_tri2x2(char **args, const npy_intp *dims,
