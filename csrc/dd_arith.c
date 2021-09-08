@@ -4,47 +4,32 @@
 static const double LARGE = 3.273390607896142e+150;
 static const double INV_LARGE = 3.054936363499605e-151;
 
+static ddouble hypotqq_compute(ddouble x, ddouble y)
+{
+    return sqrtq(addqq(sqrq(x), sqrq(y)));
+}
 
 ddouble _hypotqq_ordered(ddouble x, ddouble y)
 {
     // assume that x >= y >= 0
     // special cases
-    if (!isfiniteq(x) || iszeroq(x))
+    if (iszeroq(x))
         return x;
 
     // if very large or very small, renormalize
     if (x.hi > LARGE) {
         x = mul_pwr2(x, INV_LARGE);
         y = mul_pwr2(y, INV_LARGE);
-        return mul_pwr2(_hypotqq_ordered(x, y), LARGE);
+        return mul_pwr2(hypotqq_compute(x, y), LARGE);
     }
     if (x.hi < INV_LARGE) {
         x = mul_pwr2(x, LARGE);
         y = mul_pwr2(y, LARGE);
-        return mul_pwr2(_hypotqq_ordered(x, y), INV_LARGE);
+        return mul_pwr2(hypotqq_compute(x, y), INV_LARGE);
     }
-
-    // if vastly different in magnitude, return x
-    if ((x.hi - y.hi) > ldexp(1, 32))
-        return x;
 
     // normal case
-    ddouble arg;
-    if (x.hi > 2 * y.hi) {
-        // use x.hi**2 + (y**2 + (x.lo * (x + x.hi)))
-        arg = mulqd(addqd(x, x.hi), x.lo);
-        arg = addqq(arg, sqrq(y));
-        arg = addqd(arg, x.hi * x.hi);
-    } else {
-        // with t = 2 * x, use:
-        // t.hi * y.hi + ((x - y)**2 + (t.hi * y.lo + t.lo * y))
-        ddouble t = mul_pwr2(x, 2);
-        arg = mulqd(y, t.lo);
-        arg = addqd(arg, t.hi * y.lo);
-        arg = addqq(arg, sqrq(subqq(x, y)));
-        arg = addqd(arg, t.hi * y.hi);
-    }
-    return sqrtq(arg);
+    return hypotqq_compute(x, y);
 }
 
 ddouble sqrtq(ddouble a)
