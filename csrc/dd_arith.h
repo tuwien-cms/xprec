@@ -1,6 +1,7 @@
 #pragma once
-#include "math.h"
-#include "stdbool.h"
+#include <math.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
 /**
  * Type for double-double calculations
@@ -465,26 +466,7 @@ static inline bool isnegativeq(ddouble x)
 
 /************************** Advanced math functions ********************/
 
-static inline ddouble sqrtq(ddouble a)
-{
-    /* Given approximation x to 1/sqrt(a), perform a single Newton step:
-     *
-     *    sqrt(a) = a*x + [a - (a*x)^2] * x / 2   (approx)
-     *
-     * The approximation is accurate to twice the accuracy of x.
-     * Also, the multiplication (a*x) and [-]*x can be done with
-     * only half the precision.
-     * From: Karp, High Precision Division and Square Root, 1993
-     */
-    if (a.hi <= 0)
-        return (ddouble){sqrt(a.hi), 0};
-
-    double x = 1.0 / sqrt(a.hi);
-    double ax = a.hi * x;
-    ddouble ax_sqr = sqrq((ddouble){ax, 0});
-    double diff = subqq(a, ax_sqr).hi * x * 0.5;
-    return two_sum(ax, diff);
-}
+ddouble sqrtq(ddouble a);
 
 static inline ddouble ldexpq(ddouble a, int exp)
 {
@@ -493,49 +475,7 @@ static inline ddouble ldexpq(ddouble a, int exp)
 
 /************************* Binary functions ************************/
 
-static inline ddouble _hypotqq_ordered(ddouble x, ddouble y)
-{
-    // assume that x >= y >= 0
-    // special cases
-    if (!isfiniteq(x) || iszeroq(x))
-        return x;
-
-    // if very large or very small, renormalize
-    const double LARGE = ldexp(1.0, 150);
-    const double INV_LARGE = 1/LARGE;
-    if (x.hi > LARGE) {
-        x = mul_pwr2(x, INV_LARGE);
-        y = mul_pwr2(y, INV_LARGE);
-        return mul_pwr2(_hypotqq_ordered(x, y), LARGE);
-    }
-    if (x.hi < INV_LARGE) {
-        x = mul_pwr2(x, LARGE);
-        y = mul_pwr2(y, LARGE);
-        return mul_pwr2(_hypotqq_ordered(x, y), INV_LARGE);
-    }
-
-    // if vastly different in magnitude, return x
-    if ((x.hi - y.hi) > ldexp(1, 32))
-        return x;
-
-    // normal case
-    ddouble arg;
-    if (x.hi > 2 * y.hi) {
-        // use x.hi**2 + (y**2 + (x.lo * (x + x.hi)))
-        arg = mulqd(addqd(x, x.hi), x.lo);
-        arg = addqq(arg, sqrq(y));
-        arg = addqd(arg, x.hi * x.hi);
-    } else {
-        // with t = 2 * x, use:
-        // t.hi * y.hi + ((x - y)**2 + (t.hi * y.lo + t.lo * y))
-        ddouble t = mul_pwr2(x, 2);
-        arg = mulqd(y, t.lo);
-        arg = addqd(arg, t.hi * y.lo);
-        arg = addqq(arg, sqrq(subqq(x, y)));
-        arg = addqd(arg, t.hi * y.hi);
-    }
-    return sqrtq(arg);
-}
+ddouble _hypotqq_ordered(ddouble x, ddouble y);
 
 static inline ddouble hypotqq(ddouble x, ddouble y)
 {
@@ -556,3 +496,12 @@ static inline ddouble hypotqd(ddouble x, double y)
 {
     return hypotqq(x, (ddouble){y, 0});
 }
+
+ddouble expq(ddouble a);
+ddouble expm1q(ddouble a);
+ddouble logq(ddouble a);
+ddouble sinq(ddouble a);
+ddouble cosq(ddouble a);
+ddouble sinhq(ddouble a);
+ddouble coshq(ddouble a);
+ddouble tanhq(ddouble a);

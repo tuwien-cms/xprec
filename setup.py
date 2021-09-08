@@ -153,8 +153,10 @@ setup(
         },
 
     ext_modules=[
-        Extension("quadruple._dd_ufunc", ["csrc/_dd_ufunc.c"]),
-        Extension("quadruple._dd_linalg", ["csrc/_dd_linalg.c"]),
+        Extension("quadruple._dd_ufunc",
+                  ["csrc/_dd_ufunc.c", "csrc/dd_arith.c"]),
+        Extension("quadruple._dd_linalg",
+                  ["csrc/_dd_linalg.c", "csrc/dd_arith.c"]),
         ],
     setup_requires=[
         'numpy>=1.16',
