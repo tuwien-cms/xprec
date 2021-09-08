@@ -153,7 +153,7 @@ setup(
         },
 
     ext_modules=[
-        Extension("quadruple._raw", ["csrc/_raw.c"]),
+        Extension("quadruple._dd_ufunc", ["csrc/_dd_ufunc.c"]),
         Extension("quadruple._dd_linalg", ["csrc/_dd_linalg.c"]),
         ],
     setup_requires=[

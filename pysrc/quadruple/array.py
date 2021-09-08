@@ -1,11 +1,11 @@
 import numpy as np
 
-from . import _raw
+from . import _dd_ufunc
 from . import _dd_linalg
 
 DTYPE = np.dtype([("hi", float), ("lo", float)])
 
-_RAW_DTYPE = _raw.dtype
+_RAW_DTYPE = _dd_ufunc.dtype
 
 _UFUNC_SUPPORTED = (
     "add", "subtract", "multiply", "true_divide",
@@ -15,7 +15,7 @@ _UFUNC_SUPPORTED = (
     "square", "sqrt", "reciprocal", "exp", "expm1", "log",
     "sin", "cos", "sinh", "cosh", "tanh", "hypot", "fmin", "fmax",
     )
-_UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
+_UFUNC_TABLE = {getattr(np, name): getattr(_dd_ufunc, name)
                 for name in _UFUNC_SUPPORTED}
 _UFUNC_TABLE[np.matmul] = _dd_linalg.matmul
 

@@ -9,6 +9,10 @@
 #include "numpy/ufuncobject.h"
 #include "numpy/npy_3kcompat.h"
 
+/**
+ * Allows parameter to be marked unused
+ */
+#define MARK_UNUSED(x)  do { (void)(x); } while(false)
 
 /**
  * Create ufunc loop routine for a unary operation
@@ -631,7 +635,7 @@ static void constant(PyObject *module_dict, ddouble value, const char *name)
     Py_DECREF(array);
 }
 
-PyMODINIT_FUNC PyInit__raw(void)
+PyMODINIT_FUNC PyInit__dd_ufunc(void)
 {
     // Defitions
     static PyMethodDef no_methods[] = {
@@ -639,7 +643,7 @@ PyMODINIT_FUNC PyInit__raw(void)
     };
     static struct PyModuleDef module_def = {
         PyModuleDef_HEAD_INIT,
-        "_raw",
+        "_dd_ufunc",
         NULL,
         -1,
         no_methods,
