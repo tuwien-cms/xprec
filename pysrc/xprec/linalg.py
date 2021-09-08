@@ -3,6 +3,7 @@ import numpy as np
 from . import array
 from . import _dd_linalg
 
+norm = _dd_linalg.norm
 givens = _dd_linalg.givens
 svd_tri2x2 = _dd_linalg.svd_tri2x2
 svvals_tri2x2 = _dd_linalg.svvals_tri2x2

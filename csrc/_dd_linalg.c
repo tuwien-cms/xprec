@@ -14,10 +14,16 @@
  */
 #define MARK_UNUSED(x)  do { (void)(x); } while(false)
 
+
+// 2**500 and 2**(-500);
+static const double LARGE = 3.273390607896142e+150;
+static const double INV_LARGE = 3.054936363499605e-151;
+
+
 /************************ Linear algebra ***************************/
 
-static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
-                    void *data)
+static void u_matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
+                      void *data)
 {
     // signature (n;i,j),(n;j,k)->(n;i,k)
     const npy_intp nn = dims[0], ii = dims[1], jj = dims[2], kk = dims[3];
@@ -47,6 +53,65 @@ static void matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
 }
 
 /*************************** More complicated ***********************/
+
+static ddouble normq_scaled(const ddouble *x, long nn, long sxn,
+                            double scaling)
+{
+    ddouble sum = Q_ZERO;
+    for (long n = 0; n < nn; ++n, x += sxn) {
+        ddouble curr = mul_pwr2(*x, scaling);
+        sum = addqq(sum, sqrq(curr));
+    };
+    return mul_pwr2(sqrtq(sum), 1.0/scaling);
+}
+
+static ddouble normq(const ddouble *x, long nn, long sxn)
+{
+    ddouble sum = normq_scaled(x, nn, sxn, 1.0);
+
+    // fall back to other routines in case of over/underflow
+    if (sum.hi > LARGE)
+        return normq_scaled(x, nn, sxn, INV_LARGE);
+    else if (sum.hi < INV_LARGE)
+        return normq_scaled(x, nn, sxn, LARGE);
+    else
+        return sum;
+}
+
+static void u_normq(char **args, const npy_intp *dims,
+                    const npy_intp* steps, void *data)
+{
+   // signature (n;i)->(n;)
+    const npy_intp nn = dims[0], ii = dims[1];
+    const npy_intp san = steps[0], sbn = steps[1], _sai = steps[2];
+    char *_a = args[0], *_b = args[1];
+
+    const npy_intp sai = _sai / sizeof(ddouble);
+    for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn) {
+        const ddouble *a = (const ddouble *)_a;
+        ddouble *b = (ddouble *)_b;
+
+        *b = normq(a, ii, sai);
+    }
+    MARK_UNUSED(data);
+}
+
+// static void u_householderq(char **args, const npy_intp *dims,
+//                            const npy_intp* steps, void *data)
+// {
+//     // signature (n;i)->(n;1),(n;i)
+//     const npy_intp nn = dims[0], ii = dims[1];
+//     const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
+//                    sai = steps[3], sci = steps[4];
+//     char *_a = args[0], *_b = args[1], *_c = args[2];
+
+//     for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn, _c += scn) {
+//         // compute norm of vector
+//         const ddouble *a = (const ddouble *)_a;
+//         ddouble norm = normq((const ddouble *)_a, ii, sai / sizeof(double));
+//     }
+//     MARK_UNUSED(data);
+// }
 
 static void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
 {
@@ -290,7 +355,9 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
     import_array();
     import_umath();
 
-    gufunc(module_dict, matmulq, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
+    gufunc(module_dict, u_normq, 1, 1, "(i)->()",
+           "norm", "Vector 2-norm");
+    gufunc(module_dict, u_matmulq, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
            "matmul", "Matrix multiplication");
     gufunc(module_dict, u_givensq, 1, 2, "(2)->(2),(2,2)",
            "givens", "Generate Givens rotation");

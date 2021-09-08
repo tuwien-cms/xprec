@@ -1,5 +1,9 @@
 #include "dd_arith.h"
 
+// 2**500 and 2**(-500);
+static const double LARGE = 3.273390607896142e+150;
+static const double INV_LARGE = 3.054936363499605e-151;
+
 
 ddouble _hypotqq_ordered(ddouble x, ddouble y)
 {
@@ -9,8 +13,6 @@ ddouble _hypotqq_ordered(ddouble x, ddouble y)
         return x;
 
     // if very large or very small, renormalize
-    const double LARGE = ldexp(1.0, 150);
-    const double INV_LARGE = 1/LARGE;
     if (x.hi > LARGE) {
         x = mul_pwr2(x, INV_LARGE);
         y = mul_pwr2(y, INV_LARGE);
