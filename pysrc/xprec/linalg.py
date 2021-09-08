@@ -7,29 +7,12 @@ norm = _dd_linalg.norm
 givens = _dd_linalg.givens
 svd_tri2x2 = _dd_linalg.svd_tri2x2
 svvals_tri2x2 = _dd_linalg.svvals_tri2x2
+householder = _dd_linalg.householder
 
 
 def householder_vector(x):
-    x = np.asanyarray(x)
-    xhead = x[:1]
-    xtail = x[1:]
-    v = x.copy()
-    v[0] = 1
-
-    sigma = xtail @ xtail
-    if not sigma:
-        beta = 0
-    else:
-        mu = np.sqrt(np.square(xhead) + sigma)
-        if xhead <= 0:
-            vhead = xhead - mu
-        else:
-            vhead = -sigma / (xhead + mu)
-
-        vhead2 = np.square(vhead)
-        beta = 2 * vhead2 / (sigma + vhead2)
-        v[1:] /= vhead
-
+    x = array.asddarray(x)
+    beta, v = householder(x)
     return beta, v
 
 

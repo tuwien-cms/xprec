@@ -28,6 +28,28 @@ ddouble normq(const ddouble *x, long nn, long sxn)
         return sum;
 }
 
+ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv)
+{
+    if (nn == 0)
+        return Q_ZERO;
+
+    ddouble norm_x = normq(x + sx, nn - 1, sx);
+    if (iszeroq(norm_x))
+        return Q_ZERO;
+
+    ddouble alpha = *x;
+    ddouble beta = copysignqq(hypotqq(alpha, norm_x), alpha);
+
+    ddouble diff = subqq(beta, alpha);
+    ddouble tau = divqq(diff, beta);
+    ddouble scale = reciprocalq(negq(diff));
+
+    v[0] = Q_ONE;
+    for (long n = 1; n != nn; ++n)
+        v[n * sv] = mulqq(scale, x[n * sx]);
+    return tau;
+}
+
 void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
 {
     /* ACM Trans. Math. Softw. 28(2), 206, Alg 1 */

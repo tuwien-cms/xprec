@@ -58,32 +58,28 @@ static void u_normq(char **args, const npy_intp *dims,
     const npy_intp san = steps[0], sbn = steps[1], _sai = steps[2];
     char *_a = args[0], *_b = args[1];
 
-    const npy_intp sai = _sai / sizeof(ddouble);
     for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn) {
-        const ddouble *a = (const ddouble *)_a;
-        ddouble *b = (ddouble *)_b;
-
-        *b = normq(a, ii, sai);
+        *(ddouble *)_b = normq((const ddouble *)_a, ii, _sai / sizeof(ddouble));
     }
     MARK_UNUSED(data);
 }
 
-// static void u_householderq(char **args, const npy_intp *dims,
-//                            const npy_intp* steps, void *data)
-// {
-//     // signature (n;i)->(n;1),(n;i)
-//     const npy_intp nn = dims[0], ii = dims[1];
-//     const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
-//                    sai = steps[3], sci = steps[4];
-//     char *_a = args[0], *_b = args[1], *_c = args[2];
+static void u_householderq(char **args, const npy_intp *dims,
+                           const npy_intp* steps, void *data)
+{
+    // signature (n;i)->(n;),(n;i)
+    const npy_intp nn = dims[0], ii = dims[1];
+    const npy_intp _san = steps[0], _sbn = steps[1], _scn = steps[2],
+                   _sai = steps[3], _sci = steps[4];
+    char *_a = args[0], *_b = args[1], *_c = args[2];
 
-//     for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn, _c += scn) {
-//         // compute norm of vector
-//         const ddouble *a = (const ddouble *)_a;
-//         ddouble norm = normq((const ddouble *)_a, ii, sai / sizeof(double));
-//     }
-//     MARK_UNUSED(data);
-// }
+    for (npy_intp n = 0; n != nn; ++n, _a += _san, _b += _sbn, _c += _scn) {
+        *(ddouble *)_b = householderq(
+                (const ddouble *)_a, (ddouble *)_c, ii,
+                _sai / sizeof(ddouble), _sci / sizeof(ddouble));
+    }
+    MARK_UNUSED(data);
+}
 
 static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
                       void *data)
@@ -246,6 +242,8 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "matmul", "Matrix multiplication");
     gufunc(module_dict, u_givensq, 1, 2, "(2)->(2),(2,2)",
            "givens", "Generate Givens rotation");
+    gufunc(module_dict, u_householderq, 1, 2, "(i)->(),(i)",
+           "householder", "Generate Householder reflectors");
     gufunc(module_dict, u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
            "svd_tri2x2", "SVD of upper triangular 2x2 problem");
     gufunc(module_dict, u_svvals_tri2x2, 1, 1, "(2,2)->(2)",
