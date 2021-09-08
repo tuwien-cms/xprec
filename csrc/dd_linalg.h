@@ -9,3 +9,6 @@ ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv);
 
 void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
                 ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su);
+
+void mul_givensq(long i1, long i2, ddouble c, ddouble s, long jj,
+                 ddouble *A, long sai, long saj);

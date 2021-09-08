@@ -73,6 +73,19 @@ void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
     }
 }
 
+void mul_givensq(long i1, long i2, ddouble c, ddouble s, long jj,
+                 ddouble *A, long sai, long saj)
+{
+    for (long j = 0; j < jj; ++j) {
+        ddouble *a1 = A + i1 * sai + j * saj;
+        ddouble *a2 = A + i2 * sai + j * saj;
+        ddouble n1 = addqq(mulqq(c, *a1), mulqq(s, *a2));
+        ddouble n2 = subqq(mulqq(c, *a2), mulqq(s, *a1));
+        *a1 = n1;
+        *a2 = n2;
+    }
+}
+
 void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
                 ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
 {

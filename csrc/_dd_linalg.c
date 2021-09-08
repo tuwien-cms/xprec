@@ -50,8 +50,8 @@ static void u_matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
 
 /*************************** More complicated ***********************/
 
-static void u_normq(char **args, const npy_intp *dims,
-                    const npy_intp* steps, void *data)
+static void u_normq(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
    // signature (n;i)->(n;)
     const npy_intp nn = dims[0], ii = dims[1];
@@ -64,8 +64,8 @@ static void u_normq(char **args, const npy_intp *dims,
     MARK_UNUSED(data);
 }
 
-static void u_householderq(char **args, const npy_intp *dims,
-                           const npy_intp* steps, void *data)
+static void u_householderq(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;i)->(n;),(n;i)
     const npy_intp nn = dims[0], ii = dims[1];
@@ -81,8 +81,8 @@ static void u_householderq(char **args, const npy_intp *dims,
     MARK_UNUSED(data);
 }
 
-static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
-                      void *data)
+static void u_givensq(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2)->(n;2),(n;2,2)
     const npy_intp nn = dims[0];
@@ -108,8 +108,37 @@ static void u_givensq(char **args, const npy_intp *dims, const npy_intp* steps,
     MARK_UNUSED(data);
 }
 
-static void u_svd_tri2x2(char **args, const npy_intp *dims,
-                         const npy_intp* steps, void *data)
+static void u_mul_givensq(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
+{
+    // signature (n;2),(n;2,2),(n,i,j)->(n;i,j)
+    const npy_intp nn = dims[0], ii = dims[1], jj = dims[2];
+    const npy_intp _san = steps[0], _sbn = steps[1], _scn = steps[2],
+                   _sdn = steps[3], _saq = steps[4], _sbq = steps[5],
+                   _sbr = steps[6], _sci = steps[7], _scj = steps[8],
+                   _sdi = steps[9], _sdj = steps[10];
+    char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3];
+
+    if (_c != _d || _sci != _sdi || _scj != _sdj) {
+        fprintf(stderr, "Function must be applied in-place (set out arg)\n");
+        return;
+    }
+    for (npy_intp n = 0; n != nn;
+                 ++n, _a += _san, _b += _sbn, _c += _scn, _d += _sdn) {
+        long i1 = *(long *)(_a);
+        long i2 = *(long *)(_a + _saq);
+        ddouble g_cos = *(ddouble *)(_b);
+        ddouble g_sin = *(ddouble *)(_b + _sbr);
+
+        mul_givensq(i1, i2, g_cos, g_sin, jj,
+                    (ddouble *)_d, _sdi/sizeof(ddouble), _sdj/sizeof(ddouble));
+    }
+    MARK_UNUSED(data);
+    MARK_UNUSED(ii);
+}
+
+static void u_svd_tri2x2(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2,2)->(n;2,2),(n;2),(n;2,2)
     const npy_intp nn = dims[0];
@@ -150,8 +179,8 @@ static void u_svd_tri2x2(char **args, const npy_intp *dims,
     MARK_UNUSED(data);
 }
 
-static void u_svvals_tri2x2(char **args, const npy_intp *dims,
-                            const npy_intp* steps, void *data)
+static void u_svvals_tri2x2(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2,2)->(n;2)
     const npy_intp nn = dims[0];
@@ -204,6 +233,28 @@ static void gufunc(PyObject *module_dict, PyUFuncGenericFunction uloop,
     Py_DECREF(ufunc);
 }
 
+static void gufunc_var(PyObject *module_dict, PyUFuncGenericFunction uloop,
+                   int nin, int nout, const char *signature, const char *name,
+                   const char *docstring)
+{
+    PyObject *ufunc;
+    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
+    char *dtypes = PyMem_New(char, nin + nout);
+    void **data = PyMem_New(void *, 1);
+
+    loops[0] = uloop;
+    data[0] = NULL;
+    dtypes[0] = NPY_LONG;
+    for (int i = 1; i != nin + nout; ++i)
+        dtypes[i] = DDOUBLE_WRAP;
+
+    ufunc = PyUFunc_FromFuncAndDataAndSignature(
+                loops, data, dtypes, 1, nin, nout, PyUFunc_None, name,
+                docstring, 0, signature);
+    PyDict_SetItemString(module_dict, name, ufunc);
+    Py_DECREF(ufunc);
+}
+
 PyMODINIT_FUNC PyInit__dd_linalg(void)
 {
     // Defitions
@@ -242,6 +293,8 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "matmul", "Matrix multiplication");
     gufunc(module_dict, u_givensq, 1, 2, "(2)->(2),(2,2)",
            "givens", "Generate Givens rotation");
+    gufunc_var(module_dict, u_mul_givensq, 3, 1, "(2),(2,2),(i,j?)->(i,j?)",
+           "mul_givens", "apply givens rotation to matrix");
     gufunc(module_dict, u_householderq, 1, 2, "(i)->(),(i)",
            "householder", "Generate Householder reflectors");
     gufunc(module_dict, u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",

@@ -8,12 +8,11 @@ givens = _dd_linalg.givens
 svd_tri2x2 = _dd_linalg.svd_tri2x2
 svvals_tri2x2 = _dd_linalg.svvals_tri2x2
 householder = _dd_linalg.householder
+mul_givens = _dd_linalg.mul_givens
 
 
 def householder_vector(x):
-    x = array.asddarray(x)
-    beta, v = householder(x)
-    return beta, v
+    return householder(array.asddarray(x))
 
 
 def householder_update(A, Q):
