@@ -32,6 +32,6 @@ def test_exp():
 
 
 def test_hypot():
-    x = np.geomspace(1e-150, 1e150, 47)
+    x = np.geomspace(1e-300, 1e260, 47)
     x = np.hstack([-x[::-1], 0, x])
-    _compare_ufunc(np.hypot, x, x)
+    _compare_ufunc(np.hypot, x[:,None], x[None,:])

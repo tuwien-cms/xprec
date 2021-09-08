@@ -294,8 +294,9 @@ static const ddouble Q_LOG10 = {2.302585092994045901e+00, -2.170756223382249351e
 
 static const ddouble Q_EPS = {4.93038065763132e-32, 0.0};
 static const ddouble Q_MIN = {2.0041683600089728e-292, 0.0};
-static const ddouble Q_MAX =
-    {1.79769313486231570815e+308, 9.97920154767359795037e+291};
+static const ddouble Q_MAX = {1.79769313486231570815e+308, 0.0};
+static const ddouble Q_TINY = {2.2250738585072014e-308, 0.0};
+
 
 static inline bool isfiniteq(ddouble x)
 {
@@ -492,10 +493,58 @@ static inline ddouble ldexpq(ddouble a, int exp)
 
 /************************* Binary functions ************************/
 
+static inline ddouble _hypotqq_ordered(ddouble x, ddouble y)
+{
+    // assume that x >= y >= 0
+    // special cases
+    if (!isfiniteq(x) || iszeroq(x))
+        return x;
+
+    // if very large or very small, renormalize
+    const double LARGE = ldexp(1.0, 150);
+    const double INV_LARGE = 1/LARGE;
+    if (x.hi > LARGE) {
+        x = mul_pwr2(x, INV_LARGE);
+        y = mul_pwr2(y, INV_LARGE);
+        return mul_pwr2(_hypotqq_ordered(x, y), LARGE);
+    }
+    if (x.hi < INV_LARGE) {
+        x = mul_pwr2(x, LARGE);
+        y = mul_pwr2(y, LARGE);
+        return mul_pwr2(_hypotqq_ordered(x, y), INV_LARGE);
+    }
+
+    // if vastly different in magnitude, return x
+    if ((x.hi - y.hi) > ldexp(1, 32))
+        return x;
+
+    // normal case
+    ddouble arg;
+    if (x.hi > 2 * y.hi) {
+        // use x.hi**2 + (y**2 + (x.lo * (x + x.hi)))
+        arg = mulqd(addqd(x, x.hi), x.lo);
+        arg = addqq(arg, sqrq(y));
+        arg = addqd(arg, x.hi * x.hi);
+    } else {
+        // with t = 2 * x, use:
+        // t.hi * y.hi + ((x - y)**2 + (t.hi * y.lo + t.lo * y))
+        ddouble t = mul_pwr2(x, 2);
+        arg = mulqd(y, t.lo);
+        arg = addqd(arg, t.hi * y.lo);
+        arg = addqq(arg, sqrq(subqq(x, y)));
+        arg = addqd(arg, t.hi * y.hi);
+    }
+    return sqrtq(arg);
+}
+
 static inline ddouble hypotqq(ddouble x, ddouble y)
 {
-    /* FIXME: this expression may under- or overflow */
-    return sqrtq(addqq(sqrq(x), sqrq(y)));
+    x = absq(x);
+    y = absq(y);
+    if (x.hi < y.hi)
+        return _hypotqq_ordered(y, x);
+    else
+        return _hypotqq_ordered(x, y);
 }
 
 static inline ddouble hypotdq(double x, ddouble y)
