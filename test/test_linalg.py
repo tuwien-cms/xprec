@@ -46,19 +46,6 @@ def test_givens():
     np.testing.assert_allclose(res.hi, 0, atol=1e-31)
 
 
-def test_symmschur():
-    X = quadruple.ddarray([3., -2., -2., 5.]).reshape(2, 2)
-    c, s = quadruple.linalg.jacobi_symm2x2(X[0,0], X[0,1], X[1,1])
-    R = np.array([c, s, -s, c]).reshape(2, 2)
-    D = R.T @ X @ R
-    np.testing.assert_allclose(D[1,0].hi, 0, atol=1e-31)
-    np.testing.assert_allclose(D[0,1].hi, 0, atol=1e-31)
-
-    eval = D[1,1]
-    eval_ref = quadruple.linalg.eigval_symm2x2_closeqq(X[0,0], X[0,1], X[1,1])
-    np.testing.assert_allclose(eval - eval_ref, 0, atol=1e-30)
-
-
 def test_givens():
     a = quadruple.ddarray([2.0, -3.0])
     r, G = quadruple.linalg.givens(a)

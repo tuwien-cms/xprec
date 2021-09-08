@@ -1,5 +1,6 @@
 import numpy as np
 
+from . import array
 from . import _dd_linalg
 
 givens = _dd_linalg.givens
@@ -77,96 +78,126 @@ def householder_apply(H, Q):
     return Q
 
 
-def givens_rotation(f, g):
-    """Compute the Givens rotation.
-
-    For a vector `[f, g]`, determine parameters `c, s, r` such that:
-
-                [  c,  s ]  @  [ f ]  =  [ r ]
-                [ -s,  c ]     [ g ]     [ 0 ]
-    """
-    # ACM Trans. Math. Softw. 28(2), 206, Alg 1.
-    if np.equal(g, 0):
-        return np.ones_like(f), np.zeros_like(g), f
-    if np.equal(f, 0):
-        return np.zeros_like(f), np.sign(g), np.abs(g)
-
-    r = np.copysign(np.hypot(f, g), f)
-    inv_r = np.reciprocal(r)
-    return f * inv_r, g * inv_r, r
-
-
-def apply_givens_left(k, q, c, s, A):
+def givens_apply_left(k, q, G, A):
     """Apply givens rotation `G` to a matrix `A` from the left: `G @ A`"""
-    a_k = A[k,:].copy()
-    a_q = A[q,:].copy()
-    A[k,:] = c * a_k + s * a_q
-    A[q,:] = c * a_q - s * a_k
+    part = A[[k,q],:].copy()
+    A[[k,q],:] = G @ part
 
 
-def apply_givens_right(A, k, q, c, s):
+def givens_apply_right(k, q, G, A):
     """Apply givens rotation `G` to a matrix `A` from the left: `A @ G`"""
-    a_k = A[:,k].copy()
-    a_q = A[:,q].copy()
-    A[:,k] = c * a_k - s * a_q
-    A[:,q] = c * a_q + s * a_k
+    part = A[:,[k,q]].copy()
+    A[:,[k,q]] = part @ G
 
 
-def jacobi_symm2x2(a_pp, a_pq, a_qq):
-    # 8.4.1
-    if np.equal(a_pq, 0):  # already diagonal
-        return np.ones_like(a_pp), np.zeros_like(a_pp)
+def golub_kahan_svd_step(d, f, U, VH, shift):
+    # Alg 8.6.1
+    n = d.size
 
-    tau = (a_qq - a_pp) / (2 * a_pq)
-    if np.greater_equal(tau, 0):
-        t = np.reciprocal(tau + np.hypot(1, tau))
-    else:
-        t = -np.reciprocal(-tau + np.hypot(1, tau))
+    # First step: generate "unwanted element"
+    y = d[0] - np.square(shift) / d[0]
+    z = f[0]
+    _, G = givens(array.ddarray([y, z]))
+    givens_apply_left(0, 1, G, VH)
+    c, s = G[0]
 
-    c = np.reciprocal(np.hypot(1, t))
-    return c, t * c
+    ditmp = d[0]
+    fi1 = f[0]
+    di = ditmp*c + fi1*s
+    fi1 = -ditmp*s + fi1*c
+    di1 = d[1]
+    bulge = di1*s
+    di1 = di1 * c
+
+    for i in range(n, n-2):
+        _, G = givens(array.ddarray([di, bulge]))
+        givens_apply_right(i, i+1, G.T, U)
+        c, s = G[0]
+        d[i] = c*di + s*bulge
+        fi = c*fi1 + s*di1
+        di1 = -s*fi1 + c*di1
+        fi1 = f[i+1]
+        bulge = s*fi1
+        fi1 = fi1 * c
+
+        _, G = givens(array.ddarray([fi, bulge]))
+        givens_apply_left(i+1, i+2, G, VH)
+        c, s = G[0]
+        f[i]  = fi*c + bulge*s
+        di = di1*c + fi1*s
+        fi1 = -di1*s + fi1*c
+        di2 = d[i+2]
+        bulge = di2*s
+        di1 = di2*c
+
+    _, G = givens(array.ddarray([di, bulge]))
+    givens_apply_right(n-2, n-1, G.T, U)
+    c, s = G[0]
+    d[n-2] = c*di + s*bulge
+    f[n-2] = c*fi1 + s*di1
+    d[n-1] = -s*fi1 + c*di1
 
 
-def eigval_symm2x2_closeqq(a_pp, a_pq, a_qq):
-    # Alg. 8.3.2
-    d = .5 * (a_pp - a_qq)
-    t = d + np.copysign(np.hypot(d, a_pq), d)
-    return a_qq - np.square(a_pq) / t
+def estimate_sbounds(d, f):
+    abs_d = np.abs(d)
+    abs_f = np.abs(f)
+    n = abs_d.size
+
+    def iter_backward():
+        lambda_ = abs_d[n-1]
+        yield lambda_
+        for j in range(n-2, -1, -1):
+            lambda_ = abs_d[j] * (lambda_ / (lambda_ + abs_f[j]))
+            yield lambda_
+
+    def iter_forward():
+        mu = abs_d[0]
+        yield mu
+        for j in range(n-1):
+            mu = abs_d[j+1] * (mu * (mu + abs_f[j]))
+            yield mu
+
+    smin = min(min(iter_backward()), min(iter_forward()))
+    smax = max(max(abs_d), max(abs_f))
+    return smax, smin
 
 
-def square_bidiag(d, f):
-    # Suppose we have a bidiagonal matrix with
-    #   B[i,i] == d[i],  B[i,i+1] == f[i]
-    # Now, note that for T = B^T B, we have:
-    #   T[i,i]   == d[i]**2 + f[i-1]**2
-    #   T[i,i+1] == d[i] * f[i]
-    a = np.square(d)
-    a[1:] += np.square(f)
-    b = d[:-1] * f
-    return a, b
+def golub_kahan_svd(d, f, U, VH, max_iter=30):
+    n = d.size
+    n1 = 0
+    n2 = n-1
+    count = 0
 
+    # See LAWN3 page 6 and 22
+    _, sigma_minus = estimate_sbounds(d, f)
+    tol = 100 * 2e-16
+    thresh = tol * sigma_minus
 
-# def bidiag_rotate_row(f, d, k, c, s):
-#     fk = f[k]
-#     dk = d[k]
-#     d[k] = dk * c - fk * s
-#     f[k] = dk * s + fk * c
+    for i_iter in range(max_iter):
+        # Search for biggest index for non-zero off diagonal value in e
+        for n2i in range(n2, 0, -1):
+            if abs(f[n2i-1]) > thresh:
+                n2 = n2i
+                break
+        else:
+            return
 
+        # Search for largest sub-bidiagonal matrix ending at n2
+        for _n1 in range(n2 - 1, -1, -1):
+            if abs(f[_n1]) < thresh:
+                n1 = _n1
+                break
+        else:
+            n1 = 0
 
-# def golub_kahan_svd_step(d, f):
-#     # Alg 8.6.1
-#     n = d.size
-#     t_d, t_f = square_bidiag(d, f)
-#     mu = eigval_symm2x2_closeqq(t_d[-2], t_f[-1], t_d[-1])
+        print("iter={}, range={}:{}".format(i_iter, n1, n2+1))
 
-#     # First step: generate "unwanted element"
-#     y = t_d[0] - mu
-#     z = t_f[0]
-#     c, s, _ = givens_rotation(y, z)
-#     bidiag_rotate_row(f, d, 0, c, s)
-#     y = d[0]
-#     z = -d[1] * s
-#     d[1] = d[1] * c
-#     for k in range(n - 1):
-#     T_11 = np.square(d[0]) + np.square(f[0])
-#     T_12 = d[0] * f[0]
+        # TODO CHECK THIS!
+        if n1 == n2:
+            return
+
+        tail = array.ddarray([d[n2-1],   f[n2-1],
+                              0 * d[n2], d[n2]]).reshape(2, 2)
+        shift = svvals_tri2x2(tail)[1]
+        golub_kahan_svd_step(d[n1:n2+1], f[n1:n2],
+                             U[:, n1:n2+1], VH[n1:n2+1, :], shift)
