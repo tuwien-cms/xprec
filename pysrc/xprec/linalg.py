@@ -146,7 +146,7 @@ def estimate_sbounds(d, f):
         mu = abs_d[0]
         yield mu
         for j in range(n-1):
-            mu = abs_d[j+1] * (mu * (mu + abs_f[j]))
+            mu = abs_d[j+1] * (mu / (mu + abs_f[j]))
             yield mu
 
     smin = min(min(iter_backward()), min(iter_forward()))
