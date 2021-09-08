@@ -1,6 +1,7 @@
 import numpy as np
 
 from . import _raw
+from . import _dd_linalg
 
 DTYPE = np.dtype([("hi", float), ("lo", float)])
 
@@ -13,18 +14,20 @@ _UFUNC_SUPPORTED = (
     "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
     "square", "sqrt", "reciprocal", "exp", "expm1", "log",
     "sin", "cos", "sinh", "cosh", "tanh", "hypot", "fmin", "fmax",
-    "matmul"
     )
 _UFUNC_TABLE = {getattr(np, name): getattr(_raw, name)
                 for name in _UFUNC_SUPPORTED}
+_UFUNC_TABLE[np.matmul] = _dd_linalg.matmul
 
-_UFUNC_IMPORTED = (_raw.givens, _raw.svd_tri2x2, _raw.svvals_tri2x2)
+_UFUNC_IMPORTED = (
+    _dd_linalg.givens, _dd_linalg.svd_tri2x2, _dd_linalg.svvals_tri2x2
+    )
 _UFUNC_TABLE.update({x: x for x in _UFUNC_IMPORTED})
 
 # TODO: not sure where to put those...
-givens = _raw.givens
-svd_tri2x2 = _raw.svd_tri2x2
-svvals_tri2x2 = _raw.svvals_tri2x2
+givens = _dd_linalg.givens
+svd_tri2x2 = _dd_linalg.svd_tri2x2
+svvals_tri2x2 = _dd_linalg.svvals_tri2x2
 
 
 class Array(np.ndarray):

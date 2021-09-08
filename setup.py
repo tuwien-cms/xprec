@@ -154,6 +154,7 @@ setup(
 
     ext_modules=[
         Extension("quadruple._raw", ["csrc/_raw.c"]),
+        Extension("quadruple._dd_linalg", ["csrc/_dd_linalg.c"]),
         ],
     setup_requires=[
         'numpy>=1.16',
