@@ -765,6 +765,8 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
     constant(module_dict, Q_E, "E");
     constant(module_dict, Q_LOG2, "LOG2");
     constant(module_dict, Q_LOG10, "LOG10");
+    constant(module_dict, nanq(), "NAN");
+    constant(module_dict, infq(), "INF");
 
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
