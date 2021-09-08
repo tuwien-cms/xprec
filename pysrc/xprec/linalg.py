@@ -1,4 +1,5 @@
 import numpy as np
+from warnings import warn
 
 from . import array
 from . import _dd_linalg
@@ -71,15 +72,17 @@ def givens_apply_right(k, q, G, A):
     mul_givens([k, q], G.T, A.T, out=A.T)
 
 
-def golub_kahan_svd_step(d, f, U, VH, shift):
+def golub_kahan_svd_step(d, f, shift):
     # Alg 8.6.1
     n = d.size
+    G_V = []
+    G_U = []
 
     # First step: generate "unwanted element"
     y = d[0] - np.square(shift) / d[0]
     z = f[0]
     _, G = givens(array.ddarray([y, z]))
-    givens_apply_left(0, 1, G, VH)
+    G_V.append(G)
     c, s = G[0]
 
     ditmp = d[0]
@@ -92,7 +95,7 @@ def golub_kahan_svd_step(d, f, U, VH, shift):
 
     for i in range(n-2):
         _, G = givens(array.ddarray([di, bulge]))
-        givens_apply_right(i, i+1, G.T, U)
+        G_U.append(G)
         c, s = G[0]
         d[i] = c*di + s*bulge
         fi = c*fi1 + s*di1
@@ -102,7 +105,7 @@ def golub_kahan_svd_step(d, f, U, VH, shift):
         fi1 = fi1 * c
 
         _, G = givens(array.ddarray([fi, bulge]))
-        givens_apply_left(i+1, i+2, G, VH)
+        G_V.append(G)
         c, s = G[0]
         f[i]  = fi*c + bulge*s
         di = di1*c + fi1*s
@@ -112,11 +115,19 @@ def golub_kahan_svd_step(d, f, U, VH, shift):
         di1 = di2*c
 
     _, G = givens(array.ddarray([di, bulge]))
-    givens_apply_right(n-2, n-1, G.T, U)
+    G_U.append(G)
     c, s = G[0]
     d[n-2] = c*di + s*bulge
     f[n-2] = c*fi1 + s*di1
     d[n-1] = -s*fi1 + c*di1
+    return G_U, G_V
+
+
+def svd_apply_givens(G_V, VT):
+    indices = np.array([0, 1])
+    for G in G_V:
+        mul_givens(indices, G, VT, out=VT)
+        indices += 1
 
 
 def estimate_sbounds(d, f):
@@ -180,8 +191,11 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30):
         tail = array.ddarray([d[n2-1],   f[n2-1],
                               0 * d[n2], d[n2]]).reshape(2, 2)
         shift = svvals_tri2x2(tail)[1]
-        golub_kahan_svd_step(d[n1:n2+1], f[n1:n2],
-                             U[:, n1:n2+1], VH[n1:n2+1, :], shift)
+        G_U, G_V = golub_kahan_svd_step(d[n1:n2+1], f[n1:n2], shift)
+        svd_apply_givens(G_V, VH[n1:n2+1, :])
+        svd_apply_givens(G_U, U[:, n1:n2+1].T)
+    else:
+        warn("Did not converge!")
 
 
 def svd(A):
