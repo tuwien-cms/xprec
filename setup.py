@@ -156,7 +156,7 @@ setup(
         Extension("xprec._dd_ufunc",
                   ["csrc/_dd_ufunc.c", "csrc/dd_arith.c"]),
         Extension("xprec._dd_linalg",
-                  ["csrc/_dd_linalg.c", "csrc/dd_arith.c"]),
+                  ["csrc/_dd_linalg.c", "csrc/dd_arith.c", "csrc/dd_linalg.c"]),
         ],
     setup_requires=[
         'numpy>=1.16',

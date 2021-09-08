@@ -3,6 +3,7 @@
 #include "stdio.h"
 
 #include "dd_arith.h"
+#include "dd_linalg.h"
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarraytypes.h"
@@ -13,11 +14,6 @@
  * Allows parameter to be marked unused
  */
 #define MARK_UNUSED(x)  do { (void)(x); } while(false)
-
-
-// 2**500 and 2**(-500);
-static const double LARGE = 3.273390607896142e+150;
-static const double INV_LARGE = 3.054936363499605e-151;
 
 
 /************************ Linear algebra ***************************/
@@ -53,30 +49,6 @@ static void u_matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
 }
 
 /*************************** More complicated ***********************/
-
-static ddouble normq_scaled(const ddouble *x, long nn, long sxn,
-                            double scaling)
-{
-    ddouble sum = Q_ZERO;
-    for (long n = 0; n < nn; ++n, x += sxn) {
-        ddouble curr = mul_pwr2(*x, scaling);
-        sum = addqq(sum, sqrq(curr));
-    };
-    return mul_pwr2(sqrtq(sum), 1.0/scaling);
-}
-
-static ddouble normq(const ddouble *x, long nn, long sxn)
-{
-    ddouble sum = normq_scaled(x, nn, sxn, 1.0);
-
-    // fall back to other routines in case of over/underflow
-    if (sum.hi > LARGE)
-        return normq_scaled(x, nn, sxn, INV_LARGE);
-    else if (sum.hi < INV_LARGE)
-        return normq_scaled(x, nn, sxn, LARGE);
-    else
-        return sum;
-}
 
 static void u_normq(char **args, const npy_intp *dims,
                     const npy_intp* steps, void *data)
