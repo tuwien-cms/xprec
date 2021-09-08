@@ -19,16 +19,6 @@ _UFUNC_TABLE = {getattr(np, name): getattr(_dd_ufunc, name)
                 for name in _UFUNC_SUPPORTED}
 _UFUNC_TABLE[np.matmul] = _dd_linalg.matmul
 
-_UFUNC_IMPORTED = (
-    _dd_linalg.givens, _dd_linalg.svd_tri2x2, _dd_linalg.svvals_tri2x2
-    )
-_UFUNC_TABLE.update({x: x for x in _UFUNC_IMPORTED})
-
-# TODO: not sure where to put those...
-givens = _dd_linalg.givens
-svd_tri2x2 = _dd_linalg.svd_tri2x2
-svvals_tri2x2 = _dd_linalg.svvals_tri2x2
-
 
 class Array(np.ndarray):
     def __new__(cls, shape, buffer=None, offset=0, strides=None, order=None):
@@ -38,7 +28,10 @@ class Array(np.ndarray):
 
     def __array_ufunc__(self, ufunc, method, *in_, **kwds):
         """Override what happens when executing numpy ufunc."""
-        ufunc = _UFUNC_TABLE[ufunc]
+        try:
+            ufunc = _UFUNC_TABLE[ufunc]
+        except KeyError:
+            pass
         in_ = map(_strip, in_)
         try:
             out = kwds["out"]
@@ -87,7 +80,10 @@ class Scalar(np.ndarray):
 
     def __array_ufunc__(self, ufunc, method, *in_, **kwds):
         """Override what happens when executing numpy ufunc."""
-        ufunc = _UFUNC_TABLE[ufunc]
+        try:
+            ufunc = _UFUNC_TABLE[ufunc]
+        except KeyError:
+            pass
         in_ = map(_strip, in_)
         try:
             out = kwds["out"]

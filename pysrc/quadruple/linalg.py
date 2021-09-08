@@ -1,5 +1,11 @@
 import numpy as np
 
+from . import _dd_linalg
+
+givens = _dd_linalg.givens
+svd_tri2x2 = _dd_linalg.svd_tri2x2
+svvals_tri2x2 = _dd_linalg.svvals_tri2x2
+
 
 def householder_vector(x):
     x = np.asanyarray(x)

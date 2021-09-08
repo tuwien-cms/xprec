@@ -35,17 +35,3 @@ def test_hypot():
     x = np.geomspace(1e-150, 1e150, 47)
     x = np.hstack([-x[::-1], 0, x])
     _compare_ufunc(np.hypot, x, x)
-
-
-def test_givens():
-    a = quadruple.ddarray([2.0, -3.0])
-    r, G = quadruple.array.givens(a)
-    diff = r - G @ a
-    np.testing.assert_allclose(diff.hi, 0, atol=1e-31)
-
-
-def test_svd_tri2x2():
-    A = quadruple.ddarray([[2.0, -3.0], [0.0, 4.0]])
-    U, s, VH = quadruple.array.svd_tri2x2(A)
-    diff = A - (U * s) @ VH
-    np.testing.assert_allclose(diff.hi, 0, atol=2e-31)

@@ -57,3 +57,17 @@ def test_symmschur():
     eval = D[1,1]
     eval_ref = quadruple.linalg.eigval_symm2x2_closeqq(X[0,0], X[0,1], X[1,1])
     np.testing.assert_allclose(eval - eval_ref, 0, atol=1e-30)
+
+
+def test_givens():
+    a = quadruple.ddarray([2.0, -3.0])
+    r, G = quadruple.linalg.givens(a)
+    diff = r - G @ a
+    np.testing.assert_allclose(diff.hi, 0, atol=1e-31)
+
+
+def test_svd_tri2x2():
+    A = quadruple.ddarray([[2.0, -3.0], [0.0, 4.0]])
+    U, s, VH = quadruple.linalg.svd_tri2x2(A)
+    diff = A - (U * s) @ VH
+    np.testing.assert_allclose(diff.hi, 0, atol=2e-31)
