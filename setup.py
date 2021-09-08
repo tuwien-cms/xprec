@@ -116,16 +116,16 @@ class BuildExtWithNumpy(build_ext):
         super().build_extensions()
 
 
-VERSION = extract_version('pysrc', 'quadruple', '__init__.py')
-REPO_URL = "https://github.com/mwallerb/quadruple"
+VERSION = extract_version('pysrc', 'xprec', '__init__.py')
+REPO_URL = "https://github.com/mwallerb/xprec"
 DOCTREE_URL = "%s/tree/v%s" % (REPO_URL, VERSION)
 LONG_DESCRIPTION = rebase_links(readfile('README.md'), DOCTREE_URL)
 
 setup(
-    name='quadruple',
+    name='xprec',
     version=VERSION,
 
-    description='quadruple precision numpy extension',
+    description='xprec precision numpy extension',
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
     keywords=' '.join([
@@ -153,9 +153,9 @@ setup(
         },
 
     ext_modules=[
-        Extension("quadruple._dd_ufunc",
+        Extension("xprec._dd_ufunc",
                   ["csrc/_dd_ufunc.c", "csrc/dd_arith.c"]),
-        Extension("quadruple._dd_linalg",
+        Extension("xprec._dd_linalg",
                   ["csrc/_dd_linalg.c", "csrc/dd_arith.c"]),
         ],
     setup_requires=[

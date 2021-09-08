@@ -1,16 +1,16 @@
 import numpy as np
 
-import quadruple
-import quadruple.linalg
+import xprec
+import xprec.linalg
 
 
 def test_householder_vec():
     rng = np.random.RandomState(4711)
     xd = rng.random_sample(20)
-    xq = quadruple.ddarray(xd)
+    xq = xprec.ddarray(xd)
 
-    betad, vd = quadruple.linalg.householder_vector(xd)
-    betaq, vq = quadruple.linalg.householder_vector(xq)
+    betad, vd = xprec.linalg.householder_vector(xd)
+    betaq, vq = xprec.linalg.householder_vector(xq)
     np.testing.assert_array_almost_equal_nulp(betaq.hi, betad, 4)
     np.testing.assert_array_almost_equal_nulp(vq.hi, vd, 4)
 
@@ -24,22 +24,22 @@ def test_householder_vec():
 def test_bidiag():
     rng = np.random.RandomState(4711)
     m, n = 7, 5
-    A = quadruple.ddarray(rng.normal(size=(m,n)))
-    Q_h, B, R_h = quadruple.linalg.householder_bidiag(A)
+    A = xprec.ddarray(rng.normal(size=(m,n)))
+    Q_h, B, R_h = xprec.linalg.householder_bidiag(A)
 
-    Q = quadruple.ddarray(np.eye(m))
-    Q = quadruple.linalg.householder_apply(Q_h, Q)
-    R = quadruple.ddarray(np.eye(n))
-    R = quadruple.linalg.householder_apply(R_h, R)
+    Q = xprec.ddarray(np.eye(m))
+    Q = xprec.linalg.householder_apply(Q_h, Q)
+    R = xprec.ddarray(np.eye(n))
+    R = xprec.linalg.householder_apply(R_h, R)
     diff = Q @ B @ R.T - A
     np.testing.assert_allclose(diff.hi, 0, atol=5e-31)
 
 
 def test_givens():
-    f, g = quadruple.ddarray([3.0, -2.0])
-    c, s, r = quadruple.linalg.givens_rotation(f, g)
+    f, g = xprec.ddarray([3.0, -2.0])
+    c, s, r = xprec.linalg.givens_rotation(f, g)
 
-    R = quadruple.ddarray([c, s, -s, c]).reshape(2, 2)
+    R = xprec.ddarray([c, s, -s, c]).reshape(2, 2)
     v = np.hstack([f, g])
     w = np.hstack([r, np.zeros_like(r)])
     res = R @ v - w
@@ -47,15 +47,15 @@ def test_givens():
 
 
 def test_givens():
-    a = quadruple.ddarray([2.0, -3.0])
-    r, G = quadruple.linalg.givens(a)
+    a = xprec.ddarray([2.0, -3.0])
+    r, G = xprec.linalg.givens(a)
     diff = r - G @ a
     np.testing.assert_allclose(diff.hi, 0, atol=1e-31)
 
 
 def test_svd_tri2x2():
-    A = quadruple.ddarray([[2.0, -3.0], [0.0, 4.0]])
-    U, s, VH = quadruple.linalg.svd_tri2x2(A)
+    A = xprec.ddarray([[2.0, -3.0], [0.0, 4.0]])
+    U, s, VH = xprec.linalg.svd_tri2x2(A)
     diff = A - (U * s) @ VH
     np.testing.assert_allclose(diff.hi, 0, atol=2e-31)
 
@@ -63,7 +63,7 @@ def test_svd_tri2x2():
 def test_svd():
     rng = np.random.RandomState(4711)
     A = rng.normal(size=(30,20))
-    Ax = quadruple.ddarray(A)
-    Ux, sx, VTx = quadruple.linalg.svd(Ax)
+    Ax = xprec.ddarray(A)
+    Ux, sx, VTx = xprec.linalg.svd(Ax)
     diff = (Ux[:,:20] * sx) @ VTx - Ax
     np.testing.assert_allclose(diff.hi, 0, atol=1e-29)

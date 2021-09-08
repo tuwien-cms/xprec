@@ -1,4 +1,4 @@
-name: quadruple python package
+name: xprec python package
 
 on: [push]
 
