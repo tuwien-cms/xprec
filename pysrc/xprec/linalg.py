@@ -63,14 +63,12 @@ def householder_apply(H, Q):
 
 def givens_apply_left(k, q, G, A):
     """Apply givens rotation `G` to a matrix `A` from the left: `G @ A`"""
-    part = A[[k,q],:].copy()
-    A[[k,q],:] = G @ part
+    mul_givens([k, q], G, A, out=A)
 
 
 def givens_apply_right(k, q, G, A):
     """Apply givens rotation `G` to a matrix `A` from the left: `A @ G`"""
-    part = A[:,[k,q]].copy()
-    A[:,[k,q]] = part @ G
+    mul_givens([k, q], G.T, A.T, out=A.T)
 
 
 def golub_kahan_svd_step(d, f, U, VH, shift):

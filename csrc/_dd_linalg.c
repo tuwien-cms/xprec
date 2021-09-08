@@ -112,9 +112,9 @@ static void u_mul_givensq(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2),(n;2,2),(n,i,j)->(n;i,j)
-    const npy_intp nn = dims[0], ii = dims[1], jj = dims[2];
+    const npy_intp nn = dims[0], jj = dims[3];
     const npy_intp _san = steps[0], _sbn = steps[1], _scn = steps[2],
-                   _sdn = steps[3], _saq = steps[4], _sbq = steps[5],
+                   _sdn = steps[3], _saq = steps[4],
                    _sbr = steps[6], _sci = steps[7], _scj = steps[8],
                    _sdi = steps[9], _sdj = steps[10];
     char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3];
@@ -134,7 +134,6 @@ static void u_mul_givensq(
                     (ddouble *)_d, _sdi/sizeof(ddouble), _sdj/sizeof(ddouble));
     }
     MARK_UNUSED(data);
-    MARK_UNUSED(ii);
 }
 
 static void u_svd_tri2x2(
