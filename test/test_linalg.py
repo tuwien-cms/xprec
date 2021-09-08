@@ -58,3 +58,12 @@ def test_svd_tri2x2():
     U, s, VH = quadruple.linalg.svd_tri2x2(A)
     diff = A - (U * s) @ VH
     np.testing.assert_allclose(diff.hi, 0, atol=2e-31)
+
+
+def test_svd():
+    rng = np.random.RandomState(4711)
+    A = rng.normal(size=(30,20))
+    Ax = quadruple.ddarray(A)
+    Ux, sx, VTx = quadruple.linalg.svd(Ax)
+    diff = (Ux[:,:20] * sx) @ VTx - Ax
+    np.testing.assert_allclose(diff.hi, 0, atol=1e-29)

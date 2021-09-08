@@ -201,3 +201,16 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30):
         shift = svvals_tri2x2(tail)[1]
         golub_kahan_svd_step(d[n1:n2+1], f[n1:n2],
                              U[:, n1:n2+1], VH[n1:n2+1, :], shift)
+
+
+def svd(A):
+    m, n = A.shape
+    U, B, V = householder_bidiag(A)
+    U = householder_apply(U, array.ddarray(np.eye(m)))
+    V = householder_apply(V, array.ddarray(np.eye(n)))
+    VT = V.T
+
+    d = B.diagonal().copy()
+    f = B.diagonal(1).copy()
+    golub_kahan_svd(d, f, U, VT, 1000)
+    return U, d, VT
