@@ -109,7 +109,7 @@ def golub_kahan_svd_step(d, f, U, VH, shift):
     bulge = di1*s
     di1 = di1 * c
 
-    for i in range(n, n-2):
+    for i in range(n-2):
         _, G = givens(array.ddarray([di, bulge]))
         givens_apply_right(i, i+1, G.T, U)
         c, s = G[0]
@@ -170,7 +170,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30):
 
     # See LAWN3 page 6 and 22
     _, sigma_minus = estimate_sbounds(d, f)
-    tol = 100 * 2e-16
+    tol = 100 * 5e-32
     thresh = tol * sigma_minus
 
     for i_iter in range(max_iter):
@@ -190,7 +190,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30):
         else:
             n1 = 0
 
-        print("iter={}, range={}:{}".format(i_iter, n1, n2+1))
+        #print("iter={}, range={}:{}".format(i_iter, n1, n2+1))
 
         # TODO CHECK THIS!
         if n1 == n2:
