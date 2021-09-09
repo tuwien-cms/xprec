@@ -72,6 +72,39 @@ def givens_apply_right(k, q, G, A):
     mul_givens([k, q], G.T, A.T, out=A.T)
 
 
+def golub_kahan_chase(d, e, shift):
+    n = d.size
+    G_V = []
+    G_U = []
+
+    f = (np.abs(d[0]) - shift) * (np.copysign(1.0, d[0]) + shift / d[0])
+    g = e[0]
+
+    for i in range(n-1):
+        r, G = givens(array.ddarray([f, g]))
+        cosr, sinr = G[0]
+        if i > 0:
+            e[i-1] = r[0]
+        f = cosr * d[i] + sinr * e[i]
+        e[i] = cosr * e[i] - sinr * d[i]
+        g = sinr * d[i+1]
+        d[i+1] = cosr * d[i+1]
+        G_V.append(G)
+
+        r, G = givens(array.ddarray([f, g]))
+        cosl, sinl = G[0]
+        d[i] = r[0]
+        f = cosl * e[i] + sinl * d[i+1]
+        d[i+1] = cosl * d[i+1] - sinl * e[i]
+        if i < n-2:
+            g = sinl * e[i+1]
+            e[i+1] = cosl * e[i+1]
+        G_U.append(G)
+
+    e[n-2] = f
+    return array.ddarray(G_U), array.ddarray(G_V)
+
+
 def golub_kahan_svd_step(d, f, shift):
     # Alg 8.6.1
     n = d.size
@@ -121,6 +154,7 @@ def golub_kahan_svd_step(d, f, shift):
     f[n-2] = c*fi1 + s*di1
     d[n-1] = -s*fi1 + c*di1
     return G_U, G_V
+    #return array.ddarray(G_U), array.ddarray(G_V)
 
 
 def svd_apply_givens(G_V, VT):
@@ -154,7 +188,7 @@ def estimate_sbounds(d, f):
     return smax, smin
 
 
-def golub_kahan_svd(d, f, U, VH, max_iter=30):
+def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_svd_step):
     n = d.size
     n1 = 0
     n2 = n-1
@@ -191,7 +225,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30):
         tail = array.ddarray([d[n2-1],   f[n2-1],
                               0 * d[n2], d[n2]]).reshape(2, 2)
         shift = svvals_tri2x2(tail)[1]
-        G_U, G_V = golub_kahan_svd_step(d[n1:n2+1], f[n1:n2], shift)
+        G_U, G_V = step(d[n1:n2+1], f[n1:n2], shift)
         svd_apply_givens(G_V, VH[n1:n2+1, :])
         svd_apply_givens(G_U, U[:, n1:n2+1].T)
     else:
