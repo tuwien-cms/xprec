@@ -21,44 +21,36 @@
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp *steps, void *data)            \
     {                                                                   \
-        assert (sizeof(ddouble) == 2 * sizeof(double));                 \
         const npy_intp n = dimensions[0];                               \
-        const npy_intp is1 = steps[0], os1 = steps[1];                  \
-        char *_in1 = args[0], *_out1 = args[1];                         \
+        const npy_intp is = steps[0] / sizeof(type_in),                 \
+                       os = steps[1] / sizeof(type_out);                \
+        const type_in *in = (const type_in *)args[0];                   \
+        type_out *out = (type_out *)args[1];                            \
                                                                         \
-        for (npy_intp i = 0; i < n; i++) {                              \
-            const type_in *in = (const type_in *)_in1;                  \
-            type_out *out = (type_out *)_out1;                          \
-            *out = inner_func(*in);                                     \
-                                                                        \
-            _in1 += is1;                                                \
-            _out1 += os1;                                               \
-        }                                                               \
+        _Pragma("omp parallel for")                                     \
+        for (npy_intp i = 0; i < n; ++i)                                \
+            out[i * os] = inner_func(in[i * is]);                       \
         MARK_UNUSED(data);                                              \
     }
 
 /**
  * Create ufunc loop routine for a binary operation
  */
-#define ULOOP_BINARY(func_name, inner_func, type_r, type_a, type_b)     \
+#define ULOOP_BINARY(func_name, inner_func, type_out, type_a, type_b)   \
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp* steps, void *data)            \
     {                                                                   \
-        assert (sizeof(ddouble) == 2 * sizeof(double));                 \
         const npy_intp n = dimensions[0];                               \
-        const npy_intp is1 = steps[0], is2 = steps[1], os1 = steps[2];  \
-        char *_in1 = args[0], *_in2 = args[1], *_out1 = args[2];        \
+        const npy_intp as = steps[0] / sizeof(type_a),                  \
+                       bs = steps[1] / sizeof(type_b),                  \
+                       os = steps[2] / sizeof(type_out);                \
+        const type_a *a = (const type_a *)args[0];                      \
+        const type_b *b = (const type_b *)args[1];                      \
+        type_out *out = (type_out *)args[2];                            \
                                                                         \
-        for (npy_intp i = 0; i < n; i++) {                              \
-            const type_a *lhs = (const type_a *)_in1;                   \
-            const type_b *rhs = (const type_b *)_in2;                   \
-            type_r *out = (type_r *)_out1;                              \
-            *out = inner_func(*lhs, *rhs);                              \
-                                                                        \
-            _in1 += is1;                                                \
-            _in2 += is2;                                                \
-            _out1 += os1;                                               \
-        }                                                               \
+        _Pragma("omp parallel for")                                     \
+        for (npy_intp i = 0; i < n; ++i)                                \
+            out[i * os] = inner_func(a[i * as], b[i * bs]);             \
         MARK_UNUSED(data);                                              \
     }
 
