@@ -3,6 +3,7 @@ Setup script for irbasis_x
 """
 import io
 import os.path
+import platform
 import re
 
 from setuptools import setup, find_packages
@@ -86,7 +87,7 @@ class BuildExtWithNumpy(build_ext):
         # This must be deferred to build time, because that is when
         # self.compiler starts being a compiler instance (before, it is
         # a flag)  *slow-clap*
-        platform = self.compiler.compiler_type
+        compiler_type = self.compiler.compiler_type
 
         compiler_binary = getattr(self.compiler, 'compiler', [''])[0]
         compiler_binary = os.path.basename(compiler_binary)
@@ -96,21 +97,22 @@ class BuildExtWithNumpy(build_ext):
             compiler_make = 'clang'
         elif 'icc' in compiler_binary:
             compiler_make = 'icc'
-        elif platform == 'msvc':
+        elif compiler_type == 'msvc':
             # See msvccompiler.py:206 - a comment worth reading in its
             # entirety.  distutils sets up an abstraction which it immediately
             # break with its own derived classes.  *slow-clap*
             compiler_make = 'msvc'
 
-        if platform == 'unix':
+        if platform.system() == 'unix':
             new_flags = {"-march": "native", "-mtune": "native",
                          "-Wextra": None}
             self.compiler.compiler_so = update_flags(
                                     self.compiler.compiler_so, new_flags)
 
         # This has to be set to false because MacOS does not ship openmp
+        # by default.
         if self.with_openmp is None:
-            self.with_openmp = compiler_make == 'gcc'
+            self.with_openmp = platform.system() == 'Linux'
 
         # Numpy headers: numpy must be imported here rather than
         # globally, because otherwise it may not be available at the time
