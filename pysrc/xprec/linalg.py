@@ -105,58 +105,6 @@ def golub_kahan_chase(d, e, shift):
     return array.ddarray(G_U), array.ddarray(G_V)
 
 
-def golub_kahan_svd_step(d, f, shift):
-    # Alg 8.6.1
-    n = d.size
-    G_V = []
-    G_U = []
-
-    # First step: generate "unwanted element"
-    y = d[0] - np.square(shift) / d[0]
-    z = f[0]
-    _, G = givens(array.ddarray([y, z]))
-    G_V.append(G)
-    c, s = G[0]
-
-    ditmp = d[0]
-    fi1 = f[0]
-    di = ditmp*c + fi1*s
-    fi1 = -ditmp*s + fi1*c
-    di1 = d[1]
-    bulge = di1*s
-    di1 = di1 * c
-
-    for i in range(n-2):
-        _, G = givens(array.ddarray([di, bulge]))
-        G_U.append(G)
-        c, s = G[0]
-        d[i] = c*di + s*bulge
-        fi = c*fi1 + s*di1
-        di1 = -s*fi1 + c*di1
-        fi1 = f[i+1]
-        bulge = s*fi1
-        fi1 = fi1 * c
-
-        _, G = givens(array.ddarray([fi, bulge]))
-        G_V.append(G)
-        c, s = G[0]
-        f[i]  = fi*c + bulge*s
-        di = di1*c + fi1*s
-        fi1 = -di1*s + fi1*c
-        di2 = d[i+2]
-        bulge = di2*s
-        di1 = di2*c
-
-    _, G = givens(array.ddarray([di, bulge]))
-    G_U.append(G)
-    c, s = G[0]
-    d[n-2] = c*di + s*bulge
-    f[n-2] = c*fi1 + s*di1
-    d[n-1] = -s*fi1 + c*di1
-    return G_U, G_V
-    #return array.ddarray(G_U), array.ddarray(G_V)
-
-
 def svd_apply_givens(G_V, VT):
     indices = np.array([0, 1])
     for G in G_V:
@@ -188,7 +136,7 @@ def estimate_sbounds(d, f):
     return smax, smin
 
 
-def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_svd_step):
+def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
     n = d.size
     n1 = 0
     n2 = n-1
