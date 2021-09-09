@@ -279,7 +279,7 @@ static void u_svvals_tri2x2(
 
 static const char DDOUBLE_WRAP = NPY_CDOUBLE;
 
-static void gufunc(PyObject *module_dict, PyUFuncGenericFunction uloop,
+static void gufunc(PyObject *module, PyUFuncGenericFunction uloop,
                    int nin, int nout, const char *signature, const char *name,
                    const char *docstring)
 {
@@ -296,8 +296,7 @@ static void gufunc(PyObject *module_dict, PyUFuncGenericFunction uloop,
     ufunc = PyUFunc_FromFuncAndDataAndSignature(
                 loops, data, dtypes, 1, nin, nout, PyUFunc_None, name,
                 docstring, 0, signature);
-    PyDict_SetItemString(module_dict, name, ufunc);
-    Py_DECREF(ufunc);
+    PyModule_AddObject(module, name, ufunc);
 }
 
 PyMODINIT_FUNC PyInit__dd_linalg(void)
@@ -319,38 +318,38 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
     };
 
     /* Module definition */
-    PyObject *module, *module_dict;
+    PyObject *module;
     PyArray_Descr *dtype;
 
     /* Create module */
     module = PyModule_Create(&module_def);
     if (!module)
         return NULL;
-    module_dict = PyModule_GetDict(module);
 
     /* Initialize numpy things */
     import_array();
     import_umath();
 
-    gufunc(module_dict, u_normq, 1, 1, "(i)->()",
+    gufunc(module, u_normq, 1, 1, "(i)->()",
            "norm", "Vector 2-norm");
-    gufunc(module_dict, u_matmulq, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
+    gufunc(module, u_matmulq, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
            "matmul", "Matrix multiplication");
-    gufunc(module_dict, u_givensq, 1, 2, "(2)->(2),(2,2)",
+    gufunc(module, u_givensq, 1, 2, "(2)->(2),(2,2)",
            "givens", "Generate Givens rotation");
-    gufunc(module_dict, u_givens_seqq, 2, 1, "(i,2),(i,j?)->(i,j?)",
+    gufunc(module, u_givens_seqq, 2, 1, "(i,2),(i,j?)->(i,j?)",
            "givens_seq", "apply sequence of givens rotation to matrix");
-    gufunc(module_dict, u_householderq, 1, 2, "(i)->(),(i)",
+    gufunc(module, u_householderq, 1, 2, "(i)->(),(i)",
            "householder", "Generate Householder reflectors");
-    gufunc(module_dict, u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
+    gufunc(module, u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
            "svd_tri2x2", "SVD of upper triangular 2x2 problem");
-    gufunc(module_dict, u_svvals_tri2x2, 1, 1, "(2,2)->(2)",
+    gufunc(module, u_svvals_tri2x2, 1, 1, "(2,2)->(2)",
            "svvals_tri2x2", "singular values of upper triangular 2x2 problem");
-    gufunc(module_dict, u_golub_kahan_chaseq, 3, 3, "(i),(i),()->(i),(i),(i,4)",
+    gufunc(module, u_golub_kahan_chaseq, 3, 3, "(i),(i),()->(i),(i),(i,4)",
            "golub_kahan_chase", "bidiagonal chase procedure");
+
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
-    PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);
+    PyModule_AddObject(module, "dtype", (PyObject *)dtype);
 
     /* Module is ready */
     return module;
