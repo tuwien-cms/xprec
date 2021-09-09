@@ -152,6 +152,10 @@ def ddarray(arr_like, copy=True, order='K', ndmin=0):
     return dd_arr.view(Array)
 
 
+def ddempty(shape):
+    return np.empty(shape, DTYPE).view(Array)
+
+
 def _strip_or_none(arr):
     if arr is None:
         return None

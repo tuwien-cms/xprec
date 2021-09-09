@@ -108,30 +108,103 @@ static void u_givensq(
     MARK_UNUSED(data);
 }
 
+static void ensure_inplace_3(
+        char *in, char *out, npy_intp n1, npy_intp si1, npy_intp so1,
+        npy_intp n2, npy_intp si2, npy_intp so2, npy_intp n3, npy_intp si3,
+        npy_intp so3)
+{
+    if (in == out)
+        return;
+
+    char *in1 = in, *out1 = out;
+    for (npy_intp i1 = 0; i1 != n1; ++i1, in1 += si1, out1 += so1) {
+        char *in2 = in1, *out2 = out1;
+        for (npy_intp i2 = 0; i2 != n2; ++i2, in2 += si2, out2 += so2) {
+            char *in3 = in2, *out3 = out2;
+            for (npy_intp i3 = 0; i3 != n3; ++i3, in3 += si3, out3 += so3) {
+                char *inx = in3, *outx = out3;
+                *(ddouble *)outx = *(ddouble *)inx;
+            }
+        }
+    }
+}
+
 static void u_mul_givensq(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2),(n;2,2),(n,i,j)->(n;i,j)
-    const npy_intp nn = dims[0], jj = dims[3];
+    const npy_intp nn = dims[0], ii = dims[2], jj = dims[3];
     const npy_intp _san = steps[0], _sbn = steps[1], _scn = steps[2],
-                   _sdn = steps[3], _saq = steps[4],
+                   _sdn = steps[3], _saq = steps[4], _sbq = steps[5],
                    _sbr = steps[6], _sci = steps[7], _scj = steps[8],
                    _sdi = steps[9], _sdj = steps[10];
     char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3];
 
-    if (_c != _d || _sci != _sdi || _scj != _sdj) {
-        fprintf(stderr, "Function must be applied in-place (set out arg)\n");
-        return;
-    }
-    for (npy_intp n = 0; n != nn;
-                 ++n, _a += _san, _b += _sbn, _c += _scn, _d += _sdn) {
+    ensure_inplace_3(_c, _d, nn, _scn, _sdn, ii, _sci, _sdi, jj, _scj, _sdj);
+    for (npy_intp n = 0; n != nn; ++n, _a += _san, _b += _sbn, _d += _sdn) {
         long i1 = *(long *)(_a);
         long i2 = *(long *)(_a + _saq);
+        if (i1 < 0 || i1 >= ii || i2 < 0 || i2 >= ii) {
+            fprintf(stderr, "invalid rows %ld,%ld for shape (%ld,%ld,%ld)\n",
+                    i1, i2, nn, ii, jj);
+            continue;
+        }
         ddouble g_cos = *(ddouble *)(_b);
         ddouble g_sin = *(ddouble *)(_b + _sbr);
 
+        ddouble g_chk_msin = *(ddouble *)(_b + _sbq);
+        ddouble g_chk_cos = *(ddouble *)(_b + _sbq + _sbr);
+        if (notequalqq(g_cos, g_chk_cos) || notequalqq(g_sin, negq(g_chk_msin))) {
+            fprintf(stderr, "Warning: matrix is not a Givens rotation\n");
+        }
         mul_givensq(i1, i2, g_cos, g_sin, jj,
                     (ddouble *)_d, _sdi/sizeof(ddouble), _sdj/sizeof(ddouble));
+    }
+    MARK_UNUSED(data);
+}
+
+static void ensure_inplace_2(
+        char *in, char *out, npy_intp n1, npy_intp si1, npy_intp so1,
+        npy_intp n2, npy_intp si2, npy_intp so2)
+{
+    if (in == out)
+        return;
+
+    char *in1 = in, *out1 = out;
+    for (npy_intp i1 = 0; i1 != n1; ++i1, in1 += si1, out1 += so1) {
+        char *in2 = in1, *out2 = out1;
+        for (npy_intp i2 = 0; i2 != n2; ++i2, in2 += si2, out2 += so2) {
+            char *inx = in2, *outx = out2;
+            *(ddouble *)outx = *(ddouble *)inx;
+        }
+    }
+}
+
+static void u_golub_kahan_chaseq(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
+{
+    // signature (n;i),(n;i),(n;)->(n;i),(n;i),(n;i,4)
+    const npy_intp nn = dims[0], ii = dims[1];
+    const npy_intp _san = steps[0], _sbn = steps[1],  _scn = steps[2],
+                   _sdn = steps[3], _sen = steps[4],  _sfn = steps[5],
+                   _sai = steps[6], _sbi = steps[7],  _sdi = steps[8],
+                   _sei = steps[9], _sfi = steps[10], _sf4 = steps[11];
+    char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3],
+         *_e = args[4], *_f = args[5];
+
+    ensure_inplace_2(_a, _d, nn, _san, _sdn, ii, _sai, _sdi);
+    ensure_inplace_2(_b, _e, nn, _sbn, _sen, ii, _sbi, _sei);
+    if (_sf4 != sizeof(ddouble) || _sfi != 4 * sizeof(ddouble)) {
+        fprintf(stderr, "rot is not contiguous, but needs to be");
+        return;
+    }
+
+    for (npy_intp n = 0; n != nn; ++n,
+            _c += _scn, _d += _sdn, _e += _sen, _f += _sfn) {
+        ddouble shift = *(ddouble *)_c;
+        golub_kahan_chaseq((ddouble *)_d, _sdi / sizeof(ddouble),
+                           (ddouble *)_e, _sei / sizeof(ddouble),
+                           ii, shift, (ddouble *)_f);
     }
     MARK_UNUSED(data);
 }
@@ -300,7 +373,8 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "svd_tri2x2", "SVD of upper triangular 2x2 problem");
     gufunc(module_dict, u_svvals_tri2x2, 1, 1, "(2,2)->(2)",
            "svvals_tri2x2", "singular values of upper triangular 2x2 problem");
-
+    gufunc(module_dict, u_golub_kahan_chaseq, 3, 3, "(i),(i),()->(i),(i),(i,4)",
+           "golub_kahan_chase", "bidiagonal chase procedure");
     /* Make dtype */
     dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
     PyDict_SetItemString(module_dict, "dtype", (PyObject *)dtype);

@@ -73,6 +73,44 @@ void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
     }
 }
 
+void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
+                        ddouble shift, ddouble *rot)
+{
+    if (ii < 2)
+        return;
+
+    ddouble g = e[0];
+    ddouble f = addqq(copysigndq(1.0, d[0]), divqq(shift, d[0]));
+    f = mulqq(f, subqq(absq(d[0]), shift));
+
+    for (long i = 0; i < (ii - 1); ++i) {
+        ddouble r, cosr, sinr;
+        givensq(f, g, &cosr, &sinr, &r);
+        if (i != 0)
+            e[(i-1)*se] = r;
+
+        f = addqq(mulqq(cosr, d[i*sd]), mulqq(sinr, e[i*se]));
+        e[i*se] = subqq(mulqq(cosr, e[i*se]), mulqq(sinr, d[i*sd]));
+        g = mulqq(sinr, d[(i+1)*sd]);
+        d[(i+1)*sd] = mulqq(cosr, d[(i+1)*sd]);
+        *(rot++) = cosr;
+        *(rot++) = sinr;
+
+        ddouble cosl, sinl;
+        givensq(f, g, &cosl, &sinl, &r);
+        d[i*sd] = r;
+        f = addqq(mulqq(cosl, e[i*se]), mulqq(sinl, d[(i+1)*sd]));
+        d[(i+1)*sd] = subqq(mulqq(cosl, d[(i+1)*sd]), mulqq(sinl, e[i*se]));
+        if (i < ii - 2) {
+            g = mulqq(sinl, e[(i+1)*se]);
+            e[(i+1)*se] = mulqq(cosl, e[(i+1)*se]);
+        }
+        *(rot++) = cosl;
+        *(rot++) = sinl;
+    }
+    e[(ii-2)*se] = f;
+}
+
 void mul_givensq(long i1, long i2, ddouble c, ddouble s, long jj,
                  ddouble *A, long sai, long saj)
 {

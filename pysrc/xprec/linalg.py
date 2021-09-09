@@ -3,6 +3,7 @@ from warnings import warn
 
 from . import array
 from . import _dd_linalg
+import sys
 
 norm = _dd_linalg.norm
 givens = _dd_linalg.givens
@@ -10,6 +11,7 @@ svd_tri2x2 = _dd_linalg.svd_tri2x2
 svvals_tri2x2 = _dd_linalg.svvals_tri2x2
 householder = _dd_linalg.householder
 mul_givens = _dd_linalg.mul_givens
+golub_kahan_chase2 = _dd_linalg.golub_kahan_chase
 
 
 def householder_vector(x):
@@ -72,10 +74,16 @@ def givens_apply_right(k, q, G, A):
     mul_givens([k, q], G.T, A.T, out=A.T)
 
 
+def full_givens(G):
+    G = G[..., None, :]
+    G = np.concatenate([G, G[..., ::-1]], axis=-2)
+    G[..., 1, 0] *= -1
+    return G
+
+
 def golub_kahan_chase(d, e, shift):
     n = d.size
-    G_V = []
-    G_U = []
+    Gs = array.ddempty((n-1, 4))
 
     f = (np.abs(d[0]) - shift) * (np.copysign(1.0, d[0]) + shift / d[0])
     g = e[0]
@@ -89,7 +97,7 @@ def golub_kahan_chase(d, e, shift):
         e[i] = cosr * e[i] - sinr * d[i]
         g = sinr * d[i+1]
         d[i+1] = cosr * d[i+1]
-        G_V.append(G)
+        Gs[i,:2] = G[0]
 
         r, G = givens(array.ddarray([f, g]))
         cosl, sinl = G[0]
@@ -99,10 +107,14 @@ def golub_kahan_chase(d, e, shift):
         if i < n-2:
             g = sinl * e[i+1]
             e[i+1] = cosl * e[i+1]
-        G_U.append(G)
+        Gs[i,2:] = G[0]
 
     e[n-2] = f
-    return array.ddarray(G_U), array.ddarray(G_V)
+
+    #
+    G_V = full_givens(Gs[:,:2])
+    G_U = full_givens(Gs[:,2:])
+    return G_U, G_V
 
 
 def svd_apply_givens(G_V, VT):
