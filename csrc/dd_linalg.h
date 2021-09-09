@@ -1,6 +1,19 @@
 #pragma once
 #include "dd_arith.h"
 
+/**
+ * Apply Givens rotation to vector:
+ *
+ *      [ a ]  =  [  c   s ] [ x ]
+ *      [ b ]     [ -s   c ] [ y ]
+ */
+static inline void lmul_givensq(
+        ddouble *a, ddouble *b, ddouble c, ddouble s, ddouble x, ddouble y)
+{
+    *a = addqq(mulqq(c, x), mulqq(s, y));
+    *b = subqq(mulqq(c, y), mulqq(s, x));
+}
+
 ddouble normq(const ddouble *x, long nn, long sxn);
 
 void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r);

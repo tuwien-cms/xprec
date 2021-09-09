@@ -89,21 +89,17 @@ void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
         if (i != 0)
             e[(i-1)*se] = r;
 
-        f = addqq(mulqq(cosr, d[i*sd]), mulqq(sinr, e[i*se]));
-        e[i*se] = subqq(mulqq(cosr, e[i*se]), mulqq(sinr, d[i*sd]));
-        g = mulqq(sinr, d[(i+1)*sd]);
-        d[(i+1)*sd] = mulqq(cosr, d[(i+1)*sd]);
+        lmul_givensq(&f, &e[i*se], cosr, sinr, d[i*sd], e[i*se]);
+        lmul_givensq(&g, &d[(i+1)*sd], cosr, sinr, Q_ZERO, d[(i+1)*sd]);
         *(rot++) = cosr;
         *(rot++) = sinr;
 
         ddouble cosl, sinl;
         givensq(f, g, &cosl, &sinl, &r);
         d[i*sd] = r;
-        f = addqq(mulqq(cosl, e[i*se]), mulqq(sinl, d[(i+1)*sd]));
-        d[(i+1)*sd] = subqq(mulqq(cosl, d[(i+1)*sd]), mulqq(sinl, e[i*se]));
+        lmul_givensq(&f, &d[(i+1)*sd], cosl, sinl, e[i*se], d[(i+1)*sd]);
         if (i < ii - 2) {
-            g = mulqq(sinl, e[(i+1)*se]);
-            e[(i+1)*se] = mulqq(cosl, e[(i+1)*se]);
+            lmul_givensq(&g, &e[(i+1)*se], cosl, sinl, Q_ZERO, e[(i+1)*se]);
         }
         *(rot++) = cosl;
         *(rot++) = sinl;
@@ -117,10 +113,7 @@ void mul_givensq(long i1, long i2, ddouble c, ddouble s, long jj,
     for (long j = 0; j < jj; ++j) {
         ddouble *a1 = A + i1 * sai + j * saj;
         ddouble *a2 = A + i2 * sai + j * saj;
-        ddouble n1 = addqq(mulqq(c, *a1), mulqq(s, *a2));
-        ddouble n2 = subqq(mulqq(c, *a2), mulqq(s, *a1));
-        *a1 = n1;
-        *a2 = n2;
+        lmul_givensq(a1, a2, c, s, *a1, *a2);
     }
 }
 
