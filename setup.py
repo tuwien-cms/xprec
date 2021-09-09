@@ -88,17 +88,29 @@ class BuildExtWithNumpy(build_ext):
         # a flag)  *slow-clap*
         platform = self.compiler.compiler_type
 
-        # See msvccompiler.py:206 - a comment worth reading in its entirety.
-        # distutils sets up an abstraction which it immediately break with its
-        # own derived classes.  *slow-clap*
+        compiler_binary = getattr(self.compiler, 'compiler', [''])[0]
+        compiler_binary = os.path.basename(compiler_binary)
+        if 'gcc' in compiler_binary or 'g++' in compiler_binary:
+            compiler_make = 'gcc'
+        elif 'clang' in compiler_binary:
+            compiler_make = 'clang'
+        elif 'icc' in compiler_binary:
+            compiler_make = 'icc'
+        elif platform == 'msvc':
+            # See msvccompiler.py:206 - a comment worth reading in its
+            # entirety.  distutils sets up an abstraction which it immediately
+            # break with its own derived classes.  *slow-clap*
+            compiler_make = 'msvc'
+
         if platform == 'unix':
-            new_flags =  {"-march": "native", "-mtune": "native", "-Wextra": None}
+            new_flags = {"-march": "native", "-mtune": "native",
+                         "-Wextra": None}
             self.compiler.compiler_so = update_flags(
-                                self.compiler.compiler_so, new_flags)
+                                    self.compiler.compiler_so, new_flags)
 
         # This has to be set to false because MacOS does not ship openmp
         if self.with_openmp is None:
-            self.with_openmp = False
+            self.with_openmp = compiler_make == 'gcc'
 
         # Numpy headers: numpy must be imported here rather than
         # globally, because otherwise it may not be available at the time
@@ -112,6 +124,8 @@ class BuildExtWithNumpy(build_ext):
             if self.with_openmp:
                 append_if_absent(ext.extra_compile_args, '-fopenmp')
                 append_if_absent(ext.extra_link_args, '-fopenmp')
+                if compiler_make == 'clang':
+                    append_if_absent(ext.extra_link_args, '-lomp')
 
         super().build_extensions()
 
