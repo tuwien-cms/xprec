@@ -277,7 +277,7 @@ static void u_svvals_tri2x2(
 
 /* ----------------------- Python stuff -------------------------- */
 
-static const char DDOUBLE_WRAP = NPY_CDOUBLE;
+static const char DDOUBLE_WRAP = NPY_VOID;
 
 static PyObject *module;
 

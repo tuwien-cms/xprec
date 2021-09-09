@@ -229,6 +229,35 @@ static void constant(ddouble value, const char *name)
     PyModule_AddObject(module, name, (PyObject *)array);
 }
 
+
+
+static int ddtype_compare(const void *d1, const void *d2, void *arr)
+{
+    ddouble lhs = *(ddouble *)d1;
+    ddouble rhs = *(ddouble *)d2;
+    if (lhs.hi == rhs.hi)
+
+
+
+
+}
+
+
+static int ddtype_create()
+{
+    PyArray_Descr *dtype = PyArray_DescrNewFromType(NPY_CDOUBLE);
+    dtype->kind = 'f';
+    dtype->type = NPY_FLOAT64;  // unsure
+    dtype->byteorder = '=';
+    dtype->elsize = sizeof(ddouble);
+
+
+
+
+
+    return PyArray_RegisterDataType(dtype);
+}
+
 PyMODINIT_FUNC PyInit__dd_ufunc(void)
 {
     /* Initialize module */
