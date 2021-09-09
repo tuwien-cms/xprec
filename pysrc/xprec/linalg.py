@@ -11,7 +11,7 @@ svd_tri2x2 = _dd_linalg.svd_tri2x2
 svvals_tri2x2 = _dd_linalg.svvals_tri2x2
 householder = _dd_linalg.householder
 mul_givens = _dd_linalg.mul_givens
-golub_kahan_chase2 = _dd_linalg.golub_kahan_chase
+golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 
 
 def householder_vector(x):
@@ -83,37 +83,14 @@ def full_givens(G):
 
 def golub_kahan_chase(d, e, shift):
     n = d.size
-    Gs = array.ddempty((n-1, 4))
+    ex = array.ddempty(d.shape)
+    ex[:-1] = e
+    Gs = array.ddempty((n, 4))
+    golub_kahan_chase_ufunc(d, ex, shift, out=(d, ex, Gs))
+    e[:] = ex[:-1]
 
-    f = (np.abs(d[0]) - shift) * (np.copysign(1.0, d[0]) + shift / d[0])
-    g = e[0]
-
-    for i in range(n-1):
-        r, G = givens(array.ddarray([f, g]))
-        cosr, sinr = G[0]
-        if i > 0:
-            e[i-1] = r[0]
-        f = cosr * d[i] + sinr * e[i]
-        e[i] = cosr * e[i] - sinr * d[i]
-        g = sinr * d[i+1]
-        d[i+1] = cosr * d[i+1]
-        Gs[i,:2] = G[0]
-
-        r, G = givens(array.ddarray([f, g]))
-        cosl, sinl = G[0]
-        d[i] = r[0]
-        f = cosl * e[i] + sinl * d[i+1]
-        d[i+1] = cosl * d[i+1] - sinl * e[i]
-        if i < n-2:
-            g = sinl * e[i+1]
-            e[i+1] = cosl * e[i+1]
-        Gs[i,2:] = G[0]
-
-    e[n-2] = f
-
-    #
-    G_V = full_givens(Gs[:,:2])
-    G_U = full_givens(Gs[:,2:])
+    G_V = full_givens(Gs[:-1,:2])
+    G_U = full_givens(Gs[:-1,2:])
     return G_U, G_V
 
 
