@@ -141,13 +141,16 @@ static void u_givens_seqq(
 
     ensure_inplace_3(_b, _c, nn, _sbn, _scn, ii, _sbi, _sci, jj, _sbj, _scj);
     for (npy_intp n = 0; n != nn; ++n, _a += _san, _c += _scn) {
-        for (npy_intp i = 0; i != ii - 1; ++i) {
-            ddouble g_cos = *(ddouble *)(_a + i * _sai);
-            ddouble g_sin = *(ddouble *)(_a + i * _sai + _saq);
-
-            for (npy_intp j = 0; j != jj; ++j) {
+        /* The rotation are interdependent, so we splice the array in
+         * the other direction.
+         */
+        #pragma omp parallel for
+        for (npy_intp j = 0; j != jj; ++j) {
+            for (npy_intp i = 0; i != ii - 1; ++i) {
                 ddouble *c_x = (ddouble *)(_c + i *_sci + j * _scj);
                 ddouble *c_y = (ddouble *)(_c + (i + 1) *_sci + j * _scj);
+                ddouble g_cos = *(ddouble *)(_a + i * _sai);
+                ddouble g_sin = *(ddouble *)(_a + i * _sai + _saq);
                 lmul_givensq(c_x, c_y, g_cos, g_sin, *c_x, *c_y);
             }
         }
