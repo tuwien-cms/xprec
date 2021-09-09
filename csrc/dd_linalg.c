@@ -107,16 +107,6 @@ void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
     e[(ii-2)*se] = f;
 }
 
-void mul_givensq(long i1, long i2, ddouble c, ddouble s, long jj,
-                 ddouble *A, long sai, long saj)
-{
-    for (long j = 0; j < jj; ++j) {
-        ddouble *a1 = A + i1 * sai + j * saj;
-        ddouble *a2 = A + i2 * sai + j * saj;
-        lmul_givensq(a1, a2, c, s, *a1, *a2);
-    }
-}
-
 void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
                 ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
 {

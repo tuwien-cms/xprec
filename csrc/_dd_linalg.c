@@ -129,36 +129,28 @@ static void ensure_inplace_3(
     }
 }
 
-static void u_mul_givensq(
+static void u_givens_seqq(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
-    // signature (n;2),(n;2,2),(n,i,j)->(n;i,j)
-    const npy_intp nn = dims[0], ii = dims[2], jj = dims[3];
+    // signature (n;i,2),(n;i,j)->(n;i,j)
+    const npy_intp nn = dims[0], ii = dims[1], jj = dims[3];
     const npy_intp _san = steps[0], _sbn = steps[1], _scn = steps[2],
-                   _sdn = steps[3], _saq = steps[4], _sbq = steps[5],
-                   _sbr = steps[6], _sci = steps[7], _scj = steps[8],
-                   _sdi = steps[9], _sdj = steps[10];
-    char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3];
+                   _sai = steps[3], _saq = steps[4], _sbi = steps[5],
+                   _sbj = steps[6], _sci = steps[7], _scj = steps[8];
+    char *_a = args[0], *_b = args[1], *_c = args[2];
 
-    ensure_inplace_3(_c, _d, nn, _scn, _sdn, ii, _sci, _sdi, jj, _scj, _sdj);
-    for (npy_intp n = 0; n != nn; ++n, _a += _san, _b += _sbn, _d += _sdn) {
-        long i1 = *(long *)(_a);
-        long i2 = *(long *)(_a + _saq);
-        if (i1 < 0 || i1 >= ii || i2 < 0 || i2 >= ii) {
-            fprintf(stderr, "invalid rows %ld,%ld for shape (%ld,%ld,%ld)\n",
-                    i1, i2, nn, ii, jj);
-            continue;
-        }
-        ddouble g_cos = *(ddouble *)(_b);
-        ddouble g_sin = *(ddouble *)(_b + _sbr);
+    ensure_inplace_3(_b, _c, nn, _sbn, _scn, ii, _sbi, _sci, jj, _sbj, _scj);
+    for (npy_intp n = 0; n != nn; ++n, _a += _san, _c += _scn) {
+        for (npy_intp i = 0; i != ii - 1; ++i) {
+            ddouble g_cos = *(ddouble *)(_a + i * _sai);
+            ddouble g_sin = *(ddouble *)(_a + i * _sai + _saq);
 
-        ddouble g_chk_msin = *(ddouble *)(_b + _sbq);
-        ddouble g_chk_cos = *(ddouble *)(_b + _sbq + _sbr);
-        if (notequalqq(g_cos, g_chk_cos) || notequalqq(g_sin, negq(g_chk_msin))) {
-            fprintf(stderr, "Warning: matrix is not a Givens rotation\n");
+            for (npy_intp j = 0; j != jj; ++j) {
+                ddouble *c_x = (ddouble *)(_c + i *_sci + j * _scj);
+                ddouble *c_y = (ddouble *)(_c + (i + 1) *_sci + j * _scj);
+                lmul_givensq(c_x, c_y, g_cos, g_sin, *c_x, *c_y);
+            }
         }
-        mul_givensq(i1, i2, g_cos, g_sin, jj,
-                    (ddouble *)_d, _sdi/sizeof(ddouble), _sdj/sizeof(ddouble));
     }
     MARK_UNUSED(data);
 }
@@ -305,28 +297,6 @@ static void gufunc(PyObject *module_dict, PyUFuncGenericFunction uloop,
     Py_DECREF(ufunc);
 }
 
-static void gufunc_var(PyObject *module_dict, PyUFuncGenericFunction uloop,
-                   int nin, int nout, const char *signature, const char *name,
-                   const char *docstring)
-{
-    PyObject *ufunc;
-    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
-    char *dtypes = PyMem_New(char, nin + nout);
-    void **data = PyMem_New(void *, 1);
-
-    loops[0] = uloop;
-    data[0] = NULL;
-    dtypes[0] = NPY_LONG;
-    for (int i = 1; i != nin + nout; ++i)
-        dtypes[i] = DDOUBLE_WRAP;
-
-    ufunc = PyUFunc_FromFuncAndDataAndSignature(
-                loops, data, dtypes, 1, nin, nout, PyUFunc_None, name,
-                docstring, 0, signature);
-    PyDict_SetItemString(module_dict, name, ufunc);
-    Py_DECREF(ufunc);
-}
-
 PyMODINIT_FUNC PyInit__dd_linalg(void)
 {
     // Defitions
@@ -365,8 +335,8 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "matmul", "Matrix multiplication");
     gufunc(module_dict, u_givensq, 1, 2, "(2)->(2),(2,2)",
            "givens", "Generate Givens rotation");
-    gufunc_var(module_dict, u_mul_givensq, 3, 1, "(2),(2,2),(i,j?)->(i,j?)",
-           "mul_givens", "apply givens rotation to matrix");
+    gufunc(module_dict, u_givens_seqq, 2, 1, "(i,2),(i,j?)->(i,j?)",
+           "givens_seq", "apply sequence of givens rotation to matrix");
     gufunc(module_dict, u_householderq, 1, 2, "(i)->(),(i)",
            "householder", "Generate Householder reflectors");
     gufunc(module_dict, u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",

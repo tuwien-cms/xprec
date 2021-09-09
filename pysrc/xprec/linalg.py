@@ -7,10 +7,10 @@ import sys
 
 norm = _dd_linalg.norm
 givens = _dd_linalg.givens
+givens_seq = _dd_linalg.givens_seq
 svd_tri2x2 = _dd_linalg.svd_tri2x2
 svvals_tri2x2 = _dd_linalg.svvals_tri2x2
 householder = _dd_linalg.householder
-mul_givens = _dd_linalg.mul_givens
 golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 
 
@@ -64,23 +64,6 @@ def householder_apply(H, Q):
     return Q
 
 
-def givens_apply_left(k, q, G, A):
-    """Apply givens rotation `G` to a matrix `A` from the left: `G @ A`"""
-    mul_givens([k, q], G, A, out=A)
-
-
-def givens_apply_right(k, q, G, A):
-    """Apply givens rotation `G` to a matrix `A` from the left: `A @ G`"""
-    mul_givens([k, q], G.T, A.T, out=A.T)
-
-
-def full_givens(G):
-    G = G[..., None, :]
-    G = np.concatenate([G, G[..., ::-1]], axis=-2)
-    G[..., 1, 0] *= -1
-    return G
-
-
 def golub_kahan_chase(d, e, shift):
     n = d.size
     ex = array.ddempty(d.shape)
@@ -88,17 +71,8 @@ def golub_kahan_chase(d, e, shift):
     Gs = array.ddempty((n, 4))
     golub_kahan_chase_ufunc(d, ex, shift, out=(d, ex, Gs))
     e[:] = ex[:-1]
-
-    G_V = full_givens(Gs[:-1,:2])
-    G_U = full_givens(Gs[:-1,2:])
-    return G_U, G_V
-
-
-def svd_apply_givens(G_V, VT):
-    indices = np.array([0, 1])
-    for G in G_V:
-        mul_givens(indices, G, VT, out=VT)
-        indices += 1
+    Gs[-1] = 0
+    return Gs[:,:2], Gs[:,2:]
 
 
 def estimate_sbounds(d, f):
@@ -162,9 +136,12 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
         tail = array.ddarray([d[n2-1],   f[n2-1],
                               0 * d[n2], d[n2]]).reshape(2, 2)
         shift = svvals_tri2x2(tail)[1]
-        G_U, G_V = step(d[n1:n2+1], f[n1:n2], shift)
-        svd_apply_givens(G_V, VH[n1:n2+1, :])
-        svd_apply_givens(G_U, U[:, n1:n2+1].T)
+        G_V, G_U = step(d[n1:n2+1], f[n1:n2], shift)
+
+        VHpart = VH[n1:n2+1, :]
+        UHpart = U[:, n1:n2+1].T
+        givens_seq(G_V, VHpart, out=VHpart)
+        givens_seq(G_U, UHpart, out=UHpart)
     else:
         warn("Did not converge!")
 
