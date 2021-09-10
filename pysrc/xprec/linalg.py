@@ -64,6 +64,58 @@ def householder_apply(H, Q):
     return Q
 
 
+def qr(A, reflectors=False):  # xGEQR2
+    R = array.ddarray(A)
+    m, n = R.shape
+    k = min(m, n)
+
+    Q = array.ddzeros((k, m))
+    for i in range(k):
+        householder_update(R[i:,i:], Q[i:,i:])
+    if not reflectors:
+        I = array.ddeye(m)
+        Q = householder_apply(Q, I)
+    return Q, R
+
+
+def qr_pivot(A, reflectors=False):   # xGEQPF
+    R = array.ddarray(A)
+    m, n = R.shape
+    k = min(m, n)
+
+    Q = array.ddzeros((k, m))
+    jpvt = np.arange(n)
+    norms = norm(A.T)
+    xnorms = norms.copy()
+    TOL3Z = np.finfo(float).eps
+    for i in range(k):
+        pvt = i + np.argmax(norms[i:])
+        if i != pvt:
+            R[:,[i, pvt]] = R[:,[pvt, i]]
+            jpvt[[i, pvt]] = jpvt[[pvt, i]]
+            norms[pvt] = norms[i]
+            xnorms[pvt] = xnorms[i]
+
+        householder_update(R[i:,i:], Q[i:,i:])
+
+        for j in range(i+1, n):
+            if np.equal(norms[j], 0):
+                continue
+
+            temp = np.abs(R[i,j]) / norms[j]
+            temp = np.maximum(0, (1 + temp)*(1 - temp))
+            temp2 = temp * np.square(norms[j] / xnorms[j])
+            if temp2 < TOL3Z:
+                xnorms[j] = norms[j] = norm(R[i+1:,j])
+            else:
+                np.multiply(norms[j], np.sqrt(temp), out=norms[j])
+
+    if not reflectors:
+        I = array.ddeye(m)
+        Q = householder_apply(Q, I)
+    return Q, R, jpvt
+
+
 def golub_kahan_chase(d, e, shift):
     n = d.size
     ex = array.ddempty(d.shape)

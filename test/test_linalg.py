@@ -62,3 +62,27 @@ def test_svd():
     Ux, sx, VTx = xprec.linalg.svd(Ax)
     diff = (Ux[:,:20] * sx) @ VTx - Ax
     np.testing.assert_allclose(diff.hi, 0, atol=1e-29)
+
+
+def test_qr():
+    A = np.vander(np.linspace(-1, 1, 60), 80)
+    Q, R = xprec.linalg.qr(A)
+    I_m = xprec.array.ddeye(60)
+    D = Q @ Q.T - I_m
+    np.testing.assert_allclose(D.hi, 0, atol=4e-30)
+    D = Q @ R - A
+    np.testing.assert_allclose(D.hi, 0, atol=4e-30)
+
+
+def test_qr_pivot():
+    A = np.vander(np.linspace(-1, 1, 60), 80)
+    Q, R, piv = xprec.linalg.qr_pivot(A)
+    I_m = xprec.array.ddeye(60)
+    D = Q @ Q.T - I_m
+    np.testing.assert_allclose(D.hi, 0, atol=4e-30)
+
+    D = Q @ R - A[:,piv]
+    np.testing.assert_allclose(D.hi, 0, atol=4e-30)
+
+    Rdiag = np.abs(R.diagonal())
+    assert (Rdiag[1:] <= Rdiag[:-1]).all()

@@ -142,8 +142,10 @@ def asddarray(arr, copy=False):
 
 
 def ddarray(arr_like, copy=True, order='K', ndmin=0):
-    arr = np.array(arr_like, copy=copy, order=order, ndmin=ndmin)
+    arr = np.array(arr_like, copy=False, order=order, ndmin=ndmin)
     if arr.dtype == DTYPE:
+        if copy:
+            arr = arr.copy()
         return arr.view(Array)
 
     dd_arr = np.empty(arr.shape, DTYPE)
@@ -154,6 +156,14 @@ def ddarray(arr_like, copy=True, order='K', ndmin=0):
 
 def ddempty(shape):
     return np.empty(shape, DTYPE).view(Array)
+
+
+def ddzeros(shape):
+    return np.zeros(shape, DTYPE).view(Array)
+
+
+def ddeye(n, m=None, k=0):
+    return ddarray(np.eye(n, m, k))
 
 
 def _strip_or_none(arr):
