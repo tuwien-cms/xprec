@@ -287,6 +287,65 @@ static int PyDDouble_Nonzero(PyObject* _x)
     return !(x.hi == 0);
 }
 
+PyObject* PyDDouble_RichCompare(PyObject* _x, PyObject* _y, int op)
+{
+    ddouble x, y;
+    if (!PyDDouble_Cast(_x, &x) || !PyDDouble_Cast(_y, &y))
+        return PyGenericArrType_Type.tp_richcompare(_x, _y, op);
+
+    bool result;
+    switch (op) {
+    case Py_LT:
+        result = lessqq(x, y);
+        break;
+    case Py_LE:
+        result = lessequalqq(x, y);
+        break;
+    case Py_EQ:
+        result = equalqq(x, y);
+        break;
+    case Py_NE:
+        result = notequalqq(x, y);
+        break;
+    case Py_GT:
+        result = greaterqq(x, y);
+        break;
+    case Py_GE:
+        result = greaterequalqq(x, y);
+        break;
+    default:
+        PyErr_SetString(PyExc_RuntimeError, "Invalid op type");
+        return NULL;
+    }
+    return PyBool_FromLong(result);
+}
+
+Py_hash_t PyDDouble_Hash(PyObject *_x)
+{
+    ddouble x = PyDDouble_Unwrap(_x);
+
+    int exp;
+    double mantissa;
+    mantissa = frexp(x.hi, &exp);
+    return SSIZE_MAX * mantissa + exp;
+}
+
+PyObject *PyDDouble_Str(PyObject *self)
+{
+    char out[200];
+    ddouble x = PyDDouble_Unwrap(self);
+    snprintf(out, 200, "%.16g", x.hi);
+    return PyUnicode_FromString(out);
+}
+
+PyObject *PyDDouble_Repr(PyObject *self)
+{
+    char out[200];
+    ddouble x = PyDDouble_Unwrap(self);
+    snprintf(out, 200, "ddouble(%.16g)", x.hi);
+    return PyUnicode_FromString(out);
+}
+
 int make_ddouble_type()
 {
     static PyNumberMethods ddouble_as_number = {
@@ -309,13 +368,13 @@ int make_ddouble_type()
         PyVarObject_HEAD_INIT(NULL, 0)
         .tp_name = "ddouble",
         .tp_basicsize = sizeof(PyDDouble),
-        .tp_repr = NULL,  // TODO
+        .tp_repr = PyDDouble_Repr,
         .tp_as_number = &ddouble_as_number,
-        .tp_hash = NULL,    // TODO
-        .tp_str = NULL,     // TODO
+        .tp_hash = PyDDouble_Hash,
+        .tp_str = PyDDouble_Str,
         .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
         .tp_doc = "double-double floating point type",
-        .tp_richcompare = NULL,   // TODO
+        .tp_richcompare = PyDDouble_RichCompare,
         .tp_new = PyDDouble_New,
         };
 
