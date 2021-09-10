@@ -689,6 +689,23 @@ static int register_ufuncs()
     return 0;
 }
 
+int register_dtype_in_dicts()
+{
+    PyObject *type_dict = NULL;
+
+    type_dict = PyObject_GetAttrString(numpy_module, "sctypeDict");
+    if (type_dict == NULL) goto error;
+
+    if (PyDict_SetItemString(type_dict, "ddouble",
+                             (PyObject *)pyddouble_type) < 0)
+        goto error;
+    return 0;
+
+error:
+    Py_XDECREF(type_dict);
+    return -1;
+}
+
 /* ----------------------- Python stuff -------------------------- */
 
 static const char DDOUBLE_WRAP = NPY_CDOUBLE;
@@ -715,8 +732,6 @@ PyObject *make_module()
     module = PyModule_Create(&module_def);
     return module;
 }
-
-
 
 static void binary_ufunc(PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
@@ -798,6 +813,7 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
         return NULL;
     if (make_dtype() < 0)
         return NULL;
+
     numpy_module = PyImport_ImportModule("numpy");
     if (numpy_module == NULL)
         return NULL;
@@ -806,6 +822,8 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
     PyModule_AddObject(module, "fancy_dtype", (PyObject *)fancy_dtype);
 
     register_ufuncs();
+    if (register_dtype_in_dicts() < 0)
+        return NULL;
 
     /* Create ufuncs */
     binary_ufunc(u_adddq, u_addqd, u_addqq,
