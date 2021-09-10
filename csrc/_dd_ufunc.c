@@ -465,6 +465,88 @@ static int make_dtype()
     return type_num;
 }
 
+/* ------------------------------- Casts ------------------------------ */
+
+#define NPY_CAST_FROM(func, from_type)                               \
+    static void func(void *_from, void *_to, npy_intp n,             \
+                     void *_arr_from, void *_arr_to)                 \
+    {                                                                \
+        ddouble *to = (ddouble *)_to;                                \
+        const from_type *from = (const from_type *)_from;            \
+        for (npy_intp i = 0; i < n; ++i)                             \
+            to[i] = (ddouble) { from[i], 0.0 };                      \
+        MARK_UNUSED(_arr_from);                                      \
+        MARK_UNUSED(_arr_to);                                        \
+    }
+
+#define NPY_CAST_TO(func, to_type)                                   \
+    static void func(void *_from, void *_to, npy_intp n,             \
+                     void *_arr_from, void *_arr_to)                 \
+    {                                                                \
+        to_type *to = (to_type *)_to;                                \
+        const ddouble *from = (const ddouble *)_from;                \
+        for (npy_intp i = 0; i < n; ++i)                             \
+            to[i] = (to_type) from[i].hi;                            \
+        MARK_UNUSED(_arr_from);                                      \
+        MARK_UNUSED(_arr_to);                                        \
+    }
+
+// These casts are all loss-less
+// TODO: int64 should be loss-less too
+NPY_CAST_FROM(from_double, double)
+NPY_CAST_FROM(from_float, float)
+NPY_CAST_FROM(from_bool, bool)
+NPY_CAST_FROM(from_int8, int8_t)
+NPY_CAST_FROM(from_int16, int16_t)
+NPY_CAST_FROM(from_int32, int32_t)
+NPY_CAST_FROM(from_int64, int64_t)
+NPY_CAST_FROM(from_uint8, uint8_t)
+NPY_CAST_FROM(from_uint16, uint16_t)
+NPY_CAST_FROM(from_uint32, uint32_t)
+NPY_CAST_FROM(from_uint64, uint64_t)
+
+// These casts are all lossy
+NPY_CAST_TO(to_double, double)
+NPY_CAST_TO(to_float, float)
+NPY_CAST_TO(to_bool, bool)
+NPY_CAST_TO(to_int8, int8_t)
+NPY_CAST_TO(to_int16, int16_t)
+NPY_CAST_TO(to_int32, int32_t)
+NPY_CAST_TO(to_int64, int64_t)
+NPY_CAST_TO(to_uint8, uint8_t)
+NPY_CAST_TO(to_uint16, uint16_t)
+NPY_CAST_TO(to_uint32, uint32_t)
+NPY_CAST_TO(to_uint64, uint64_t)
+
+static int register_cast(int other_type, PyArray_VectorUnaryFunc from_other,
+                         PyArray_VectorUnaryFunc to_other)
+{
+    PyArray_Descr *other_descr = PyArray_DescrFromType(other_type);
+    PyArray_Descr *ddouble_descr = PyArray_DescrFromType(type_num);
+
+    PyArray_RegisterCastFunc(other_descr, type_num, from_other);
+    PyArray_RegisterCanCast(other_descr, type_num, NPY_NOSCALAR);
+
+    PyArray_RegisterCastFunc(ddouble_descr, other_type, to_other);
+    return 0;
+}
+
+static int register_casts()
+{
+    register_cast(NPY_DOUBLE, from_double, to_double);
+    register_cast(NPY_FLOAT,  from_float,  to_float);
+    register_cast(NPY_BOOL,   from_bool,   to_bool);
+    register_cast(NPY_INT8,   from_int8,   to_int8);
+    register_cast(NPY_INT16,  from_int16,  to_int16);
+    register_cast(NPY_INT32,  from_int32,  to_int32);
+    register_cast(NPY_INT64,  from_int64,  to_int64);
+    register_cast(NPY_UINT8,  from_uint8,  to_uint8);
+    register_cast(NPY_UINT16, from_uint16, to_uint16);
+    register_cast(NPY_UINT32, from_uint32, to_uint32);
+    register_cast(NPY_UINT64, from_uint64, to_uint64);
+    return 0;
+}
+
 /* ------------------------------- Ufuncs ----------------------------- */
 
 
@@ -821,8 +903,11 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
     PyArray_Descr *fancy_dtype = PyArray_DescrFromType(type_num);
     PyModule_AddObject(module, "fancy_dtype", (PyObject *)fancy_dtype);
 
-    register_ufuncs();
+    if (register_ufuncs() < 0)
+        return NULL;
     if (register_dtype_in_dicts() < 0)
+        return NULL;
+    if (register_casts() < 0)
         return NULL;
 
     /* Create ufuncs */
