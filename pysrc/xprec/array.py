@@ -3,21 +3,7 @@ import numpy as np
 from . import _dd_ufunc
 from . import _dd_linalg
 
-DTYPE = np.dtype([("hi", float), ("lo", float)])
-
-_RAW_DTYPE = _dd_ufunc.dtype
-
-_UFUNC_SUPPORTED = (
-    "add", "subtract", "multiply", "true_divide",
-    "positive", "negative", "absolute", "floor", "ceil", "rint",
-    "copysign", "sign", "signbit", "isfinite", "isinf", "isnan",
-    "equal", "not_equal", "greater", "greater_equal", "less", "less_equal",
-    "square", "sqrt", "reciprocal", "exp", "expm1", "log",
-    "sin", "cos", "sinh", "cosh", "tanh", "hypot", "fmin", "fmax",
-    )
-_UFUNC_TABLE = {getattr(np, name): getattr(_dd_ufunc, name)
-                for name in _UFUNC_SUPPORTED}
-_UFUNC_TABLE[np.matmul] = _dd_linalg.matmul
+DTYPE = _dd_ufunc.dtype
 
 
 class Array(np.ndarray):

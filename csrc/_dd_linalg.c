@@ -15,7 +15,6 @@
  */
 #define MARK_UNUSED(x)  do { (void)(x); } while(false)
 
-
 /************************ Linear algebra ***************************/
 
 static void u_matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
@@ -277,9 +276,9 @@ static void u_svvals_tri2x2(
 
 /* ----------------------- Python stuff -------------------------- */
 
-static const char DDOUBLE_WRAP = NPY_CDOUBLE;
-
 static PyObject *module;
+static PyObject *numpy_module = NULL;
+static int type_num;
 
 static PyObject *make_module()
 {
@@ -301,24 +300,54 @@ static PyObject *make_module()
     return module;
 }
 
-static void gufunc(
-        PyUFuncGenericFunction uloop, int nin, int nout,
-        const char *signature, const char *name, const char *docstring)
+static int import_ddouble_dtype()
 {
-    PyObject *ufunc;
-    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
-    char *dtypes = PyMem_New(char, nin + nout);
-    void **data = PyMem_New(void *, 1);
+    PyObject *dd_module = PyImport_ImportModule("xprec._dd_ufunc");
+    if (dd_module == NULL)
+        return -1;
 
-    loops[0] = uloop;
-    data[0] = NULL;
+    // Now, ddouble should be defined
+    type_num = PyArray_TypeNumFromName("ddouble");
+    if (type_num == NPY_NOTYPE)
+        return -1;
+
+    return 0;
+}
+
+static int gufunc(
+        PyUFuncGenericFunction uloop, int nin, int nout,
+        const char *signature, const char *name, const char *docstring,
+        bool in_numpy)
+{
+    PyUFuncObject *ufunc = NULL;
+    int *arg_types = NULL, retcode = 0;
+
+    if (in_numpy) {
+        ufunc = (PyUFuncObject *)PyObject_GetAttrString(numpy_module, name);
+    } else {
+        ufunc = (PyUFuncObject *)PyUFunc_FromFuncAndDataAndSignature(
+                        NULL, NULL, NULL, 0, nin, nout, PyUFunc_None, name,
+                        docstring, 0, signature);
+    }
+    if (ufunc == NULL) goto error;
+
+    int *dtypes = PyMem_New(int, nin + nout);
+    if (dtypes == NULL) goto error;
+
     for (int i = 0; i != nin + nout; ++i)
-        dtypes[i] = DDOUBLE_WRAP;
+        dtypes[i] = type_num;
 
-    ufunc = PyUFunc_FromFuncAndDataAndSignature(
-                loops, data, dtypes, 1, nin, nout, PyUFunc_None, name,
-                docstring, 0, signature);
-    PyModule_AddObject(module, name, ufunc);
+    retcode = PyUFunc_RegisterLoopForType(ufunc, type_num,
+                                          uloop, arg_types, NULL);
+    if (retcode < 0) goto error;
+
+    return PyModule_AddObject(module, name, (PyObject *)ufunc);
+
+error:
+    if (!in_numpy)
+        Py_XDECREF(ufunc);
+    PyMem_Free(arg_types);
+    return -1;
 }
 
 PyMODINIT_FUNC PyInit__dd_linalg(void)
@@ -330,25 +359,32 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
     import_array();
     import_umath();
 
+    numpy_module = PyImport_ImportModule("numpy");
+    if (numpy_module == NULL)
+       return NULL;
+
+    if (import_ddouble_dtype() < 0)
+        return NULL;
+
     gufunc(u_normq, 1, 1, "(i)->()",
-           "norm", "Vector 2-norm");
+           "norm", "Vector 2-norm", false);
     gufunc(u_matmulq, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
-           "matmul", "Matrix multiplication");
+           "matmul", "Matrix multiplication", true);
     gufunc(u_givensq, 1, 2, "(2)->(2),(2,2)",
-           "givens", "Generate Givens rotation");
+           "givens", "Generate Givens rotation", false);
     gufunc(u_givens_seqq, 2, 1, "(i,2),(i,j?)->(i,j?)",
-           "givens_seq", "apply sequence of givens rotation to matrix");
+           "givens_seq", "apply sequence of givens rotation to matrix", false);
     gufunc(u_householderq, 1, 2, "(i)->(),(i)",
-           "householder", "Generate Householder reflectors");
+           "householder", "Generate Householder reflectors", false);
     gufunc(u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
-           "svd_tri2x2", "SVD of upper triangular 2x2 problem");
+           "svd_tri2x2", "SVD of upper triangular 2x2 problem", false);
     gufunc(u_svvals_tri2x2, 1, 1, "(2,2)->(2)",
-           "svvals_tri2x2", "singular values of upper triangular 2x2 problem");
+           "svvals_tri2x2", "singular values of upper triangular 2x2 problem", false);
     gufunc(u_golub_kahan_chaseq, 3, 3, "(i),(i),()->(i),(i),(i,4)",
-           "golub_kahan_chase", "bidiagonal chase procedure");
+           "golub_kahan_chase", "bidiagonal chase procedure", false);
 
     /* Make dtype */
-    PyArray_Descr *dtype = PyArray_DescrFromType(DDOUBLE_WRAP);
+    PyArray_Descr *dtype = PyArray_DescrFromType(NPY_CDOUBLE);
     PyModule_AddObject(module, "dtype", (PyObject *)dtype);
 
     /* Module is ready */

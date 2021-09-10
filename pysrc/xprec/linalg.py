@@ -1,9 +1,8 @@
 import numpy as np
 from warnings import warn
 
-from . import array
+from . import ddouble
 from . import _dd_linalg
-import sys
 
 norm = _dd_linalg.norm
 givens = _dd_linalg.givens
@@ -14,8 +13,8 @@ householder = _dd_linalg.householder
 golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 
 
-def householder_vector(x):
-    return householder(array.asddarray(x))
+# Should work
+householder_vector = householder
 
 
 def householder_update(A, Q):
@@ -27,8 +26,7 @@ def householder_update(A, Q):
 
 
 def householder_bidiag(A):
-    A = np.array(A, copy=True, subok=True)
-
+    A = np.array(A)
     m, n = A.shape
     if m < n:
         raise NotImplementedError("must be tall matrix")
@@ -46,7 +44,7 @@ def householder_bidiag(A):
 
 
 def householder_apply(H, Q):
-    H = np.asanyarray(H)
+    H = np.asarray(H)
     Q = Q.copy()
     m, r = H.shape
     if Q.shape != (m, m):
@@ -65,25 +63,25 @@ def householder_apply(H, Q):
 
 
 def qr(A, reflectors=False):  # xGEQR2
-    R = array.ddarray(A)
+    R = np.array(A)
     m, n = R.shape
     k = min(m, n)
 
-    Q = array.ddzeros((k, m))
+    Q = np.zeros((k, m), A.dtype)
     for i in range(k):
         householder_update(R[i:,i:], Q[i:,i:])
     if not reflectors:
-        I = array.ddeye(m)
+        I = np.eye(m, dtype=A.dtype)
         Q = householder_apply(Q, I)
     return Q, R
 
 
 def qr_pivot(A, reflectors=False):   # xGEQPF
-    R = array.ddarray(A)
+    R = np.array(A)
     m, n = R.shape
     k = min(m, n)
 
-    Q = array.ddzeros((k, m))
+    Q = np.zeros((k, m), A.dtype)
     jpvt = np.arange(n)
     norms = norm(A.T)
     xnorms = norms.copy()
@@ -111,16 +109,16 @@ def qr_pivot(A, reflectors=False):   # xGEQPF
                 np.multiply(norms[j], np.sqrt(temp), out=norms[j])
 
     if not reflectors:
-        I = array.ddeye(m)
+        I = np.eye(m, dtype=A.dtype)
         Q = householder_apply(Q, I)
     return Q, R, jpvt
 
 
 def golub_kahan_chase(d, e, shift):
     n = d.size
-    ex = array.ddempty(d.shape)
+    ex = np.empty(d.shape, d.dtype)
     ex[:-1] = e
-    Gs = array.ddempty((n, 4))
+    Gs = np.empty((n, 4), d.dtype)
     golub_kahan_chase_ufunc(d, ex, shift, out=(d, ex, Gs))
     e[:] = ex[:-1]
     Gs[-1] = 0
@@ -185,8 +183,8 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
         if n1 == n2:
             return
 
-        tail = array.ddarray([d[n2-1],   f[n2-1],
-                              0 * d[n2], d[n2]]).reshape(2, 2)
+        tail = np.array([d[n2-1],   f[n2-1],
+                         0 * d[n2], d[n2]]).reshape(2, 2)
         shift = svvals_tri2x2(tail)[1]
         G_V, G_U = step(d[n1:n2+1], f[n1:n2], shift)
 
@@ -201,8 +199,8 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
 def svd(A):
     m, n = A.shape
     U, B, V = householder_bidiag(A)
-    U = householder_apply(U, array.ddarray(np.eye(m)))
-    V = householder_apply(V, array.ddarray(np.eye(n)))
+    U = householder_apply(U, np.eye(m, A.dtype))
+    V = householder_apply(V, np.eye(n, A.dtype))
     VT = V.T
 
     d = B.diagonal().copy()

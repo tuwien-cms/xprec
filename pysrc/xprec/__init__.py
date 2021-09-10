@@ -1,3 +1,6 @@
 __version__ = "0.1"
 
-from .array import Array, ddarray, asddarray
+from . import _dd_ufunc
+from . import _dd_linalg
+
+ddouble = _dd_ufunc.dtype

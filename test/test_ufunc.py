@@ -1,11 +1,10 @@
 import numpy as np
 import xprec
-import xprec.array
 
 
 def _compare_ufunc(ufunc, *args, ulps=1):
     fx_d = ufunc(*args)
-    fx_q = ufunc(*map(xprec.ddarray, args)).hi
+    fx_q = ufunc(*(a.astype(xprec.ddouble) for a in args)).astype(float)
 
     # Ensure relative accuracy of 2 ulps
     np.testing.assert_array_almost_equal_nulp(fx_d, fx_q, ulps)

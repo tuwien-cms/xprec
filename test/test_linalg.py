@@ -2,12 +2,13 @@ import numpy as np
 
 import xprec
 import xprec.linalg
+from xprec import ddouble
 
 
 def test_householder_vec():
     rng = np.random.RandomState(4711)
     xd = rng.random_sample(20)
-    xq = xprec.ddarray(xd)
+    xq = np.array(xd, dtype=ddouble)
 
     betaq, vq = xprec.linalg.householder_vector(xq)
     eq = xq - betaq * vq * (vq @ xq)

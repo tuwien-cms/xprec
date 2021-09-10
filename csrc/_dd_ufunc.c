@@ -654,7 +654,6 @@ ULOOP_UNARY(u_sinhq, sinhq, ddouble, ddouble)
 ULOOP_UNARY(u_coshq, coshq, ddouble, ddouble)
 ULOOP_UNARY(u_tanhq, tanhq, ddouble, ddouble)
 
-
 static int register_binary(PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
         int ret_dtype, const char *name)
@@ -790,8 +789,6 @@ error:
 
 /* ----------------------- Python stuff -------------------------- */
 
-static const char DDOUBLE_WRAP = NPY_CDOUBLE;
-
 PyObject *make_module()
 {
     // Defitions
@@ -815,57 +812,6 @@ PyObject *make_module()
     return module;
 }
 
-static void binary_ufunc(PyUFuncGenericFunction dq_func,
-        PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
-        char ret_dtype, const char *name, const char *docstring)
-{
-
-    PyObject *ufunc;
-    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 3);
-    char *dtypes = PyMem_New(char, 3 * 3);
-    void **data = PyMem_New(void *, 3);
-
-    loops[0] = dq_func;
-    data[0] = NULL;
-    dtypes[0] = NPY_DOUBLE;
-    dtypes[1] = DDOUBLE_WRAP;
-    dtypes[2] = ret_dtype;
-
-    loops[1] = qd_func;
-    data[1] = NULL;
-    dtypes[3] = DDOUBLE_WRAP;
-    dtypes[4] = NPY_DOUBLE;
-    dtypes[5] = ret_dtype;
-
-    loops[2] = qq_func;
-    data[2] = NULL;
-    dtypes[6] = DDOUBLE_WRAP;
-    dtypes[7] = DDOUBLE_WRAP;
-    dtypes[8] = ret_dtype;
-
-    ufunc = PyUFunc_FromFuncAndData(
-                loops, data, dtypes, 3, 2, 1, PyUFunc_None, name, docstring, 0);
-    PyModule_AddObject(module, name, ufunc);
-}
-
-static void unary_ufunc(PyUFuncGenericFunction func, char ret_dtype,
-                        const char *name, const char *docstring)
-{
-    PyObject *ufunc;
-    PyUFuncGenericFunction* loops = PyMem_New(PyUFuncGenericFunction, 1);
-    char *dtypes = PyMem_New(char, 1 * 2);
-    void **data = PyMem_New(void *, 1);
-
-    loops[0] = func;
-    data[0] = NULL;
-    dtypes[0] = DDOUBLE_WRAP;
-    dtypes[1] = ret_dtype;
-
-    ufunc = PyUFunc_FromFuncAndData(
-                loops, data, dtypes, 1, 1, 1, PyUFunc_None, name, docstring, 0);
-    PyModule_AddObject(module, name, ufunc);
-}
-
 static void constant(ddouble value, const char *name)
 {
     // Note that data must be allocated using malloc, not python allocators!
@@ -873,13 +819,29 @@ static void constant(ddouble value, const char *name)
     *data = value;
 
     PyArrayObject *array = (PyArrayObject *)
-        PyArray_SimpleNewFromData(0, NULL, DDOUBLE_WRAP, data);
+            PyArray_SimpleNewFromData(0, NULL, type_num, data);
     PyArray_ENABLEFLAGS(array, NPY_ARRAY_OWNDATA);
     PyArray_CLEARFLAGS(array, NPY_ARRAY_WRITEABLE);
 
     PyModule_AddObject(module, name, (PyObject *)array);
 }
 
+static int register_constants()
+{
+    constant(Q_MAX, "MAX");
+    constant(Q_MIN, "MIN");
+    constant(Q_EPS, "EPS");
+    constant(Q_2PI, "TWOPI");
+    constant(Q_PI, "PI");
+    constant(Q_PI_2, "PI_2");
+    constant(Q_PI_4, "PI_4");
+    constant(Q_E, "E");
+    constant(Q_LOG2, "LOG2");
+    constant(Q_LOG10, "LOG10");
+    constant(nanq(), "NAN");
+    constant(infq(), "INF");
+    return 0;
+}
 
 PyMODINIT_FUNC PyInit__dd_ufunc(void)
 {
@@ -900,8 +862,8 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
     if (numpy_module == NULL)
         return NULL;
 
-    PyArray_Descr *fancy_dtype = PyArray_DescrFromType(type_num);
-    PyModule_AddObject(module, "fancy_dtype", (PyObject *)fancy_dtype);
+    PyArray_Descr *dtype = PyArray_DescrFromType(type_num);
+    PyModule_AddObject(module, "dtype", (PyObject *)dtype);
 
     if (register_ufuncs() < 0)
         return NULL;
@@ -909,111 +871,8 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
         return NULL;
     if (register_casts() < 0)
         return NULL;
-
-    /* Create ufuncs */
-    binary_ufunc(u_adddq, u_addqd, u_addqq,
-                 DDOUBLE_WRAP, "add", "addition");
-    binary_ufunc(u_subdq, u_subqd, u_subqq,
-                 DDOUBLE_WRAP, "subtract", "subtraction");
-    binary_ufunc(u_muldq, u_mulqd, u_mulqq,
-                 DDOUBLE_WRAP, "multiply", "element-wise multiplication");
-    binary_ufunc(u_divdq, u_divqd, u_divqq,
-                 DDOUBLE_WRAP, "true_divide", "element-wise division");
-
-    binary_ufunc(u_equaldq, u_equalqd, u_equalqq,
-                 NPY_BOOL, "equal", "equality comparison");
-    binary_ufunc(u_notequaldq, u_notequalqd, u_notequalqq,
-                 NPY_BOOL, "not_equal", "inequality comparison");
-    binary_ufunc(u_greaterdq, u_greaterqd, u_greaterqq,
-                 NPY_BOOL, "greater", "element-wise greater");
-    binary_ufunc(u_lessdq, u_lessqd, u_lessqq,
-                 NPY_BOOL, "less", "element-wise less");
-    binary_ufunc(u_greaterequaldq, u_greaterequalqd, u_greaterequalqq,
-                 NPY_BOOL, "greater_equal", "element-wise greater or equal");
-    binary_ufunc(u_lessequaldq, u_lessequalqd, u_lessequalqq,
-                 NPY_BOOL, "less_equal", "element-wise less or equal");
-    binary_ufunc(u_fmindq, u_fminqd, u_fminqq,
-                 DDOUBLE_WRAP, "fmin", "element-wise minimum");
-    binary_ufunc(u_fmaxdq, u_fmaxqd, u_fmaxqq,
-                 DDOUBLE_WRAP, "fmax", "element-wise minimum");
-
-    unary_ufunc(u_negq, DDOUBLE_WRAP,
-                "negative", "negation (+ to -)");
-    unary_ufunc(u_posq, DDOUBLE_WRAP,
-                "positive", "explicit + sign");
-    unary_ufunc(u_absq, DDOUBLE_WRAP,
-                "absolute", "absolute value");
-    unary_ufunc(u_reciprocalq, DDOUBLE_WRAP,
-                "reciprocal", "element-wise reciprocal value");
-    unary_ufunc(u_sqrq, DDOUBLE_WRAP,
-                "square", "element-wise square");
-    unary_ufunc(u_sqrtq, DDOUBLE_WRAP,
-                "sqrt", "element-wise square root");
-    unary_ufunc(u_signbitq, NPY_BOOL,
-                "signbit", "sign bit of number");
-    unary_ufunc(u_isfiniteq, NPY_BOOL,
-                "isfinite", "whether number is finite");
-    unary_ufunc(u_isinfq, NPY_BOOL,
-                "isinf", "whether number is infinity");
-    unary_ufunc(u_isnanq, NPY_BOOL,
-                "isnan", "test for not-a-number");
-
-    unary_ufunc(u_roundq, DDOUBLE_WRAP,
-                "rint", "round to nearest integer");
-    unary_ufunc(u_floorq, DDOUBLE_WRAP,
-                "floor", "round down to next integer");
-    unary_ufunc(u_ceilq, DDOUBLE_WRAP,
-                "ceil", "round up to next integer");
-    unary_ufunc(u_expq, DDOUBLE_WRAP,
-                "exp", "exponential function");
-    unary_ufunc(u_expm1q, DDOUBLE_WRAP,
-                "expm1", "exponential function minus one");
-    unary_ufunc(u_logq, DDOUBLE_WRAP,
-                "log", "natural logarithm");
-    unary_ufunc(u_sinq, DDOUBLE_WRAP,
-                "sin", "sine");
-    unary_ufunc(u_cosq, DDOUBLE_WRAP,
-                "cos", "cosine");
-    unary_ufunc(u_sinhq, DDOUBLE_WRAP,
-                "sinh", "hyperbolic sine");
-    unary_ufunc(u_coshq, DDOUBLE_WRAP,
-                "cosh", "hyperbolic cosine");
-    unary_ufunc(u_tanhq, DDOUBLE_WRAP,
-                "tanh", "hyperbolic tangent");
-
-    unary_ufunc(u_iszeroq, NPY_BOOL,
-                "iszero", "element-wise test for zero");
-    unary_ufunc(u_isoneq, NPY_BOOL,
-                "isone", "element-wise test for one");
-    unary_ufunc(u_ispositiveq, NPY_BOOL,
-                "ispositive", "element-wise test for positive values");
-    unary_ufunc(u_isnegativeq, NPY_BOOL,
-                "isnegative", "element-wise test for negative values");
-    unary_ufunc(u_signq, DDOUBLE_WRAP,
-                "sign", "element-wise sign computation");
-
-    binary_ufunc(u_copysigndq, u_copysignqd, u_copysignqq,
-                 DDOUBLE_WRAP, "copysign", "overrides sign of x with that of y");
-    binary_ufunc(u_hypotdq, u_hypotqd, u_hypotqq,
-                 DDOUBLE_WRAP, "hypot", "hypothenuse calculation");
-
-
-    constant(Q_MAX, "MAX");
-    constant(Q_MIN, "MIN");
-    constant(Q_EPS, "EPS");
-    constant(Q_2PI, "TWOPI");
-    constant(Q_PI, "PI");
-    constant(Q_PI_2, "PI_2");
-    constant(Q_PI_4, "PI_4");
-    constant(Q_E, "E");
-    constant(Q_LOG2, "LOG2");
-    constant(Q_LOG10, "LOG10");
-    constant(nanq(), "NAN");
-    constant(infq(), "INF");
-
-    /* Make dtype */
-    PyObject *dtype = (PyObject *) PyArray_DescrFromType(DDOUBLE_WRAP);
-    PyModule_AddObject(module, "dtype", dtype);
+    if (register_constants() < 0)
+        return NULL;
 
     /* Module is ready */
     return module;
