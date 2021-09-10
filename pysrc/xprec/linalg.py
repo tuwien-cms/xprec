@@ -98,17 +98,21 @@ def qr_pivot(A, reflectors=False):   # xGEQPF
 
         householder_update(R[i:,i:], Q[i:,i:])
 
-        for j in range(i+1, n):
-            if np.equal(norms[j], 0):
-                continue
+        j = norms[i+1:].nonzero()[0] + (i+1)
+        temp = np.abs(R[i, j]) / norms[j]
+        temp = np.maximum(0, (1 + temp)/(1 - temp))
+        temp2 = temp * np.square(norms[j] / xnorms[j])
 
-            temp = np.abs(R[i,j]) / norms[j]
-            temp = np.maximum(0, (1 + temp)*(1 - temp))
-            temp2 = temp * np.square(norms[j] / xnorms[j])
-            if temp2 < TOL3Z:
-                xnorms[j] = norms[j] = norm(R[i+1:,j])
-            else:
-                np.multiply(norms[j], np.sqrt(temp), out=norms[j])
+        wheresmall = temp2 < TOL3Z
+        jsmall = j[wheresmall]
+        if jsmall.size:
+            norms[jsmall] = norm(R[i+1:,jsmall].T)
+            xnorms[jsmall] = norms[jsmall]
+
+        jbig = j[~wheresmall]
+        if jbig.size:
+            x = np.multiply(norms[jbig], np.sqrt(temp[~wheresmall]))
+            norms[jbig] = x.view(np.complex128, np.ndarray)
 
     if not reflectors:
         I = array.ddeye(m)
