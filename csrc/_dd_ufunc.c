@@ -135,11 +135,201 @@ ULOOP_UNARY(u_sinhq, sinhq, ddouble, ddouble)
 ULOOP_UNARY(u_coshq, coshq, ddouble, ddouble)
 ULOOP_UNARY(u_tanhq, tanhq, ddouble, ddouble)
 
+/* ------------------------ DDouble object ----------------------- */
+
+static PyObject *module = NULL;
+static int type_num = NPY_CDOUBLE;  //FIXME
+static PyTypeObject *pyddouble_type = NULL;
+
+typedef struct {
+    PyObject_HEAD;
+    ddouble x;
+} PyDDouble;
+
+static bool PyDDouble_Check(PyObject* object)
+{
+    return PyObject_IsInstance(object, (PyObject *)pyddouble_type);
+}
+
+static PyObject *PyDDouble_Wrap(ddouble x)
+{
+    PyDDouble *obj = (PyDDouble *) pyddouble_type->tp_alloc(pyddouble_type, 0);
+    if (obj != NULL)
+        obj->x = x;
+    return (PyObject *)obj;
+}
+
+static ddouble PyDDouble_Unwrap(PyObject *arg)
+{
+    return ((PyDDouble *)arg)->x;
+}
+
+static bool PyDDouble_Cast(PyObject *arg, ddouble *out)
+{
+    if (PyDDouble_Check(arg)) {
+        *out = PyDDouble_Unwrap(arg);
+    } else if (PyFloat_Check(arg)) {
+        double val = PyFloat_AsDouble(arg);
+        *out = (ddouble) {val, 0.0};
+    } else if (PyLong_Check(arg)) {
+        long val = PyLong_AsLong(arg);
+        *out = (ddouble) {val, 0.0};
+    } else if (PyArray_IsScalar(arg, Float)) {
+        float val;
+        PyArray_ScalarAsCtype(arg, &val);
+        *out = (ddouble) {val, 0.0};
+    } else if (PyArray_IsScalar(arg, Double)) {
+        double val;
+        PyArray_ScalarAsCtype(arg, &val);
+        *out = (ddouble) {val, 0.0};
+    } else if (PyArray_IsZeroDim(arg)) {
+        PyArrayObject* arr = (PyArrayObject *)arg;
+        if (PyArray_TYPE(arr) == type_num) {
+            *out = *(ddouble *)PyArray_DATA(arr);
+        } else {
+            arr = (PyArrayObject *)PyArray_Cast(arr, type_num);
+            if (!PyErr_Occurred())
+                *out = *(ddouble *)PyArray_DATA(arr);
+            else
+                *out = nanq();
+            Py_XDECREF(arr);
+        }
+    } else {
+        *out = nanq();
+        PyErr_SetString(PyExc_ValueError, "no conversion");
+    }
+    return !PyErr_Occurred();
+}
+
+PyObject* PyDDouble_New(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+    PyObject *arg = NULL;
+    if (PyArg_ParseTuple(args, "O", &arg) < 0)
+        return NULL;
+
+    ddouble val;
+    if (PyDDouble_Check(arg)) {
+        Py_INCREF(arg);
+        return arg;
+    } else  if (PyDDouble_Cast(arg, &val)) {
+        return PyDDouble_Wrap(val);
+    } else {
+        PyErr_Format(PyExc_TypeError, "expected ddouble, got %s",
+                     arg->ob_type->tp_name);
+        return NULL;
+    }
+}
+
+static PyObject* PyDDouble_Float(PyObject* self)
+{
+    ddouble x = PyDDouble_Unwrap(self);
+    return PyFloat_FromDouble(x.hi);
+}
+
+static PyObject* PyDDouble_Int(PyObject* self)
+{
+    ddouble x = PyDDouble_Unwrap(self);
+    return PyFloat_FromDouble((long) x.hi);
+}
+
+#define PYWRAP_UNARY(name, inner)                                       \
+    static PyObject* name(PyObject* _x)                                 \
+    {                                                                   \
+        ddouble r, x;                                                   \
+        x = PyDDouble_Unwrap(_x);                                       \
+        r = inner(x);                                                   \
+        return PyDDouble_Wrap(r);                                       \
+    }
+
+#define PYWRAP_BINARY(name, inner)                                      \
+    static PyObject* name(PyObject* _x, PyObject* _y)                   \
+    {                                                                   \
+        ddouble r, x, y;                                                \
+        if (PyDDouble_Cast(_x, &x) && PyDDouble_Cast(_y, &y)) {         \
+            r = inner(x, y);                                            \
+            return PyDDouble_Wrap(r);                                   \
+        } else {                                                        \
+            return NULL;                                                \
+        }                                                               \
+    }
+
+#define PYWRAP_INPLACE(name, inner)                                     \
+    static PyObject* name(PyObject* _self, PyObject* _y)                \
+    {                                                                   \
+        PyDDouble *self = (PyDDouble *)_self;                           \
+        ddouble y;                                                      \
+        if (PyDDouble_Cast(_y, &y)) {                                   \
+            self->x = inner(self->x, y);                                \
+            Py_XINCREF(_self);                                          \
+            return _self;                                               \
+        } else {                                                        \
+            return NULL;                                                \
+        }                                                               \
+    }
+
+PYWRAP_UNARY(PyDDouble_Positive, posq)
+PYWRAP_UNARY(PyDDouble_Negative, negq)
+PYWRAP_UNARY(PyDDouble_Absolute, absq)
+
+PYWRAP_BINARY(PyDDouble_Add, addqq)
+PYWRAP_BINARY(PyDDouble_Subtract, subqq)
+PYWRAP_BINARY(PyDDouble_Multiply, mulqq)
+PYWRAP_BINARY(PyDDouble_Divide, divqq)
+
+PYWRAP_INPLACE(PyDDouble_InPlaceAdd, addqq)
+PYWRAP_INPLACE(PyDDouble_InPlaceSubtract, subqq)
+PYWRAP_INPLACE(PyDDouble_InPlaceMultiply, mulqq)
+PYWRAP_INPLACE(PyDDouble_InPlaceDivide, divqq)
+
+static int PyDDouble_Nonzero(PyObject* _x)
+{
+    ddouble x = PyDDouble_Unwrap(_x);
+    return !(x.hi == 0);
+}
+
+int make_ddouble_type()
+{
+    static PyNumberMethods ddouble_as_number = {
+        .nb_add = PyDDouble_Add,
+        .nb_subtract = PyDDouble_Subtract,
+        .nb_multiply = PyDDouble_Multiply,
+        .nb_true_divide = PyDDouble_Divide,
+        .nb_inplace_add = PyDDouble_InPlaceAdd,
+        .nb_inplace_subtract = PyDDouble_InPlaceSubtract,
+        .nb_inplace_multiply = PyDDouble_InPlaceMultiply,
+        .nb_inplace_true_divide = PyDDouble_InPlaceDivide,
+        .nb_negative = PyDDouble_Negative,
+        .nb_positive = PyDDouble_Positive,
+        .nb_absolute = PyDDouble_Absolute,
+        .nb_bool = PyDDouble_Nonzero,
+        .nb_int = PyDDouble_Int,
+        .nb_float = PyDDouble_Float,
+        };
+    static PyTypeObject ddouble_type = {
+        PyVarObject_HEAD_INIT(NULL, 0)
+        .tp_name = "ddouble",
+        .tp_basicsize = sizeof(PyDDouble),
+        .tp_repr = NULL,  // TODO
+        .tp_as_number = &ddouble_as_number,
+        .tp_hash = NULL,    // TODO
+        .tp_str = NULL,     // TODO
+        .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+        .tp_doc = "double-double floating point type",
+        .tp_richcompare = NULL,   // TODO
+        .tp_new = PyDDouble_New,
+        };
+
+    ddouble_type.tp_base = &PyGenericArrType_Type;
+    if (PyType_Ready(&ddouble_type) < 0)
+        return -1;
+
+    pyddouble_type = &ddouble_type;
+    return PyModule_AddObject(module, "ddouble", (PyObject *)pyddouble_type);
+}
+
 /* ----------------------- Python stuff -------------------------- */
 
 static const char DDOUBLE_WRAP = NPY_CDOUBLE;
-
-static PyObject *module = NULL;
 
 PyObject *make_module()
 {
@@ -162,6 +352,18 @@ PyObject *make_module()
     /* Module definition */
     module = PyModule_Create(&module_def);
     return module;
+}
+
+static int make_dtype()
+{
+    /* Check if another module has registered a ddouble type.
+     */
+    //type_num = PyArray_TypeNumFromName("ddouble");
+    //if (type_num != NPY_NOTYPE)
+    //    return type_num;
+    // type_num = PyArray_RegisterDataType(dtype);
+    // return type_num;
+    return 0;
 }
 
 static void binary_ufunc(PyUFuncGenericFunction dq_func,
@@ -230,34 +432,6 @@ static void constant(ddouble value, const char *name)
 }
 
 
-
-static int ddtype_compare(const void *d1, const void *d2, void *arr)
-{
-    ddouble lhs = *(ddouble *)d1;
-    ddouble rhs = *(ddouble *)d2;
-    if (lhs.hi == rhs.hi)
-
-
-
-
-}
-
-
-static int ddtype_create()
-{
-    PyArray_Descr *dtype = PyArray_DescrNewFromType(NPY_CDOUBLE);
-    dtype->kind = 'f';
-    dtype->type = NPY_FLOAT64;  // unsure
-    dtype->byteorder = '=';
-    dtype->elsize = sizeof(ddouble);
-
-
-
-
-
-    return PyArray_RegisterDataType(dtype);
-}
-
 PyMODINIT_FUNC PyInit__dd_ufunc(void)
 {
     /* Initialize module */
@@ -267,6 +441,11 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
     /* Initialize numpy things */
     import_array();
     import_umath();
+
+    if (make_ddouble_type() < 0)
+        return NULL;
+    if (make_dtype() < 0)
+        return NULL;
 
     /* Create ufuncs */
     binary_ufunc(u_adddq, u_addqd, u_addqq,
