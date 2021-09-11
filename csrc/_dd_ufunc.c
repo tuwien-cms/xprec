@@ -24,7 +24,7 @@ static int type_num = NPY_CDOUBLE;  //FIXME
 static PyTypeObject *pyddouble_type = NULL;
 
 typedef struct {
-    PyObject_HEAD;
+    PyObject_HEAD
     ddouble x;
 } PyDDouble;
 
@@ -212,7 +212,7 @@ Py_hash_t PyDDouble_Hash(PyObject *_x)
     int exp;
     double mantissa;
     mantissa = frexp(x.hi, &exp);
-    return SSIZE_MAX * mantissa + exp;
+    return (Py_hash_t)(LONG_MAX * mantissa) + exp;
 }
 
 PyObject *PyDDouble_Str(PyObject *self)
