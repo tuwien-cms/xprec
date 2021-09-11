@@ -199,8 +199,8 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
 def svd(A):
     m, n = A.shape
     U, B, V = householder_bidiag(A)
-    U = householder_apply(U, np.eye(m, A.dtype))
-    V = householder_apply(V, np.eye(n, A.dtype))
+    U = householder_apply(U, np.eye(m, dtype=A.dtype))
+    V = householder_apply(V, np.eye(n, dtype=A.dtype))
     VT = V.T
 
     d = B.diagonal().copy()
