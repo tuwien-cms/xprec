@@ -227,7 +227,7 @@ PyObject *PyDDouble_Repr(PyObject *self)
 {
     char out[200];
     ddouble x = PyDDouble_Unwrap(self);
-    snprintf(out, 200, "ddouble(%.16g)", x.hi);
+    snprintf(out, 200, "ddouble(%.16g+%.16g)", x.hi, x.lo);
     return PyUnicode_FromString(out);
 }
 
@@ -524,14 +524,29 @@ NPY_CAST_TO(to_uint64, uint64_t)
 static int register_cast(int other_type, PyArray_VectorUnaryFunc from_other,
                          PyArray_VectorUnaryFunc to_other)
 {
-    PyArray_Descr *other_descr = PyArray_DescrFromType(other_type);
-    PyArray_Descr *ddouble_descr = PyArray_DescrFromType(type_num);
+    PyArray_Descr *other_descr = NULL, *ddouble_descr = NULL;
+    int ret;
 
-    PyArray_RegisterCastFunc(other_descr, type_num, from_other);
-    PyArray_RegisterCanCast(other_descr, type_num, NPY_NOSCALAR);
 
-    PyArray_RegisterCastFunc(ddouble_descr, other_type, to_other);
+    other_descr = PyArray_DescrFromType(other_type);
+    if (other_descr == NULL) goto error;
+
+    ddouble_descr = PyArray_DescrFromType(type_num);
+    if (ddouble_descr == NULL) goto error;
+
+    ret = PyArray_RegisterCastFunc(other_descr, type_num, from_other);
+    if (ret < 0) goto error;
+
+    // NPY_NOSCALAR apparently implies that casting is safe?
+    ret = PyArray_RegisterCanCast(other_descr, type_num, NPY_NOSCALAR);
+    if (ret < 0) goto error;
+
+    ret = PyArray_RegisterCastFunc(ddouble_descr, other_type, to_other);
+    if (ret < 0) goto error;
     return 0;
+
+error:
+    return -1;
 }
 
 static int register_casts()
@@ -582,8 +597,9 @@ static int register_casts()
         type_out *out = (type_out *)args[2];                            \
                                                                         \
         _Pragma("omp parallel for")                                     \
-        for (npy_intp i = 0; i < n; ++i)                                \
+        for (npy_intp i = 0; i < n; ++i) {                              \
             out[i * os] = inner_func(a[i * as], b[i * bs]);             \
+        }                                                               \
         MARK_UNUSED(data);                                              \
     }
 
@@ -681,14 +697,14 @@ static int register_binary(PyUFuncGenericFunction dq_func,
     arg_types[4] = NPY_DOUBLE;
     arg_types[5] = ret_dtype;
     retcode = PyUFunc_RegisterLoopForType(ufunc, type_num,
-                                          dq_func, arg_types + 3, NULL);
+                                          qd_func, arg_types + 3, NULL);
     if (retcode < 0) goto error;
 
     arg_types[6] = type_num;
     arg_types[7] = type_num;
     arg_types[8] = ret_dtype;
     retcode = PyUFunc_RegisterLoopForType(ufunc, type_num,
-                                          dq_func, arg_types + 6, NULL);
+                                          qq_func, arg_types + 6, NULL);
     if (retcode < 0) goto error;
     return 0;
 

@@ -79,10 +79,10 @@ def test_qr_pivot():
     Q, R, piv = xprec.linalg.qr_pivot(A)
     I_m = np.eye(60)
     D = Q @ Q.T - I_m
-    np.testing.assert_allclose(D.hi, 0, atol=4e-30)
+    np.testing.assert_allclose(D.astype(float), 0, atol=4e-30)
 
     D = Q @ R - A[:,piv]
-    np.testing.assert_allclose(D.hi, 0, atol=4e-30)
+    np.testing.assert_allclose(D.astype(float), 0, atol=4e-30)
 
     Rdiag = np.abs(R.diagonal())
     assert (Rdiag[1:] <= Rdiag[:-1]).all()

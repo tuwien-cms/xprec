@@ -101,12 +101,12 @@ def qr_pivot(A, reflectors=False):   # xGEQPF
                 continue
 
             temp = np.abs(R[i,j]) / norms[j]
-            temp = np.maximum(0, (1 + temp)*(1 - temp))
+            temp = np.fmax(0.0, (1 + temp)*(1 - temp))
             temp2 = temp * np.square(norms[j] / xnorms[j])
             if temp2 < TOL3Z:
                 xnorms[j] = norms[j] = norm(R[i+1:,j])
             else:
-                np.multiply(norms[j], np.sqrt(temp), out=norms[j])
+                norms[j] *= np.sqrt(temp)
 
     if not reflectors:
         I = np.eye(m, dtype=A.dtype)
