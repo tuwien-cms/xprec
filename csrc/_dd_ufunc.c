@@ -78,7 +78,9 @@ static bool PyDDouble_Cast(PyObject *arg, ddouble *out)
         }
     } else {
         *out = nanq();
-        PyErr_SetString(PyExc_ValueError, "no conversion");
+        PyErr_Format(PyExc_TypeError,
+            "Cannot cast instance of %s to ddouble scalar",
+            arg->ob_type->tp_name);
     }
     return !PyErr_Occurred();
 }
@@ -123,16 +125,17 @@ static PyObject* PyDDouble_Int(PyObject* self)
         return PyDDouble_Wrap(r);                                       \
     }
 
-#define PYWRAP_BINARY(name, inner)                                      \
+#define PYWRAP_BINARY(name, inner, tp_inner_op)                         \
     static PyObject* name(PyObject* _x, PyObject* _y)                   \
     {                                                                   \
         ddouble r, x, y;                                                \
+        if (PyArray_Check(_y))                                          \
+            return PyArray_Type.tp_as_number->tp_inner_op(_x, _y);      \
         if (PyDDouble_Cast(_x, &x) && PyDDouble_Cast(_y, &y)) {         \
             r = inner(x, y);                                            \
             return PyDDouble_Wrap(r);                                   \
-        } else {                                                        \
-            return NULL;                                                \
         }                                                               \
+        return NULL;                                                    \
     }
 
 #define PYWRAP_INPLACE(name, inner)                                     \
@@ -153,10 +156,10 @@ PYWRAP_UNARY(PyDDouble_Positive, posq)
 PYWRAP_UNARY(PyDDouble_Negative, negq)
 PYWRAP_UNARY(PyDDouble_Absolute, absq)
 
-PYWRAP_BINARY(PyDDouble_Add, addqq)
-PYWRAP_BINARY(PyDDouble_Subtract, subqq)
-PYWRAP_BINARY(PyDDouble_Multiply, mulqq)
-PYWRAP_BINARY(PyDDouble_Divide, divqq)
+PYWRAP_BINARY(PyDDouble_Add, addqq, nb_add)
+PYWRAP_BINARY(PyDDouble_Subtract, subqq, nb_subtract)
+PYWRAP_BINARY(PyDDouble_Multiply, mulqq, nb_multiply)
+PYWRAP_BINARY(PyDDouble_Divide, divqq, nb_true_divide)
 
 PYWRAP_INPLACE(PyDDouble_InPlaceAdd, addqq)
 PYWRAP_INPLACE(PyDDouble_InPlaceSubtract, subqq)
