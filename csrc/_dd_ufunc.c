@@ -15,6 +15,11 @@
  */
 #define MARK_UNUSED(x)  do { (void)(x); } while(false)
 
+#ifdef _MSC_VER
+#define alignof __alignof
+#endif
+
+
 /* ------------------------ DDouble object ----------------------- */
 
 static PyObject *module = NULL;
@@ -310,16 +315,17 @@ static void NPyDDouble_CopySwapN(void *_d, npy_intp sd, void *_s, npy_intp ss,
 {
     if (_s == NULL)
         return;
+    char *_cd = (char *)_d, *_cs = (char *)_s;
     if (swap) {
-        for (npy_intp i = 0; i != ii; ++i, _d += sd, _s += ss) {
-            ddouble *s = _s, *d = _d, tmp;
+        for (npy_intp i = 0; i != ii; ++i, _cd += sd, _cs += ss) {
+            ddouble *s = (ddouble *)_cs, *d = (ddouble *)_cd, tmp;
             tmp = *d;
             *d = *s;
             *s = tmp;
         }
     } else {
-        for (npy_intp i = 0; i != ii; ++i, _d += sd, _s += ss) {
-            ddouble *s = _s, *d = _d;
+        for (npy_intp i = 0; i != ii; ++i, _cd += sd, _cs += ss) {
+            ddouble *s = (ddouble *)_cs, *d = (ddouble *)_cd;
             *d = *s;
         }
     }
@@ -380,8 +386,9 @@ static void NPyDDouble_DotFunc(void *_in1, npy_intp is1, void *_in2,
                                npy_intp is2, void *_out, npy_intp ii, void *arr)
 {
     ddouble out = Q_ZERO;
-    for (npy_intp i = 0; i < ii; ++i, _in1 += is1, _in2 += is2) {
-        ddouble in1 = *(ddouble *)_in1, in2 = *(ddouble *)_in2;
+    char *_cin1 = (char *)_in1, *_cin2 = (char *)_in2;
+    for (npy_intp i = 0; i < ii; ++i, _cin1 += is1, _cin2 += is2) {
+        ddouble in1 = *(ddouble *)_cin1, in2 = *(ddouble *)_cin2;
         out = addqq(out, mulqq(in1, in2));
     }
     *(ddouble *)_out = out;
