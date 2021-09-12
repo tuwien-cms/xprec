@@ -145,8 +145,8 @@ static void u_givens_seqq(
          * the other direction.
          */
         #pragma omp parallel for
-        for (npy_intp j = 0; j != jj; ++j) {
-            for (npy_intp i = 0; i != ii - 1; ++i) {
+        for (npy_intp j = 0; j < jj; ++j) {
+            for (npy_intp i = 0; i < ii - 1; ++i) {
                 ddouble *c_x = (ddouble *)(_c + i *_sci + j * _scj);
                 ddouble *c_y = (ddouble *)(_c + (i + 1) *_sci + j * _scj);
                 ddouble g_cos = *(ddouble *)(_a + i * _sai);
