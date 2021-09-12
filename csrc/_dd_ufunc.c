@@ -521,12 +521,11 @@ NPY_CAST_TO(to_uint16, uint16_t)
 NPY_CAST_TO(to_uint32, uint32_t)
 NPY_CAST_TO(to_uint64, uint64_t)
 
-static int register_cast(int other_type, PyArray_VectorUnaryFunc from_other,
+static bool register_cast(int other_type, PyArray_VectorUnaryFunc from_other,
                          PyArray_VectorUnaryFunc to_other)
 {
     PyArray_Descr *other_descr = NULL, *ddouble_descr = NULL;
     int ret;
-
 
     other_descr = PyArray_DescrFromType(other_type);
     if (other_descr == NULL) goto error;
@@ -543,26 +542,26 @@ static int register_cast(int other_type, PyArray_VectorUnaryFunc from_other,
 
     ret = PyArray_RegisterCastFunc(ddouble_descr, other_type, to_other);
     if (ret < 0) goto error;
-    return 0;
+    return true;
 
 error:
-    return -1;
+    return false;
 }
 
 static int register_casts()
 {
-    register_cast(NPY_DOUBLE, from_double, to_double);
-    register_cast(NPY_FLOAT,  from_float,  to_float);
-    register_cast(NPY_BOOL,   from_bool,   to_bool);
-    register_cast(NPY_INT8,   from_int8,   to_int8);
-    register_cast(NPY_INT16,  from_int16,  to_int16);
-    register_cast(NPY_INT32,  from_int32,  to_int32);
-    register_cast(NPY_INT64,  from_int64,  to_int64);
-    register_cast(NPY_UINT8,  from_uint8,  to_uint8);
-    register_cast(NPY_UINT16, from_uint16, to_uint16);
-    register_cast(NPY_UINT32, from_uint32, to_uint32);
-    register_cast(NPY_UINT64, from_uint64, to_uint64);
-    return 0;
+    bool ok = register_cast(NPY_DOUBLE, from_double, to_double)
+        && register_cast(NPY_FLOAT,  from_float,  to_float)
+        && register_cast(NPY_BOOL,   from_bool,   to_bool)
+        && register_cast(NPY_INT8,   from_int8,   to_int8)
+        && register_cast(NPY_INT16,  from_int16,  to_int16)
+        && register_cast(NPY_INT32,  from_int32,  to_int32)
+        && register_cast(NPY_INT64,  from_int64,  to_int64)
+        && register_cast(NPY_UINT8,  from_uint8,  to_uint8)
+        && register_cast(NPY_UINT16, from_uint16, to_uint16)
+        && register_cast(NPY_UINT32, from_uint32, to_uint32)
+        && register_cast(NPY_UINT64, from_uint64, to_uint64);
+    return ok ? 0 : -1;
 }
 
 /* ------------------------------- Ufuncs ----------------------------- */
@@ -659,10 +658,6 @@ ULOOP_UNARY(u_sqrq, sqrq, ddouble, ddouble)
 ULOOP_UNARY(u_roundq, roundq, ddouble, ddouble)
 ULOOP_UNARY(u_floorq, floorq, ddouble, ddouble)
 ULOOP_UNARY(u_ceilq, ceilq, ddouble, ddouble)
-ULOOP_UNARY(u_iszeroq, iszeroq, bool, ddouble)
-ULOOP_UNARY(u_isoneq, isoneq, bool, ddouble)
-ULOOP_UNARY(u_ispositiveq, ispositiveq, bool, ddouble)
-ULOOP_UNARY(u_isnegativeq, isnegativeq, bool, ddouble)
 ULOOP_UNARY(u_sqrtq, sqrtq, ddouble, ddouble)
 ULOOP_UNARY(u_expq, expq, ddouble, ddouble)
 ULOOP_UNARY(u_expm1q, expm1q, ddouble, ddouble)
@@ -673,7 +668,7 @@ ULOOP_UNARY(u_sinhq, sinhq, ddouble, ddouble)
 ULOOP_UNARY(u_coshq, coshq, ddouble, ddouble)
 ULOOP_UNARY(u_tanhq, tanhq, ddouble, ddouble)
 
-static int register_binary(PyUFuncGenericFunction dq_func,
+static bool register_binary(PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
         int ret_dtype, const char *name)
 {
@@ -706,10 +701,10 @@ static int register_binary(PyUFuncGenericFunction dq_func,
     retcode = PyUFunc_RegisterLoopForType(ufunc, type_num,
                                           qq_func, arg_types + 6, NULL);
     if (retcode < 0) goto error;
-    return 0;
+    return true;
 
 error:
-    return -1;
+    return false;
 }
 
 static int register_unary(PyUFuncGenericFunction func, int ret_dtype,
@@ -729,64 +724,55 @@ static int register_unary(PyUFuncGenericFunction func, int ret_dtype,
     retcode = PyUFunc_RegisterLoopForType(ufunc, type_num,
                                           func, arg_types, NULL);
     if (retcode < 0) goto error;
-    return 0;
+    return true;
 
 error:
-    return -1;
+    return false;
 }
 
 static int register_ufuncs()
 {
-    register_unary(u_negq, type_num, "negative");
-    register_unary(u_posq, type_num, "positive");
-    register_unary(u_absq, type_num, "absolute");
-    register_unary(u_reciprocalq, type_num, "reciprocal");
-    register_unary(u_sqrq, type_num, "square");
-    register_unary(u_sqrtq, type_num, "sqrt");
-    register_unary(u_signbitq, NPY_BOOL, "signbit");
-    register_unary(u_isfiniteq, NPY_BOOL, "isfinite");
-    register_unary(u_isinfq, NPY_BOOL, "isinf");
-    register_unary(u_isnanq, NPY_BOOL, "isnan");
-
-    register_unary(u_roundq, type_num, "rint");
-    register_unary(u_floorq, type_num, "floor");
-    register_unary(u_ceilq, type_num, "ceil");
-    register_unary(u_expq, type_num, "exp");
-    register_unary(u_expm1q, type_num, "expm1");
-    register_unary(u_logq, type_num, "log");
-    register_unary(u_sinq, type_num, "sin");
-    register_unary(u_cosq, type_num, "cos");
-    register_unary(u_sinhq, type_num, "sinh");
-    register_unary(u_coshq, type_num, "cosh");
-    register_unary(u_tanhq, type_num, "tanh");
-
-    register_unary(u_iszeroq, NPY_BOOL, "iszero");
-    register_unary(u_isoneq, NPY_BOOL, "isone");
-    register_unary(u_ispositiveq, NPY_BOOL, "ispositive");
-    register_unary(u_isnegativeq, NPY_BOOL, "isnegative");
-    register_unary(u_signq, type_num, "sign");
-
-    register_binary(u_adddq, u_addqd, u_addqq, type_num, "add");
-    register_binary(u_subdq, u_subqd, u_subqq, type_num, "subtract");
-    register_binary(u_muldq, u_mulqd, u_mulqq, type_num, "multiply");
-    register_binary(u_divdq, u_divqd, u_divqq, type_num, "true_divide");
-
-    register_binary(u_equaldq, u_equalqd, u_equalqq, NPY_BOOL, "equal");
-    register_binary(u_notequaldq, u_notequalqd, u_notequalqq, NPY_BOOL,
-                    "not_equal");
-    register_binary(u_greaterdq, u_greaterqd, u_greaterqq, NPY_BOOL, "greater");
-    register_binary(u_lessdq, u_lessqd, u_lessqq, NPY_BOOL, "less");
-    register_binary(u_greaterequaldq, u_greaterequalqd, u_greaterequalqq,
-                    NPY_BOOL, "greater_equal");
-    register_binary(u_lessequaldq, u_lessequalqd, u_lessequalqq, NPY_BOOL,
-                    "less_equal");
-    register_binary(u_fmindq, u_fminqd, u_fminqq, type_num, "fmin");
-    register_binary(u_fmaxdq, u_fmaxqd, u_fmaxqq, type_num, "fmax");
-
-    register_binary(u_copysigndq, u_copysignqd, u_copysignqq, type_num,
-                    "copysign");
-    register_binary(u_hypotdq, u_hypotqd, u_hypotqq, type_num, "hypot");
-    return 0;
+    bool ok = register_unary(u_negq, type_num, "negative")
+        && register_unary(u_posq, type_num, "positive")
+        && register_unary(u_absq, type_num, "absolute")
+        && register_unary(u_reciprocalq, type_num, "reciprocal")
+        && register_unary(u_sqrq, type_num, "square")
+        && register_unary(u_sqrtq, type_num, "sqrt")
+        && register_unary(u_signbitq, NPY_BOOL, "signbit")
+        && register_unary(u_isfiniteq, NPY_BOOL, "isfinite")
+        && register_unary(u_isinfq, NPY_BOOL, "isinf")
+        && register_unary(u_isnanq, NPY_BOOL, "isnan")
+        && register_unary(u_roundq, type_num, "rint")
+        && register_unary(u_floorq, type_num, "floor")
+        && register_unary(u_ceilq, type_num, "ceil")
+        && register_unary(u_expq, type_num, "exp")
+        && register_unary(u_expm1q, type_num, "expm1")
+        && register_unary(u_logq, type_num, "log")
+        && register_unary(u_sinq, type_num, "sin")
+        && register_unary(u_cosq, type_num, "cos")
+        && register_unary(u_sinhq, type_num, "sinh")
+        && register_unary(u_coshq, type_num, "cosh")
+        && register_unary(u_tanhq, type_num, "tanh")
+        && register_unary(u_signq, type_num, "sign")
+        && register_binary(u_adddq, u_addqd, u_addqq, type_num, "add")
+        && register_binary(u_subdq, u_subqd, u_subqq, type_num, "subtract")
+        && register_binary(u_muldq, u_mulqd, u_mulqq, type_num, "multiply")
+        && register_binary(u_divdq, u_divqd, u_divqq, type_num, "true_divide")
+        && register_binary(u_equaldq, u_equalqd, u_equalqq, NPY_BOOL, "equal")
+        && register_binary(u_notequaldq, u_notequalqd, u_notequalqq, NPY_BOOL,
+                           "not_equal")
+        && register_binary(u_greaterdq, u_greaterqd, u_greaterqq, NPY_BOOL, "greater")
+        && register_binary(u_lessdq, u_lessqd, u_lessqq, NPY_BOOL, "less")
+        && register_binary(u_greaterequaldq, u_greaterequalqd, u_greaterequalqq,
+                           NPY_BOOL, "greater_equal")
+        && register_binary(u_lessequaldq, u_lessequalqd, u_lessequalqq, NPY_BOOL,
+                           "less_equal")
+        && register_binary(u_fmindq, u_fminqd, u_fminqq, type_num, "fmin")
+        && register_binary(u_fmaxdq, u_fmaxqd, u_fmaxqq, type_num, "fmax")
+        && register_binary(u_copysigndq, u_copysignqd, u_copysignqq, type_num,
+                           "copysign")
+        && register_binary(u_hypotdq, u_hypotqd, u_hypotqq, type_num, "hypot");
+    return ok ? 0 : -1;
 }
 
 int register_dtype_in_dicts()
@@ -831,7 +817,7 @@ PyObject *make_module()
     return module;
 }
 
-static void constant(ddouble value, const char *name)
+static bool constant(ddouble value, const char *name)
 {
     // Note that data must be allocated using malloc, not python allocators!
     ddouble *data = malloc(sizeof value);
@@ -839,27 +825,30 @@ static void constant(ddouble value, const char *name)
 
     PyArrayObject *array = (PyArrayObject *)
             PyArray_SimpleNewFromData(0, NULL, type_num, data);
+    if (array == NULL) return false;
+
     PyArray_ENABLEFLAGS(array, NPY_ARRAY_OWNDATA);
     PyArray_CLEARFLAGS(array, NPY_ARRAY_WRITEABLE);
 
     PyModule_AddObject(module, name, (PyObject *)array);
+    return true;
 }
 
 static int register_constants()
 {
-    constant(Q_MAX, "MAX");
-    constant(Q_MIN, "MIN");
-    constant(Q_EPS, "EPS");
-    constant(Q_2PI, "TWOPI");
-    constant(Q_PI, "PI");
-    constant(Q_PI_2, "PI_2");
-    constant(Q_PI_4, "PI_4");
-    constant(Q_E, "E");
-    constant(Q_LOG2, "LOG2");
-    constant(Q_LOG10, "LOG10");
-    constant(nanq(), "NAN");
-    constant(infq(), "INF");
-    return 0;
+    bool ok = constant(Q_MAX, "MAX")
+        && constant(Q_MIN, "MIN")
+        && constant(Q_EPS, "EPS")
+        && constant(Q_2PI, "TWOPI")
+        && constant(Q_PI, "PI")
+        && constant(Q_PI_2, "PI_2")
+        && constant(Q_PI_4, "PI_4")
+        && constant(Q_E, "E")
+        && constant(Q_LOG2, "LOG2")
+        && constant(Q_LOG10, "LOG10")
+        && constant(nanq(), "NAN")
+        && constant(infq(), "INF");
+    return ok ? 0 : -1;
 }
 
 PyMODINIT_FUNC PyInit__dd_ufunc(void)
