@@ -162,7 +162,9 @@ setup(
 
     python_requires='>=3',
     install_requires=[
-        'numpy>=1.16',      # we need matmul to be an ufunc -> 1.16
+        # we need matmul to be an ufunc -> 1.16
+        # 1.21 seems to break casting from np.float64 to custom types ...
+        'numpy>=1.16,<1.21',
         ],
     extras_require={
         'test': ['pytest'],
