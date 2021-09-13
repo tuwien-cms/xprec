@@ -10,7 +10,7 @@ def test_householder_vec():
     xd = rng.random_sample(20)
     xq = np.array(xd, dtype=ddouble)
 
-    betaq, vq = xprec.linalg.householder_vector(xq)
+    betaq, vq = xprec.linalg.householder(xq)
     eq = xq - betaq * vq * (vq @ xq)
     np.testing.assert_allclose(eq[1:].astype(float), 0, atol=1e-31)
 
@@ -19,12 +19,7 @@ def test_bidiag():
     rng = np.random.RandomState(4711)
     m, n = 7, 5
     A = rng.normal(size=(m,n)).astype(ddouble)
-    Q_h, B, R_h = xprec.linalg.householder_bidiag(A)
-
-    Q = np.eye(m, dtype=ddouble)
-    Q = xprec.linalg.householder_apply(Q_h, Q)
-    R = np.eye(n, dtype=ddouble)
-    R = xprec.linalg.householder_apply(R_h, R)
+    Q, B, R = xprec.linalg.bidiag(A)
     diff = Q @ B @ R.T - A
 
     # FIXME: too large precision goals

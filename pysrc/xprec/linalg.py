@@ -14,35 +14,12 @@ golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 rank1update = _dd_linalg.rank1update
 
 
-# Should work
-householder_vector = householder
-
-
 def householder_update(A, Q):
-    beta, v = householder_vector(A[:,0])
+    beta, v = householder(A[:,0])
     w = -beta * (A.T @ v)
-    #A -= v[:,None] * w[None,:]
     rank1update(A, v, w, out=A)
     Q[0,0] = beta
     Q[1:,0] = v[1:]
-
-
-def householder_bidiag(A):
-    A = np.array(A)
-    m, n = A.shape
-    if m < n:
-        raise NotImplementedError("must be tall matrix")
-
-    rq = n - (m == n)
-    Q = np.zeros_like(A)
-    R = np.zeros_like(A[:n,:n])
-
-    for j in range(n-2):
-        householder_update(A[j:,j:], Q[j:,j:])
-        householder_update(A[j:,j+1:].T, R[j+1:,j+1:])
-    for j in range(n-2, rq):
-        householder_update(A[j:,j:], Q[j:,j:])
-    return Q, A, R
 
 
 def householder_apply(H, Q):
@@ -61,9 +38,31 @@ def householder_apply(H, Q):
         v[0] = 1
         v[1:] = H[j+1:,j]
         Qpart = Q[j:,j:]
-        w = beta * (Qpart.T @ v)
-        Qpart -= v[:,None] * w[None,:]
+        w = -beta * (Qpart.T @ v)
+        rank1update(Qpart, v, w, out=Qpart)
     return Q
+
+
+def bidiag(A, reflectors=False):
+    A = np.array(A)
+    m, n = A.shape
+    if m < n:
+        raise NotImplementedError("must be tall matrix")
+
+    rq = n - (m == n)
+    Q = np.zeros_like(A)
+    R = np.zeros_like(A[:n,:n])
+
+    for j in range(n-2):
+        householder_update(A[j:,j:], Q[j:,j:])
+        householder_update(A[j:,j+1:].T, R[j+1:,j+1:])
+    for j in range(n-2, rq):
+        householder_update(A[j:,j:], Q[j:,j:])
+
+    if not reflectors:
+        Q = householder_apply(Q, np.eye(m, dtype=A.dtype))
+        R = householder_apply(R, np.eye(n, dtype=A.dtype))
+    return Q, A, R
 
 
 def qr(A, reflectors=False):  # xGEQR2
@@ -206,10 +205,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
 
 
 def svd(A):
-    m, n = A.shape
-    U, B, V = householder_bidiag(A)
-    U = householder_apply(U, np.eye(m, dtype=A.dtype))
-    V = householder_apply(V, np.eye(n, dtype=A.dtype))
+    U, B, V = bidiag(A)
     VT = V.T
 
     d = B.diagonal().copy()
