@@ -1,3 +1,5 @@
+# Copyright (C) 2021 Markus Wallerberger and others
+# SPDX-License-Identifier: MIT
 import numpy as np
 import pytest
 
@@ -28,4 +30,3 @@ def test_cast_to(other):
     x = np.eye(3, dtype=ddouble)
     y = x.astype(other)
     assert (x == y).all()
-

@@ -1,3 +1,11 @@
+/* Python extension module for the ddouble data type.
+ *
+ * Code is adapted from tensorflow's bfloat16 extension type, found here:
+ * `tensorflow/python/lib/core/bfloat16.cc` and licensed Apache 2.0.
+ *
+ * Copyright (C) 2021 Markus Wallerberger and others
+ * SPDX-License-Identifier: MIT
+ */
 #include <Python.h>
 #include <math.h>
 #include <stdio.h>
@@ -18,7 +26,6 @@
 #ifdef _MSC_VER
 #define alignof __alignof
 #endif
-
 
 /* ------------------------ DDouble object ----------------------- */
 

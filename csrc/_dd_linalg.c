@@ -1,3 +1,8 @@
+/* Python extension module for linear algebra functions.
+ *
+ * Copyright (C) 2021 Markus Wallerberger and others
+ * SPDX-License-Identifier: MIT
+ */
 #include "Python.h"
 #include "math.h"
 #include "stdio.h"

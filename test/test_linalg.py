@@ -1,3 +1,5 @@
+# Copyright (C) 2021 Markus Wallerberger and others
+# SPDX-License-Identifier: MIT
 import numpy as np
 
 import xprec
@@ -58,8 +60,11 @@ def test_svd():
     diff = (Ux[:,:20] * sx) @ VTx - Ax
     np.testing.assert_allclose(diff.astype(float), 0, atol=1e-29)
 
+    # Check singular value ordering
     assert (sx >= 0).all()
     assert (sx[1:] <= sx[:-1]).all()
+    np.testing.assert_allclose(Ux @ Ux.T - np.eye(30), 0, atol=1e-29)
+    np.testing.assert_allclose(VTx @ VTx.T - np.eye(20), 0, atol=1e-29)
 
 
 def test_qr():

@@ -1,3 +1,8 @@
+# Copyright (C) 2021 Markus Wallerberger and others
+# SPDX-License-Identifier: MIT
+#
+# Some of the code in this module is adapted from the LAPACK reference
+# implementation.
 import numpy as np
 from warnings import warn
 
@@ -151,6 +156,15 @@ def svd(A):
     f = B.diagonal(1).copy()
     golub_kahan_svd(d, f, U, VT, 1000)
     return U, d, VT
+
+
+def svd_trunc(A, tol=5e-32):
+    """Truncated singular value decomposition"""
+    Q, R, p = rrqr(A, tol)
+    U, s, VT = svd(R)
+    U = Q @ U[:, :s.size]
+    VT = VT[:s.size, p.argsort()]
+    return U, s, VT
 
 
 def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):

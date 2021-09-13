@@ -1,6 +1,7 @@
-"""
-Setup script for irbasis_x
-"""
+# Setup script - embracing the setuptools madness.
+#
+# Copyright (C) 2021 Markus Wallerberger and others
+# SPDX-License-Identifier: MIT
 import io
 import os.path
 import platform
@@ -133,7 +134,7 @@ class BuildExtWithNumpy(build_ext):
 
 
 VERSION = extract_version('pysrc', 'xprec', '__init__.py')
-REPO_URL = "https://github.com/mwallerb/xprec"
+REPO_URL = "https://github.com/tuwien-cms/xprec"
 DOCTREE_URL = "%s/tree/v%s" % (REPO_URL, VERSION)
 LONG_DESCRIPTION = rebase_links(readfile('README.md'), DOCTREE_URL)
 
@@ -148,7 +149,7 @@ setup(
         'double-double'
         ]),
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3',

@@ -1,3 +1,11 @@
+/* Double-double linear algebra library
+ *
+ * Implementations were partly inspired by LAPACK, partly from Fredrik
+ * Johansson's excellent MPMATH library.
+ *
+ * Copyright (C) 2021 Markus Wallerberger and others
+ * SPDX-License-Identifier: MIT
+ */
 #include "dd_linalg.h"
 
 // 2**500 and 2**(-500);
