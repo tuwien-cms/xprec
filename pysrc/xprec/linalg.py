@@ -47,7 +47,9 @@ def householder_apply(H, Q):
     H = np.asarray(H)
     Q = Q.copy()
     m, r = H.shape
-    if Q.shape != (m, m):
+    if Q.shape[0] != m:
+        raise ValueError("invalid shape")
+    if Q.shape[1] < r:
         raise ValueError("invalid shape")
     for j in range(r-1, -1, -1):
         beta = H[j,j]
@@ -76,12 +78,12 @@ def qr(A, reflectors=False):  # xGEQR2
     return Q, R
 
 
-def qr_pivot(A, reflectors=False):   # xGEQPF
+def rrqr(A, tol=5e-32, reflectors=False):   # xGEQPF
     R = np.array(A)
     m, n = R.shape
     k = min(m, n)
 
-    Q = np.zeros((k, m), A.dtype)
+    Q = np.zeros((m, k), A.dtype)
     jpvt = np.arange(n)
     norms = norm(A.T)
     xnorms = norms.copy()
@@ -96,20 +98,25 @@ def qr_pivot(A, reflectors=False):   # xGEQPF
 
         householder_update(R[i:,i:], Q[i:,i:])
 
-        for j in range(i+1, n):
-            if np.equal(norms[j], 0):
-                continue
-
-            temp = np.abs(R[i,j]) / norms[j]
-            temp = np.fmax(0.0, (1 + temp)*(1 - temp))
-            temp2 = temp * np.square(norms[j] / xnorms[j])
-            if temp2 < TOL3Z:
+        temp = np.abs(R[i,:]) / norms
+        temp = np.fmax(0.0, (1 + temp)*(1 - temp))
+        temp2 = temp * np.square(norms / xnorms)
+        for j in norms[i+1:].nonzero()[0] + (i+1):
+            if temp2[j] < TOL3Z:
                 xnorms[j] = norms[j] = norm(R[i+1:,j])
             else:
-                norms[j] *= np.sqrt(temp)
+                norms[j] *= np.sqrt(temp[j])
+
+        if tol is not None:
+            acc = np.abs(R[i,i] / R[0,0])
+            if acc < tol:
+                k = i + 1
+                Q = Q[:,:k]
+                R = R[:k,:]
+                break
 
     if not reflectors:
-        I = np.eye(m, dtype=A.dtype)
+        I = np.eye(m, k, dtype=A.dtype)
         Q = householder_apply(Q, I)
     return Q, R, jpvt
 

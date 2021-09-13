@@ -76,7 +76,7 @@ def test_qr():
 
 def test_qr_pivot():
     A = np.vander(np.linspace(-1, 1, 60), 80).astype(ddouble)
-    Q, R, piv = xprec.linalg.qr_pivot(A)
+    Q, R, piv = xprec.linalg.rrqr(A)
     I_m = np.eye(60)
     D = Q @ Q.T - I_m
     np.testing.assert_allclose(D.astype(float), 0, atol=4e-30)
