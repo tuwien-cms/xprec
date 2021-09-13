@@ -489,6 +489,22 @@ static int make_dtype()
         MARK_UNUSED(_arr_to);                                        \
     }
 
+#define NPY_CAST_FROM_I64(func, from_type)                           \
+    static void func(void *_from, void *_to, npy_intp n,             \
+                        void *_arr_from, void *_arr_to)              \
+    {                                                                \
+        static const from_type SPLIT = (from_type)(1) << 32;         \
+        ddouble *to = (ddouble *)_to;                                \
+        const from_type *from = (const from_type *)_from;            \
+        for (npy_intp i = 0; i < n; ++i) {                           \
+            from_type lo = from[i] % SPLIT;                          \
+            from_type hi = from[i] - lo;                             \
+            to[i] = two_sum(hi, lo);                                 \
+        }                                                            \
+        MARK_UNUSED(_arr_from);                                      \
+        MARK_UNUSED(_arr_to);                                        \
+    }
+
 #define NPY_CAST_TO(func, to_type)                                   \
     static void func(void *_from, void *_to, npy_intp n,             \
                      void *_arr_from, void *_arr_to)                 \
@@ -502,18 +518,19 @@ static int make_dtype()
     }
 
 // These casts are all loss-less
-// TODO: int64 should be loss-less too
 NPY_CAST_FROM(from_double, double)
 NPY_CAST_FROM(from_float, float)
 NPY_CAST_FROM(from_bool, bool)
 NPY_CAST_FROM(from_int8, int8_t)
 NPY_CAST_FROM(from_int16, int16_t)
 NPY_CAST_FROM(from_int32, int32_t)
-NPY_CAST_FROM(from_int64, int64_t)
 NPY_CAST_FROM(from_uint8, uint8_t)
 NPY_CAST_FROM(from_uint16, uint16_t)
 NPY_CAST_FROM(from_uint32, uint32_t)
-NPY_CAST_FROM(from_uint64, uint64_t)
+
+// These casts are also lossless, because we have now 2*54 bits of mantissa
+NPY_CAST_FROM_I64(from_int64, int64_t)
+NPY_CAST_FROM_I64(from_uint64, uint64_t)
 
 // These casts are all lossy
 NPY_CAST_TO(to_double, double)
@@ -527,6 +544,7 @@ NPY_CAST_TO(to_uint8, uint8_t)
 NPY_CAST_TO(to_uint16, uint16_t)
 NPY_CAST_TO(to_uint32, uint32_t)
 NPY_CAST_TO(to_uint64, uint64_t)
+
 
 static bool register_cast(int other_type, PyArray_VectorUnaryFunc from_other,
                          PyArray_VectorUnaryFunc to_other)
