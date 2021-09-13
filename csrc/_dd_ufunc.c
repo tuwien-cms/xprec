@@ -491,7 +491,7 @@ static int make_dtype()
 
 #define NPY_CAST_FROM_I64(func, from_type)                           \
     static void func(void *_from, void *_to, npy_intp n,             \
-                        void *_arr_from, void *_arr_to)              \
+                     void *_arr_from, void *_arr_to)                 \
     {                                                                \
         static const from_type SPLIT = (from_type)(1) << 32;         \
         ddouble *to = (ddouble *)_to;                                \
@@ -590,7 +590,6 @@ static int register_casts()
 }
 
 /* ------------------------------- Ufuncs ----------------------------- */
-
 
 #define ULOOP_UNARY(func_name, inner_func, type_out, type_in)           \
     static void func_name(char **args, const npy_intp *dimensions,      \

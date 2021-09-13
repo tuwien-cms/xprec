@@ -22,25 +22,28 @@ static void u_matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
 {
     // signature (n;i,j),(n;j,k)->(n;i,k)
     const npy_intp nn = dims[0], ii = dims[1], jj = dims[2], kk = dims[3];
-    const npy_intp san = steps[0], sbn = steps[1], scn = steps[2],
-                   sai = steps[3], saj = steps[4], sbj = steps[5],
-                   sbk = steps[6], sci = steps[7], sck = steps[8];
+    const npy_intp _san = steps[0], _sbn = steps[1], _scn = steps[2],
+                   _sai = steps[3], _saj = steps[4], _sbj = steps[5],
+                   _sbk = steps[6], _sci = steps[7], _sck = steps[8];
     char *_a = args[0], *_b = args[1], *_c = args[2];
 
-    for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn, _c += scn) {
-        for (npy_intp i = 0; i != ii; ++i) {
-            for (npy_intp k = 0; k != kk; ++k) {
-                ddouble val = Q_ZERO;
-                for (npy_intp j = 0; j != jj; ++j) {
-                    const ddouble *a_ij =
-                            (const ddouble *) (_a + i * sai + j * saj);
-                    const ddouble *b_jk =
-                            (const ddouble *) (_b + j * sbj + k * sbk);
-                    val = addqq(val, mulqq(*a_ij, *b_jk));
+    const npy_intp sai = _sai / sizeof(ddouble), saj = _saj / sizeof(ddouble),
+                   sbj = _sbj / sizeof(ddouble), sbk = _sbk / sizeof(ddouble),
+                   sci = _sci / sizeof(ddouble), sck = _sck / sizeof(ddouble);
 
+    for (npy_intp n = 0; n != nn; ++n, _a += _san, _b += _sbn, _c += _scn) {
+        const ddouble *a = (const ddouble *)_a, *b = (const ddouble *)_b;
+        ddouble *c = (ddouble *)_c;
+
+        #pragma omp parallel for collapse(2)
+        for (npy_intp i = 0; i < ii; ++i) {
+            for (npy_intp k = 0; k < kk; ++k) {
+                ddouble val = Q_ZERO, tmp;
+                for (npy_intp j = 0; j < jj; ++j) {
+                    tmp = mulqq(a[i * sai + j * saj], b[j * sbj + k * sbk]);
+                    val = addqq(val, tmp);
                 }
-                ddouble *c_ik = (ddouble *) (_c + i * sci + k * sck);
-                *c_ik = val;
+                c[i * sci + k * sck] = val;
             }
         }
     }
