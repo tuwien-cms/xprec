@@ -186,8 +186,4 @@ setup(
 
     package_dir={'': 'pysrc'},
     packages=find_packages(where='pysrc'),
-    entry_points={
-        'console_scripts': [
-            ],
-        },
     )
