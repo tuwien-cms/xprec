@@ -99,14 +99,19 @@ def rrqr(A, tol=5e-32, reflectors=False):   # xGEQPF
 
         householder_update(R[i:,i:], Q[i:,i:])
 
-        temp = np.abs(R[i,:]) / norms
+        js = (i + 1) + norms[i + 1:].nonzero()[0]
+        temp = np.abs(R[i,js]) / norms[js]
         temp = np.fmax(0.0, (1 + temp)*(1 - temp))
-        temp2 = temp * np.square(norms / xnorms)
-        for j in norms[i+1:].nonzero()[0] + (i+1):
-            if temp2[j] < TOL3Z:
-                xnorms[j] = norms[j] = norm(R[i+1:,j])
-            else:
-                norms[j] *= np.sqrt(temp[j])
+        temp2 = temp * np.square(norms[js] / xnorms[js])
+
+        wheresmall = temp2 < TOL3Z
+        jsmall = js[wheresmall]
+        upd_norms = norm(R[i+1:,jsmall].T)
+        norms[jsmall] = upd_norms
+        xnorms[jsmall] = upd_norms
+
+        jbig = js[~wheresmall]
+        norms[jbig] *= np.sqrt(temp[~wheresmall])
 
         if tol is not None:
             acc = np.abs(R[i,i] / R[0,0])
