@@ -1,3 +1,0 @@
-# This is required in order to make sure setuptools includes include files
-# in the source distribution.
-graft csrc/
