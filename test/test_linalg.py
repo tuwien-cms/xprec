@@ -19,8 +19,8 @@ def test_bidiag():
     rng = np.random.RandomState(4711)
     m, n = 7, 5
     A = rng.normal(size=(m,n)).astype(ddouble)
-    Q, B, R = xprec.linalg.bidiag(A)
-    diff = Q @ B @ R.T - A
+    Q, B, RT = xprec.linalg.bidiag(A)
+    diff = Q @ B @ RT - A
 
     # FIXME: too large precision goals
     np.testing.assert_allclose(diff.astype(float), 0, atol=1e-29)

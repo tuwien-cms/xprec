@@ -268,7 +268,7 @@ int make_ddouble_type()
         .tp_new = PyDDouble_New,
         };
 
-    ddouble_type.tp_base = &PyGenericArrType_Type;
+    ddouble_type.tp_base = &PyFloatingArrType_Type;
     if (PyType_Ready(&ddouble_type) < 0)
         return -1;
 
@@ -793,6 +793,8 @@ static int register_ufuncs()
                            "less_equal")
         && register_binary(u_fmindq, u_fminqd, u_fminqq, type_num, "fmin")
         && register_binary(u_fmaxdq, u_fmaxqd, u_fmaxqq, type_num, "fmax")
+        && register_binary(u_fmindq, u_fminqd, u_fminqq, type_num, "minimum")
+        && register_binary(u_fmaxdq, u_fmaxqd, u_fmaxqq, type_num, "maximum")
         && register_binary(u_copysigndq, u_copysignqd, u_copysignqq, type_num,
                            "copysign")
         && register_binary(u_hypotdq, u_hypotqd, u_hypotqq, type_num, "hypot");

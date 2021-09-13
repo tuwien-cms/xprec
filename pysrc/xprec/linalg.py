@@ -14,58 +14,16 @@ golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 rank1update = _dd_linalg.rank1update
 
 
-def householder_update(A, Q):
-    beta, v = householder(A[:,0])
-    w = -beta * (A.T @ v)
-    rank1update(A, v, w, out=A)
-    Q[0,0] = beta
-    Q[1:,0] = v[1:]
+def qr(A, reflectors=False):
+    """QR decomposition without pivoting.
 
+    Decomposes a `(m, n)` matrix `A` into the product:
 
-def householder_apply(H, Q):
-    H = np.asarray(H)
-    Q = Q.copy()
-    m, r = H.shape
-    if Q.shape[0] != m:
-        raise ValueError("invalid shape")
-    if Q.shape[1] < r:
-        raise ValueError("invalid shape")
-    for j in range(r-1, -1, -1):
-        beta = H[j,j]
-        if np.equal(beta, 0):
-            continue
-        v = np.empty_like(H[j:,0])
-        v[0] = 1
-        v[1:] = H[j+1:,j]
-        Qpart = Q[j:,j:]
-        w = -beta * (Qpart.T @ v)
-        rank1update(Qpart, v, w, out=Qpart)
-    return Q
+        A == Q @ R
 
-
-def bidiag(A, reflectors=False):
-    A = np.array(A)
-    m, n = A.shape
-    if m < n:
-        raise NotImplementedError("must be tall matrix")
-
-    rq = n - (m == n)
-    Q = np.zeros_like(A)
-    R = np.zeros_like(A[:n,:n])
-
-    for j in range(n-2):
-        householder_update(A[j:,j:], Q[j:,j:])
-        householder_update(A[j:,j+1:].T, R[j+1:,j+1:])
-    for j in range(n-2, rq):
-        householder_update(A[j:,j:], Q[j:,j:])
-
-    if not reflectors:
-        Q = householder_apply(Q, np.eye(m, dtype=A.dtype))
-        R = householder_apply(R, np.eye(n, dtype=A.dtype))
-    return Q, A, R
-
-
-def qr(A, reflectors=False):  # xGEQR2
+    where `Q` is an `(m, m)` orthogonal matrix and `R` is a `(m, n)` upper
+    triangular matrix.  No pivoting is used.
+    """
     R = np.array(A)
     m, n = R.shape
     k = min(m, n)
@@ -79,7 +37,17 @@ def qr(A, reflectors=False):  # xGEQR2
     return Q, R
 
 
-def rrqr(A, tol=5e-32, reflectors=False):   # xGEQPF
+def rrqr(A, tol=5e-32, reflectors=False):
+    """Truncated rank-revealing QR decomposition with full column pivoting.
+
+    Decomposes a `(m, n)` matrix `A` into the product:
+
+        A[:,piv] == Q @ R
+
+    where `Q` is an `(m, k)` isometric matrix, `R` is a `(k, n)` upper
+    triangular matrix, `piv` is a permutation vector, and `k` is chosen such
+    that the relative tolerance `tol` is met in the equality above.
+    """
     R = np.array(A)
     m, n = R.shape
     k = min(m, n)
@@ -109,7 +77,6 @@ def rrqr(A, tol=5e-32, reflectors=False):   # xGEQPF
         upd_norms = norm(R[i+1:,jsmall].T)
         norms[jsmall] = upd_norms
         xnorms[jsmall] = upd_norms
-
         jbig = js[~wheresmall]
         norms[jbig] *= np.sqrt(temp[~wheresmall])
 
@@ -127,42 +94,68 @@ def rrqr(A, tol=5e-32, reflectors=False):   # xGEQPF
     return Q, R, jpvt
 
 
-def golub_kahan_chase(d, e, shift):
-    n = d.size
-    ex = np.empty(d.shape, d.dtype)
-    ex[:-1] = e
-    Gs = np.empty((n, 4), d.dtype)
-    golub_kahan_chase_ufunc(d, ex, shift, out=(d, ex, Gs))
-    e[:] = ex[:-1]
-    Gs[-1] = 0
-    return Gs[:,:2], Gs[:,2:]
+def bidiag(A, reflectors=False):
+    """Biadiagonalizes an arbitray rectangular matrix.
+
+    Decomposes a `(m, n)` matrix `A` into the product:
+
+        A == Q @ B @ RT
+
+    where `Q` is a `(m, m)` orthogonal matrix, `RT` is a `(n, n)` orthogonal
+    matrix, and `B` is a bidiagonal matrix, where the upper diagonal is
+    nonzero for `m >= n` and the lower diagonal is nonzero for `m < n`.
+    """
+    A = np.asarray(A)
+    m, n = A.shape
+    if m < n:
+        Q, B, RT = bidiag(A.T, reflectors)
+        return RT.T, B.T, Q.T
+
+    rq = n - (m == n)
+    B = A.copy()
+    Q = np.zeros_like(B)
+    R = np.zeros_like(B[:n,:n])
+
+    for j in range(n-2):
+        householder_update(B[j:,j:], Q[j:,j:])
+        householder_update(B[j:,j+1:].T, R[j+1:,j+1:])
+    for j in range(n-2, rq):
+        householder_update(B[j:,j:], Q[j:,j:])
+
+    if not reflectors:
+        Q = householder_apply(Q, np.eye(m, dtype=B.dtype))
+        R = householder_apply(R, np.eye(n, dtype=B.dtype))
+    return Q, B, R.T
 
 
-def estimate_sbounds(d, f):
-    abs_d = np.abs(d)
-    abs_f = np.abs(f)
-    n = abs_d.size
+def svd(A):
+    """Singular value decomposition of a rectangular matrix.
 
-    def iter_backward():
-        lambda_ = abs_d[n-1]
-        yield lambda_
-        for j in range(n-2, -1, -1):
-            lambda_ = abs_d[j] * (lambda_ / (lambda_ + abs_f[j]))
-            yield lambda_
+    Decomposes a `(m, n)` matrix `A` into the product:
 
-    def iter_forward():
-        mu = abs_d[0]
-        yield mu
-        for j in range(n-1):
-            mu = abs_d[j+1] * (mu / (mu + abs_f[j]))
-            yield mu
+        A == U @ (s[:,None] * VT)    # for m >= n
+        A == (U * s) @ VT            # for m <= n
 
-    smin = min(min(iter_backward()), min(iter_forward()))
-    smax = max(max(abs_d), max(abs_f))
-    return smax, smin
+    where `U` is a `(m, m)` orthogonal matrix, `VT` is a `(n, n)` orthogonal
+    matrix, and `s` are the singular values, a set of nonnegative numbers
+    in descending order.
+    """
+    A = np.asarray(A)
+    m, n = A.shape
+    if m < n:
+        U, s, VT = svd(A.T)
+        return VT.T, s, U.T
+
+    U, B, VT = bidiag(A)
+    d = B.diagonal().copy()
+    f = B.diagonal(1).copy()
+    golub_kahan_svd(d, f, U, VT, 1000)
+    return U, d, VT
 
 
-def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
+def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
+    if step is None:
+        step = golub_kahan_chase
     n = d.size
     n1 = 0
     n2 = n-1
@@ -209,11 +202,65 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=golub_kahan_chase):
         warn("Did not converge!")
 
 
-def svd(A):
-    U, B, V = bidiag(A)
-    VT = V.T
+def golub_kahan_chase(d, e, shift):
+    n = d.size
+    ex = np.empty(d.shape, d.dtype)
+    ex[:-1] = e
+    Gs = np.empty((n, 4), d.dtype)
+    golub_kahan_chase_ufunc(d, ex, shift, out=(d, ex, Gs))
+    e[:] = ex[:-1]
+    Gs[-1] = 0
+    return Gs[:,:2], Gs[:,2:]
 
-    d = B.diagonal().copy()
-    f = B.diagonal(1).copy()
-    golub_kahan_svd(d, f, U, VT, 1000)
-    return U, d, VT
+
+def estimate_sbounds(d, f):
+    abs_d = np.abs(d)
+    abs_f = np.abs(f)
+    n = abs_d.size
+
+    def iter_backward():
+        lambda_ = abs_d[n-1]
+        yield lambda_
+        for j in range(n-2, -1, -1):
+            lambda_ = abs_d[j] * (lambda_ / (lambda_ + abs_f[j]))
+            yield lambda_
+
+    def iter_forward():
+        mu = abs_d[0]
+        yield mu
+        for j in range(n-1):
+            mu = abs_d[j+1] * (mu / (mu + abs_f[j]))
+            yield mu
+
+    smin = min(min(iter_backward()), min(iter_forward()))
+    smax = max(max(abs_d), max(abs_f))
+    return smax, smin
+
+
+def householder_update(A, Q):
+    beta, v = householder(A[:,0])
+    w = -beta * (A.T @ v)
+    rank1update(A, v, w, out=A)
+    Q[0,0] = beta
+    Q[1:,0] = v[1:]
+
+
+def householder_apply(H, Q):
+    H = np.asarray(H)
+    Q = Q.copy()
+    m, r = H.shape
+    if Q.shape[0] != m:
+        raise ValueError("invalid shape")
+    if Q.shape[1] < r:
+        raise ValueError("invalid shape")
+    for j in range(r-1, -1, -1):
+        beta = H[j,j]
+        if np.equal(beta, 0):
+            continue
+        v = np.empty_like(H[j:,0])
+        v[0] = 1
+        v[1:] = H[j+1:,j]
+        Qpart = Q[j:,j:]
+        w = -beta * (Qpart.T @ v)
+        rank1update(Qpart, v, w, out=Qpart)
+    return Q
