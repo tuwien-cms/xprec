@@ -58,6 +58,9 @@ def test_svd():
     diff = (Ux[:,:20] * sx) @ VTx - Ax
     np.testing.assert_allclose(diff.astype(float), 0, atol=1e-29)
 
+    assert (sx >= 0).all()
+    assert (sx[1:] <= sx[:-1]).all()
+
 
 def test_qr():
     A = np.vander(np.linspace(-1, 1, 60), 80).astype(ddouble)

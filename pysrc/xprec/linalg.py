@@ -173,7 +173,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
                 n2 = n2i
                 break
         else:
-            return
+            break # from iter loop
 
         # Search for largest sub-bidiagonal matrix ending at n2
         for _n1 in range(n2 - 1, -1, -1):
@@ -187,7 +187,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
 
         # TODO CHECK THIS!
         if n1 == n2:
-            return
+            break # from iter loop
 
         tail = np.array([d[n2-1],   f[n2-1],
                          0 * d[n2], d[n2]]).reshape(2, 2)
@@ -200,6 +200,16 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
         givens_seq(G_U, UHpart, out=UHpart)
     else:
         warn("Did not converge!")
+
+    # Invert
+    VH[np.signbit(d)] = -VH[np.signbit(d)]
+    d[:] = np.abs(d)
+
+    # Sort
+    order = np.argsort(d)[::-1]
+    d[:] = d[order]
+    VH[:] = VH[order]
+    U[:,:n] = U[:,order]
 
 
 def golub_kahan_chase(d, e, shift):
