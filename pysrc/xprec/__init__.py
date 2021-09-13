@@ -16,7 +16,7 @@ Example:
     print(2 * x)
 
 """
-__version__ = "0.1"
+__version__ = "0.2.1"
 
 from . import _dd_ufunc
 from . import _dd_linalg
