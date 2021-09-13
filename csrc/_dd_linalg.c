@@ -50,6 +50,46 @@ static void u_matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
     MARK_UNUSED(data);
 }
 
+/****************************** Helper functions *************************/
+
+static void ensure_inplace_2(
+        char *in, char *out, npy_intp n1, npy_intp si1, npy_intp so1,
+        npy_intp n2, npy_intp si2, npy_intp so2)
+{
+    if (in == out)
+        return;
+
+    char *in1 = in, *out1 = out;
+    for (npy_intp i1 = 0; i1 != n1; ++i1, in1 += si1, out1 += so1) {
+        char *in2 = in1, *out2 = out1;
+        for (npy_intp i2 = 0; i2 != n2; ++i2, in2 += si2, out2 += so2) {
+            char *inx = in2, *outx = out2;
+            *(ddouble *)outx = *(ddouble *)inx;
+        }
+    }
+}
+
+static void ensure_inplace_3(
+        char *in, char *out, npy_intp n1, npy_intp si1, npy_intp so1,
+        npy_intp n2, npy_intp si2, npy_intp so2, npy_intp n3, npy_intp si3,
+        npy_intp so3)
+{
+    if (in == out)
+        return;
+
+    char *in1 = in, *out1 = out;
+    for (npy_intp i1 = 0; i1 != n1; ++i1, in1 += si1, out1 += so1) {
+        char *in2 = in1, *out2 = out1;
+        for (npy_intp i2 = 0; i2 != n2; ++i2, in2 += si2, out2 += so2) {
+            char *in3 = in2, *out3 = out2;
+            for (npy_intp i3 = 0; i3 != n3; ++i3, in3 += si3, out3 += so3) {
+                char *inx = in3, *outx = out3;
+                *(ddouble *)outx = *(ddouble *)inx;
+            }
+        }
+    }
+}
+
 /*************************** More complicated ***********************/
 
 static void u_normq(
@@ -83,6 +123,27 @@ static void u_householderq(
     MARK_UNUSED(data);
 }
 
+static void u_rank1updateq(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
+{
+    // signature (n;i,j),(n;i),(n;j)->(n;i,j)
+    const npy_intp nn = dims[0], ii = dims[1], jj = dims[2];
+    const npy_intp _san = steps[0], _sbn = steps[1], _scn = steps[2],
+                   _sdn = steps[3], _sai = steps[4], _saj = steps[5],
+                   _sbi = steps[6], _scj = steps[7], _sdi = steps[8],
+                   _sdj = steps[9];
+    char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3];
+
+    ensure_inplace_3(_a, _d, nn, _san, _sdn, ii, _sai, _sdi, jj, _saj, _sdj);
+    for (npy_intp n = 0; n != nn; ++n, _a += _san, _b += _sbn, _c += _scn) {
+        rank1updateq(
+            (ddouble *)_d, _sai / sizeof(ddouble), _saj / sizeof(ddouble),
+            (const ddouble *)_b, _sbi / sizeof(ddouble),
+            (const ddouble *)_c, _scj / sizeof(ddouble), ii, jj);
+    }
+    MARK_UNUSED(data);
+}
+
 static void u_givensq(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
@@ -108,27 +169,6 @@ static void u_givensq(
         *(ddouble *)(_c + sci + scj) = c;
     }
     MARK_UNUSED(data);
-}
-
-static void ensure_inplace_3(
-        char *in, char *out, npy_intp n1, npy_intp si1, npy_intp so1,
-        npy_intp n2, npy_intp si2, npy_intp so2, npy_intp n3, npy_intp si3,
-        npy_intp so3)
-{
-    if (in == out)
-        return;
-
-    char *in1 = in, *out1 = out;
-    for (npy_intp i1 = 0; i1 != n1; ++i1, in1 += si1, out1 += so1) {
-        char *in2 = in1, *out2 = out1;
-        for (npy_intp i2 = 0; i2 != n2; ++i2, in2 += si2, out2 += so2) {
-            char *in3 = in2, *out3 = out2;
-            for (npy_intp i3 = 0; i3 != n3; ++i3, in3 += si3, out3 += so3) {
-                char *inx = in3, *outx = out3;
-                *(ddouble *)outx = *(ddouble *)inx;
-            }
-        }
-    }
 }
 
 static void u_givens_seqq(
@@ -158,23 +198,6 @@ static void u_givens_seqq(
         }
     }
     MARK_UNUSED(data);
-}
-
-static void ensure_inplace_2(
-        char *in, char *out, npy_intp n1, npy_intp si1, npy_intp so1,
-        npy_intp n2, npy_intp si2, npy_intp so2)
-{
-    if (in == out)
-        return;
-
-    char *in1 = in, *out1 = out;
-    for (npy_intp i1 = 0; i1 != n1; ++i1, in1 += si1, out1 += so1) {
-        char *in2 = in1, *out2 = out1;
-        for (npy_intp i2 = 0; i2 != n2; ++i2, in2 += si2, out2 += so2) {
-            char *inx = in2, *outx = out2;
-            *(ddouble *)outx = *(ddouble *)inx;
-        }
-    }
 }
 
 static void u_golub_kahan_chaseq(
@@ -379,6 +402,8 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "givens_seq", "apply sequence of givens rotation to matrix", false);
     gufunc(u_householderq, 1, 2, "(i)->(),(i)",
            "householder", "Generate Householder reflectors", false);
+    gufunc(u_rank1updateq, 3, 1, "(i,j),(i),(j)->(i,j)",
+           "rank1update", "Perform rank-1 update of matrix", false);
     gufunc(u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
            "svd_tri2x2", "SVD of upper triangular 2x2 problem", false);
     gufunc(u_svvals_tri2x2, 1, 1, "(2,2)->(2)",

@@ -50,6 +50,18 @@ ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv)
     return tau;
 }
 
+void rank1updateq(ddouble *a, long ais, long ajs, const ddouble *v, long vs,
+                  const ddouble *w, long ws, long ii, long jj)
+{
+    #pragma omp parallel for collapse(2)
+    for (long i = 0; i < ii; ++i) {
+        for (long j = 0; j < jj; ++j) {
+            ddouble tmp = mulqq(v[i * vs], w[j * ws]);
+            a[i * ais + j * ajs] = addqq(a[i * ais + j * ajs], tmp);
+        }
+    }
+}
+
 void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
 {
     /* ACM Trans. Math. Softw. 28(2), 206, Alg 1 */

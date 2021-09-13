@@ -11,6 +11,7 @@ svd_tri2x2 = _dd_linalg.svd_tri2x2
 svvals_tri2x2 = _dd_linalg.svvals_tri2x2
 householder = _dd_linalg.householder
 golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
+rank1update = _dd_linalg.rank1update
 
 
 # Should work
@@ -19,8 +20,9 @@ householder_vector = householder
 
 def householder_update(A, Q):
     beta, v = householder_vector(A[:,0])
-    w = beta * (A.T @ v)
-    A -= v[:,None] * w[None,:]
+    w = -beta * (A.T @ v)
+    #A -= v[:,None] * w[None,:]
+    rank1update(A, v, w, out=A)
     Q[0,0] = beta
     Q[1:,0] = v[1:]
 
