@@ -273,7 +273,7 @@ int make_ddouble_type()
         };
     static PyMethodDef ddouble_methods[] = {
         {"__finfo__", PyDDoubleGetFinfo, METH_NOARGS | METH_CLASS,
-         "floating point information for type", NULL},
+         "floating point information for type"},
         {NULL}
         };
     static PyTypeObject ddouble_type = {
@@ -291,7 +291,8 @@ int make_ddouble_type()
         .tp_methods = ddouble_methods
         };
 
-    ddouble_type.tp_base = &PyFloatingArrType_Type;
+    //ddouble_type.tp_base = &PyFloatingArrType_Type;
+    ddouble_type.tp_base = &PyGenericArrType_Type;
     if (PyType_Ready(&ddouble_type) < 0)
         return -1;
 
@@ -323,7 +324,7 @@ static PyObject *PPyDDoubleFInfo_Make()
         return NULL;
 
     Py_INCREF(Py_None);
-    self->dtype = PyArray_DescrFromType(type_num);
+    self->dtype = (PyObject *)PyArray_DescrFromType(type_num);
     self->bits = CHAR_BIT * sizeof(ddouble);
     self->max = PyDDouble_Wrap(Q_MAX);
     self->min = PyDDouble_Wrap(Q_MIN);
@@ -331,7 +332,7 @@ static PyObject *PPyDDoubleFInfo_Make()
     self->nexp = 11;
     self->nmant = 104;
     self->machar = Py_None;
-    return self;
+    return (PyObject *)self;
 }
 
 static int make_finfo()
@@ -351,7 +352,7 @@ static int make_finfo()
         PyVarObject_HEAD_INIT(NULL, 0)
         .tp_name = "ddouble_finfo",
         .tp_basicsize = sizeof(PyDDoubleFInfo),
-        .tp_members = &finfo_members,
+        .tp_members = finfo_members,
         .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
         .tp_doc = "finfo type"
         };
@@ -535,11 +536,11 @@ static int make_dtype()
          * promotion does not work with ddoubles.
          */
         .kind = 'V',
-        .type = 'X',
+        .type = 'E',
         .byteorder = '=',
 
         /* TODO: not sure why this must be there */
-        .flags = NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM,
+        .flags = 0, //NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM,
         .elsize = sizeof(ddouble),
         .alignment = alignof(ddouble),
         .hash = -1
