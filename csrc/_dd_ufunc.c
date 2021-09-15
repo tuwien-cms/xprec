@@ -33,7 +33,7 @@
 
 static PyObject *module = NULL;
 static PyObject *numpy_module = NULL;
-static int type_num = NPY_CDOUBLE;  //FIXME
+static int type_num = -1;  //FIXME
 
 static PyTypeObject *pyddouble_type = NULL;
 static PyObject *pyddouble_finfo = NULL;
@@ -980,9 +980,9 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
 
     if (make_ddouble_type() < 0)
         return NULL;
-    if (make_finfo() < 0)
-        return NULL;
     if (make_dtype() < 0)
+        return NULL;
+    if (make_finfo() < 0)
         return NULL;
 
     numpy_module = PyImport_ImportModule("numpy");
