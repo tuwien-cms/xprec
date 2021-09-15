@@ -7,6 +7,8 @@
  * SPDX-License-Identifier: MIT
  */
 #include <Python.h>
+#include <structmember.h>
+
 #include <math.h>
 #include <stdio.h>
 #include <stdalign.h>
@@ -31,9 +33,10 @@
 
 static PyObject *module = NULL;
 static PyObject *numpy_module = NULL;
-static int type_num = NPY_CDOUBLE;  //FIXME
+static int type_num = -1;  //FIXME
 
 static PyTypeObject *pyddouble_type = NULL;
+static PyObject *pyddouble_finfo = NULL;
 
 typedef struct {
     PyObject_HEAD
@@ -243,6 +246,13 @@ PyObject *PyDDouble_Repr(PyObject *self)
     return PyUnicode_FromString(out);
 }
 
+PyObject *PyDDoubleGetFinfo(PyObject *self, PyObject *_dummy)
+{
+    Py_INCREF(pyddouble_finfo);
+    return pyddouble_finfo;
+    MARK_UNUSED(_dummy);
+}
+
 int make_ddouble_type()
 {
     static PyNumberMethods ddouble_as_number = {
@@ -261,6 +271,11 @@ int make_ddouble_type()
         .nb_int = PyDDouble_Int,
         .nb_float = PyDDouble_Float,
         };
+    static PyMethodDef ddouble_methods[] = {
+        {"__finfo__", PyDDoubleGetFinfo, METH_NOARGS | METH_CLASS,
+         "floating point information for type"},
+        {NULL}
+        };
     static PyTypeObject ddouble_type = {
         PyVarObject_HEAD_INIT(NULL, 0)
         .tp_name = "ddouble",
@@ -273,14 +288,84 @@ int make_ddouble_type()
         .tp_doc = "double-double floating point type",
         .tp_richcompare = PyDDouble_RichCompare,
         .tp_new = PyDDouble_New,
+        .tp_methods = ddouble_methods
         };
 
-    ddouble_type.tp_base = &PyFloatingArrType_Type;
+    //ddouble_type.tp_base = &PyFloatingArrType_Type;
+    ddouble_type.tp_base = &PyGenericArrType_Type;
     if (PyType_Ready(&ddouble_type) < 0)
         return -1;
 
     pyddouble_type = &ddouble_type;
     return PyModule_AddObject(module, "ddouble", (PyObject *)pyddouble_type);
+}
+
+/* --------------------- Ddouble Finfo object -------------------- */
+
+typedef struct {
+    PyObject_HEAD
+    PyObject *dtype;    // which dtype
+    int bits;           // number of bits
+    PyObject *max;      // largest positive number
+    PyObject *min;      // largest negative number
+    PyObject *eps;      // machine epsilon (spacing)
+    int nexp;           // number of exponent bits
+    int nmant;          // number of mantissa bits
+    PyObject *machar;   // machar object (unused)
+} PyDDoubleFInfo;
+
+static PyTypeObject *PyDDoubleFinfoType;
+
+static PyObject *PPyDDoubleFInfo_Make()
+{
+    PyDDoubleFInfo *self =
+        (PyDDoubleFInfo *) PyDDoubleFinfoType->tp_alloc(PyDDoubleFinfoType, 0);
+    if (self == NULL)
+        return NULL;
+
+    Py_INCREF(Py_None);
+    self->dtype = (PyObject *)PyArray_DescrFromType(type_num);
+    self->bits = CHAR_BIT * sizeof(ddouble);
+    self->max = PyDDouble_Wrap(Q_MAX);
+    self->min = PyDDouble_Wrap(Q_MIN);
+    self->eps = PyDDouble_Wrap(Q_EPS);
+    self->nexp = 11;
+    self->nmant = 104;
+    self->machar = Py_None;
+    return (PyObject *)self;
+}
+
+static int make_finfo()
+{
+    static PyMemberDef finfo_members[] = {
+        {"dtype",  T_OBJECT_EX, offsetof(PyDDoubleFInfo, dtype),  READONLY},
+        {"bits",   T_INT,       offsetof(PyDDoubleFInfo, bits),   READONLY},
+        {"max",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, max),    READONLY},
+        {"min",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, min),    READONLY},
+        {"eps",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, eps),    READONLY},
+        {"nexp",   T_INT,       offsetof(PyDDoubleFInfo, nexp),   READONLY},
+        {"nmant",  T_INT,       offsetof(PyDDoubleFInfo, nmant),  READONLY},
+        {"machar", T_OBJECT_EX, offsetof(PyDDoubleFInfo, machar), READONLY},
+        {NULL}
+        };
+    static PyTypeObject finfo_type = {
+        PyVarObject_HEAD_INIT(NULL, 0)
+        .tp_name = "ddouble_finfo",
+        .tp_basicsize = sizeof(PyDDoubleFInfo),
+        .tp_members = finfo_members,
+        .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+        .tp_doc = "finfo type"
+        };
+
+    if (PyType_Ready(&finfo_type) < 0)
+        return -1;
+
+    PyDDoubleFinfoType = &finfo_type;
+    pyddouble_finfo = PPyDDoubleFInfo_Make();
+    if (pyddouble_finfo == NULL)
+        return -1;
+
+    return 0;
 }
 
 /* ------------------------------ Descriptor ----------------------------- */
@@ -451,11 +536,11 @@ static int make_dtype()
          * promotion does not work with ddoubles.
          */
         .kind = 'V',
-        .type = 'X',
+        .type = 'E',
         .byteorder = '=',
 
         /* TODO: not sure why this must be there */
-        .flags = NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM,
+        .flags = 0, //NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM,
         .elsize = sizeof(ddouble),
         .alignment = alignof(ddouble),
         .hash = -1
@@ -608,7 +693,6 @@ static int register_casts()
         const type_in *in = (const type_in *)args[0];                   \
         type_out *out = (type_out *)args[1];                            \
                                                                         \
-        _Pragma("omp parallel for")                                     \
         for (npy_intp i = 0; i < n; ++i)                                \
             out[i * os] = inner_func(in[i * is]);                       \
         MARK_UNUSED(data);                                              \
@@ -626,7 +710,6 @@ static int register_casts()
         const type_b *b = (const type_b *)args[1];                      \
         type_out *out = (type_out *)args[2];                            \
                                                                         \
-        _Pragma("omp parallel for")                                     \
         for (npy_intp i = 0; i < n; ++i) {                              \
             out[i * os] = inner_func(a[i * as], b[i * bs]);             \
         }                                                               \
@@ -897,6 +980,8 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
     if (make_ddouble_type() < 0)
         return NULL;
     if (make_dtype() < 0)
+        return NULL;
+    if (make_finfo() < 0)
         return NULL;
 
     numpy_module = PyImport_ImportModule("numpy");

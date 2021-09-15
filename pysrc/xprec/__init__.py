@@ -18,7 +18,19 @@ Example:
 """
 __version__ = "0.2.2"
 
+import numpy as _np
+
 from . import _dd_ufunc
 from . import _dd_linalg
 
 ddouble = _dd_ufunc.dtype
+
+
+def finfo(dtype):
+    dtype = _np.dtype(dtype)
+    try:
+        finfo_dunder = dtype.type.__finfo__
+    except AttributeError:
+        return _np.finfo(dtype)
+    else:
+        return finfo_dunder()

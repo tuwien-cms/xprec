@@ -180,7 +180,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
     tol = 100 * 5e-32
     thresh = tol * sigma_minus
 
-    for i_iter in range(max_iter):
+    for i_iter in range(50 * n):
         # Search for biggest index for non-zero off diagonal value in e
         for n2i in range(n2, 0, -1):
             if abs(f[n2i-1]) > thresh:
@@ -213,7 +213,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
         givens_seq(G_V, VHpart, out=VHpart)
         givens_seq(G_U, UHpart, out=UHpart)
     else:
-        warn("Did not converge!")
+        warn("Did not converge after %d iterations!" % i_iter)
 
     # Invert
     VH[np.signbit(d)] = -VH[np.signbit(d)]
