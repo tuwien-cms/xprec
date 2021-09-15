@@ -692,7 +692,6 @@ static int register_casts()
         const type_in *in = (const type_in *)args[0];                   \
         type_out *out = (type_out *)args[1];                            \
                                                                         \
-        _Pragma("omp parallel for")                                     \
         for (npy_intp i = 0; i < n; ++i)                                \
             out[i * os] = inner_func(in[i * is]);                       \
         MARK_UNUSED(data);                                              \
@@ -710,7 +709,6 @@ static int register_casts()
         const type_b *b = (const type_b *)args[1];                      \
         type_out *out = (type_out *)args[2];                            \
                                                                         \
-        _Pragma("omp parallel for")                                     \
         for (npy_intp i = 0; i < n; ++i) {                              \
             out[i * os] = inner_func(a[i * as], b[i * bs]);             \
         }                                                               \
