@@ -12,8 +12,8 @@ from . import _dd_linalg
 norm = _dd_linalg.norm
 givens = _dd_linalg.givens
 givens_seq = _dd_linalg.givens_seq
-svd_tri2x2 = _dd_linalg.svd_tri2x2
-svvals_tri2x2 = _dd_linalg.svvals_tri2x2
+svd2x2 = _dd_linalg.svd2x2
+svvals2x2 = _dd_linalg.svvals2x2
 householder = _dd_linalg.householder
 golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 rank1update = _dd_linalg.rank1update
@@ -205,7 +205,7 @@ def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
 
         tail = np.array([d[n2-1],   f[n2-1],
                          0 * d[n2], d[n2]]).reshape(2, 2)
-        shift = svvals_tri2x2(tail)[1]
+        shift = svvals2x2(tail)[1]
         G_V, G_U = step(d[n1:n2+1], f[n1:n2], shift)
 
         VHpart = VH[n1:n2+1, :]

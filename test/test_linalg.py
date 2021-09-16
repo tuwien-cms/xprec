@@ -47,8 +47,8 @@ def test_givens():
 
 
 def test_svd_tri2x2():
-    A = np.array([[2.0, -3.0], [0.0, 4.0]], dtype=ddouble)
-    U, s, VH = xprec.linalg.svd_tri2x2(A)
+    A = np.array([[2.0, -3.0], [2.0, 4.0]], dtype=ddouble)
+    U, s, VH = xprec.linalg.svd2x2(A)
     diff = A - (U * s) @ VH
     np.testing.assert_allclose(diff.astype(float), 0, atol=2e-31)
 

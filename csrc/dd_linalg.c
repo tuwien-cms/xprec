@@ -127,6 +127,37 @@ void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
     e[(ii-2)*se] = f;
 }
 
+void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
+             ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
+{
+    bool compute_uv = cv != NULL;
+    if(iszeroq(a21))
+        return svd_tri2x2(a11, a12, a22, smin, smax, cv, sv, cu, su);
+
+    /* First, we use a givens rotation  Rx
+     *   [  cx   sx ] [ a11  a12 ] = [ rx  a12' ]
+     *   [ -sx   cx ] [ a21  a22 ]   [ 0   a22' ]
+     */
+    ddouble cx, sx, rx;
+    givensq(a11, a21, &cx, &sx, &rx);
+    a11 = rx;
+    a21 = Q_ZERO;
+    lmul_givensq(&a12, &a22, cx, sx, a12, a22);
+
+    /* Next, use the triangular routine
+     *    [ f  g ]  =  [  cu  -su ] [ smax     0 ] [  cv   sv ]
+     *    [ 0  h ]     [  su   cu ] [    0  smin ] [ -sv   cv ]
+     */
+    svd_tri2x2(a11, a12, a22, smin, smax, cv, sv, cu, su);
+
+    /* Finally, update the LHS (U) transform as follows:
+     *   [  cx  -sx ] [  cu  -su ] = [  cu'  -su' ]
+     *   [  sx   cx ] [  su   cu ]   [  su'   cu' ]
+     */
+    if (compute_uv)
+        lmul_givensq(cu, su, cx, negq(sx), *cu, *su);
+}
+
 void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
                 ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
 {

@@ -234,7 +234,7 @@ static void u_golub_kahan_chaseq(
     MARK_UNUSED(data);
 }
 
-static void u_svd_tri2x2(
+static void u_svd_2x2(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2,2)->(n;2,2),(n;2),(n;2,2)
@@ -247,18 +247,13 @@ static void u_svd_tri2x2(
 
     for (npy_intp n = 0; n != nn;
                 ++n, _a += san, _b += sbn, _c += scn, _d += sdn) {
-        ddouble f = *(ddouble *) _a;
-        ddouble z = *(ddouble *) (_a + sai);
-        ddouble g = *(ddouble *) (_a + saj);
-        ddouble h = *(ddouble *) (_a + sai + saj);
+        ddouble a11 = *(ddouble *) _a;
+        ddouble a12 = *(ddouble *) (_a + saj);
+        ddouble a21 = *(ddouble *) (_a + sai);
+        ddouble a22 = *(ddouble *) (_a + sai + saj);
 
         ddouble smin, smax, cu, su, cv, sv;
-        if (!iszeroq(z)) {
-            fprintf(stderr, "svd_tri2x2: matrix is not upper triagonal\n");
-            smin = smax = cu = su = cv = sv = nanq();
-        } else {
-            svd_tri2x2(f, g, h, &smin, &smax, &cv, &sv, &cu, &su);
-        }
+        svd_2x2(a11, a12, a21, a22, &smin, &smax, &cv, &sv, &cu, &su);
 
         *(ddouble *)_b = cu;
         *(ddouble *)(_b + sbj) = negq(su);
@@ -276,7 +271,7 @@ static void u_svd_tri2x2(
     MARK_UNUSED(data);
 }
 
-static void u_svvals_tri2x2(
+static void u_svvals_2x2(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2,2)->(n;2)
@@ -286,18 +281,13 @@ static void u_svvals_tri2x2(
     char *_a = args[0], *_b = args[1];
 
     for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn) {
-        ddouble f = *(ddouble *) _a;
-        ddouble z = *(ddouble *) (_a + sai);
-        ddouble g = *(ddouble *) (_a + saj);
-        ddouble h = *(ddouble *) (_a + sai + saj);
+        ddouble a11 = *(ddouble *) _a;
+        ddouble a12 = *(ddouble *) (_a + saj);
+        ddouble a21 = *(ddouble *) (_a + sai);
+        ddouble a22 = *(ddouble *) (_a + sai + saj);
 
         ddouble smin, smax;
-        if (!iszeroq(z)) {
-            fprintf(stderr, "svd_tri2x2: matrix is not upper triagonal\n");
-            smin = smax = nanq();
-        } else {
-            svd_tri2x2(f, g, h, &smin, &smax, NULL, NULL, NULL, NULL);
-        }
+        svd_2x2(a11, a12, a21, a22, &smin, &smax, NULL, NULL, NULL, NULL);
 
         *(ddouble *)_b = smax;
         *(ddouble *)(_b + sbi) = smin;
@@ -409,10 +399,10 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "householder", "Generate Householder reflectors", false);
     gufunc(u_rank1updateq, 3, 1, "(i,j),(i),(j)->(i,j)",
            "rank1update", "Perform rank-1 update of matrix", false);
-    gufunc(u_svd_tri2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
-           "svd_tri2x2", "SVD of upper triangular 2x2 problem", false);
-    gufunc(u_svvals_tri2x2, 1, 1, "(2,2)->(2)",
-           "svvals_tri2x2", "singular values of upper triangular 2x2 problem", false);
+    gufunc(u_svd_2x2, 1, 3, "(2,2)->(2,2),(2),(2,2)",
+           "svd2x2", "SVD of upper triangular 2x2 problem", false);
+    gufunc(u_svvals_2x2, 1, 1, "(2,2)->(2)",
+           "svvals2x2", "singular values of upper triangular 2x2 problem", false);
     gufunc(u_golub_kahan_chaseq, 3, 3, "(i),(i),()->(i),(i),(i,4)",
            "golub_kahan_chase", "bidiagonal chase procedure", false);
 

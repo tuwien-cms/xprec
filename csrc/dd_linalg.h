@@ -22,17 +22,53 @@ static inline void lmul_givensq(
     *b = subqq(mulqq(c, y), mulqq(s, x));
 }
 
+/** Compute 2-norm of a vector */
 ddouble normq(const ddouble *x, long nn, long sxn);
 
+/**
+ * Perform a rank-one update of a `ii` times `jj` matrix:
+ *
+ *       A[i, j] += v[i] * w[j]
+ */
 void rank1updateq(ddouble *a, long ais, long ajs, const ddouble *v, long vs,
                   const ddouble *w, long ws, long ii, long jj);
 
+/**
+ * Compute Givens rotation `R` matrix that satisfies:
+ *
+ *      [  c  s ] [ f ]     [ r ]
+ *      [ -s  c ] [ g ]  =  [ 0 ]
+ */
 void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r);
 
+/**
+ * Compute Householder reflector `H[tau, v]`, defined as:
+ *
+ *      H[tau, v] = I - tau * v @ v.T
+ *
+ * that, when applied to a given `x`, zeros out all but the first component.
+ * The scaling factor `tau` is returned, while `v` is written.
+ */
 ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv);
 
+/**
+ * Perform the SVD of an arbitrary two-by-two matrix:
+ *
+ *      [ a11  a12 ]  =  [  cu  -su ] [ smax     0 ] [  cv   sv ]
+ *      [ a21  a22 ]     [  su   cu ] [    0  smin ] [ -sv   cv ]
+ */
+void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
+             ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su);
+
+/**
+ * Perform the SVD of a upper triangular two-by-two matrix:
+ *
+ *      [ f  g ]  =  [  cu  -su ] [ smax     0 ] [  cv   sv ]
+ *      [ 0  h ]     [  su   cu ] [    0  smin ] [ -sv   cv ]
+ */
 void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
                 ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su);
+
 
 void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
                         ddouble shift, ddouble *rot);
