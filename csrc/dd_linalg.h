@@ -60,15 +60,6 @@ ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv);
 void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
              ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su);
 
-/**
- * Perform the SVD of a upper triangular two-by-two matrix:
- *
- *      [ f  g ]  =  [  cu  -su ] [ smax     0 ] [  cv   sv ]
- *      [ 0  h ]     [  su   cu ] [    0  smin ] [ -sv   cv ]
- */
-void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
-                ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su);
-
 
 void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
                         ddouble shift, ddouble *rot);

@@ -93,72 +93,8 @@ void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
     }
 }
 
-void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
-                        ddouble shift, ddouble *rot)
-{
-    if (ii < 2)
-        return;
-
-    ddouble g = e[0];
-    ddouble f = addqq(copysigndq(1.0, d[0]), divqq(shift, d[0]));
-    f = mulqq(f, subqq(absq(d[0]), shift));
-
-    for (long i = 0; i < (ii - 1); ++i) {
-        ddouble r, cosr, sinr;
-        givensq(f, g, &cosr, &sinr, &r);
-        if (i != 0)
-            e[(i-1)*se] = r;
-
-        lmul_givensq(&f, &e[i*se], cosr, sinr, d[i*sd], e[i*se]);
-        lmul_givensq(&g, &d[(i+1)*sd], cosr, sinr, Q_ZERO, d[(i+1)*sd]);
-        *(rot++) = cosr;
-        *(rot++) = sinr;
-
-        ddouble cosl, sinl;
-        givensq(f, g, &cosl, &sinl, &r);
-        d[i*sd] = r;
-        lmul_givensq(&f, &d[(i+1)*sd], cosl, sinl, e[i*se], d[(i+1)*sd]);
-        if (i < ii - 2) {
-            lmul_givensq(&g, &e[(i+1)*se], cosl, sinl, Q_ZERO, e[(i+1)*se]);
-        }
-        *(rot++) = cosl;
-        *(rot++) = sinl;
-    }
-    e[(ii-2)*se] = f;
-}
-
-void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
-             ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
-{
-    bool compute_uv = cv != NULL;
-    if(iszeroq(a21))
-        return svd_tri2x2(a11, a12, a22, smin, smax, cv, sv, cu, su);
-
-    /* First, we use a givens rotation  Rx
-     *   [  cx   sx ] [ a11  a12 ] = [ rx  a12' ]
-     *   [ -sx   cx ] [ a21  a22 ]   [ 0   a22' ]
-     */
-    ddouble cx, sx, rx;
-    givensq(a11, a21, &cx, &sx, &rx);
-    a11 = rx;
-    a21 = Q_ZERO;
-    lmul_givensq(&a12, &a22, cx, sx, a12, a22);
-
-    /* Next, use the triangular routine
-     *    [ f  g ]  =  [  cu  -su ] [ smax     0 ] [  cv   sv ]
-     *    [ 0  h ]     [  su   cu ] [    0  smin ] [ -sv   cv ]
-     */
-    svd_tri2x2(a11, a12, a22, smin, smax, cv, sv, cu, su);
-
-    /* Finally, update the LHS (U) transform as follows:
-     *   [  cx  -sx ] [  cu  -su ] = [  cu'  -su' ]
-     *   [  sx   cx ] [  su   cu ]   [  su'   cu' ]
-     */
-    if (compute_uv)
-        lmul_givensq(cu, su, cx, negq(sx), *cu, *su);
-}
-
-void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
+static void svd_tri2x2(
+                ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
                 ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
 {
     ddouble fa = absq(f);
@@ -219,4 +155,69 @@ void svd_tri2x2(ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
         *cu = divqq(addqq(*cv, mulqq(*sv, q)), a);
         *su = divqq(mulqq(divqq(h, f), *sv), a);
     }
+}
+
+void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
+             ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
+{
+    bool compute_uv = cv != NULL;
+    if(iszeroq(a21))
+        return svd_tri2x2(a11, a12, a22, smin, smax, cv, sv, cu, su);
+
+    /* First, we use a givens rotation  Rx
+     *   [  cx   sx ] [ a11  a12 ] = [ rx  a12' ]
+     *   [ -sx   cx ] [ a21  a22 ]   [ 0   a22' ]
+     */
+    ddouble cx, sx, rx;
+    givensq(a11, a21, &cx, &sx, &rx);
+    a11 = rx;
+    a21 = Q_ZERO;
+    lmul_givensq(&a12, &a22, cx, sx, a12, a22);
+
+    /* Next, use the triangular routine
+     *    [ f  g ]  =  [  cu  -su ] [ smax     0 ] [  cv   sv ]
+     *    [ 0  h ]     [  su   cu ] [    0  smin ] [ -sv   cv ]
+     */
+    svd_tri2x2(a11, a12, a22, smin, smax, cv, sv, cu, su);
+
+    /* Finally, update the LHS (U) transform as follows:
+     *   [  cx  -sx ] [  cu  -su ] = [  cu'  -su' ]
+     *   [  sx   cx ] [  su   cu ]   [  su'   cu' ]
+     */
+    if (compute_uv)
+        lmul_givensq(cu, su, cx, negq(sx), *cu, *su);
+}
+
+void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
+                        ddouble shift, ddouble *rot)
+{
+    if (ii < 2)
+        return;
+
+    ddouble g = e[0];
+    ddouble f = addqq(copysigndq(1.0, d[0]), divqq(shift, d[0]));
+    f = mulqq(f, subqq(absq(d[0]), shift));
+
+    for (long i = 0; i < (ii - 1); ++i) {
+        ddouble r, cosr, sinr;
+        givensq(f, g, &cosr, &sinr, &r);
+        if (i != 0)
+            e[(i-1)*se] = r;
+
+        lmul_givensq(&f, &e[i*se], cosr, sinr, d[i*sd], e[i*se]);
+        lmul_givensq(&g, &d[(i+1)*sd], cosr, sinr, Q_ZERO, d[(i+1)*sd]);
+        *(rot++) = cosr;
+        *(rot++) = sinr;
+
+        ddouble cosl, sinl;
+        givensq(f, g, &cosl, &sinl, &r);
+        d[i*sd] = r;
+        lmul_givensq(&f, &d[(i+1)*sd], cosl, sinl, e[i*se], d[(i+1)*sd]);
+        if (i < ii - 2) {
+            lmul_givensq(&g, &e[(i+1)*se], cosl, sinl, Q_ZERO, e[(i+1)*se]);
+        }
+        *(rot++) = cosl;
+        *(rot++) = sinl;
+    }
+    e[(ii-2)*se] = f;
 }
