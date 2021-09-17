@@ -89,3 +89,36 @@ def test_qr_pivot():
 
     Rdiag = np.abs(R.diagonal())
     assert (Rdiag[1:] <= Rdiag[:-1]).all()
+
+
+def jacobi_sweep_naive(U, VT):
+    m, n = U.shape
+    if m < n:
+        raise ValueError("not possible")
+    offd = 0
+    U = U.copy()
+    VT = VT.copy()
+    for i in range(n-1):
+        for j in range(i+1, n):
+            subset = [i, j]
+            usub = U[:, subset]
+            ux = usub.T @ usub
+            offd += np.square(ux[1,0])
+            G, _, GT = xprec.linalg.svd2x2(ux)
+            U[:,subset] = U[:,subset] @ G
+            VT[subset] = GT @ VT[subset]
+    return U, VT, np.sqrt(offd)
+
+
+def test_jacobi():
+    A = np.vander(np.linspace(-1, 1, 60), 80).astype(ddouble)
+    _, R, _ = xprec.linalg.rrqr(A)
+
+    U = R.T
+    m, n = U.shape
+    VT = np.eye(n)
+    U2, VT2, od2 = xprec.linalg.jacobi_sweep(R.T.copy(), np.eye(n))
+    U1, VT1, od1 = jacobi_sweep_naive(R.T.copy(), np.eye(n))
+    np.testing.assert_allclose(od1 - od2, 0.0, atol=1e-29)
+    np.testing.assert_allclose(U1 - U2, 0.0, atol=1e-29)
+    np.testing.assert_allclose(VT1 - VT2, 0.0, atol=1e-29)

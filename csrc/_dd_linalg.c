@@ -149,6 +149,32 @@ static void u_rank1updateq(
     MARK_UNUSED(data);
 }
 
+static void u_jacobisweepq(
+    char **args, const npy_intp *dims, const npy_intp* steps, void *data)
+{
+    // signature (n;i,j),(n;i=j,j)->(n;i,j),(n;i=j,j);(n,)
+    const npy_intp nn = dims[0], ii = dims[1], jj = dims[2];
+    const npy_intp _san = steps[0], _sbn = steps[1],  _scn = steps[2],
+                   _sdn = steps[3], _sen = steps[4],  _sai = steps[5],
+                   _saj = steps[6], _sbi = steps[7],  _sbj = steps[8],
+                   _sci = steps[9], _scj = steps[10], _sdi = steps[11],
+                   _sdj = steps[12];
+    char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3],
+         *_e = args[4];
+
+    ensure_inplace_3(_a, _c, nn, _san, _scn, ii, _sai, _sci, jj, _saj, _scj);
+    ensure_inplace_3(_b, _d, nn, _sbn, _sdn, jj, _sbi, _sdi, jj, _sbj, _sdj);
+    for (npy_intp n = 0; n != nn; ++n, _c += _scn, _d += _sdn, _e += _sen) {
+        ddouble *c = (ddouble *)_c, *d = (ddouble *)_d, *e = (ddouble *)_e;
+        const npy_intp
+                sci = _sci / sizeof(ddouble), scj = _scj / sizeof(ddouble),
+                sdi = _sdi / sizeof(ddouble), sdj = _sdj / sizeof(ddouble);
+
+        *e = jacobi_sweep(c, sci, scj, d, sdi, sdj, ii, jj);
+    }
+    MARK_UNUSED(data);
+}
+
 static void u_givensq(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
@@ -403,6 +429,8 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "svd2x2", "SVD of upper triangular 2x2 problem", false);
     gufunc(u_svvals_2x2, 1, 1, "(2,2)->(2)",
            "svvals2x2", "singular values of upper triangular 2x2 problem", false);
+    gufunc(u_jacobisweepq, 2, 3, "(i,j),(j,j)->(i,j),(j,j),()",
+           "jacobi_sweep", "Perform sweep of one-sided Jacobi rotations", false);
     gufunc(u_golub_kahan_chaseq, 3, 3, "(i),(i),()->(i),(i),(i,4)",
            "golub_kahan_chase", "bidiagonal chase procedure", false);
 
