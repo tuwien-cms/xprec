@@ -167,6 +167,46 @@ def svd_trunc(A, tol=5e-32):
     return U, s, VT
 
 
+def svd_trunc_jacobi(A, tol=5e-32, max_iter=20):
+    # RRQR is an excellent preconditioner for Jacobi.  One should then perform
+    # Jacobi on RT
+    Q, R, p = rrqr(A, tol)
+    U = R.T.copy()
+    _, n = U.shape
+    VT = np.eye(n, dtype=U.dtype)
+
+    limit = tol * np.linalg.norm(U[:n,:n], 'fro')
+    for _ in range(max_iter):
+        offd = jacobi_sweep(U, VT)
+        if offd <= limit:
+            break
+    else:
+        warn("Did not converge")
+
+    s = norm(U.T)
+    U = U / s
+
+    # Reconstruct A from QRs
+    U_A = Q @ VT.T
+    VT_B = U.T[:, p.argsort()]
+    return U_A, s, VT_B
+
+
+def jacobi_sweep(U, VT):
+    _, n = U.shape
+    offd = 0
+    for i in range(n-1):
+        for j in range(i+1, n):
+            subset = [i, j]
+            usub = U[:, subset]
+            ux = usub.T @ usub
+            offd += np.square(ux[1,0])
+            G, _, GT = svd2x2(ux)
+            U[:,subset] = U[:,subset] @ G
+            VT[subset] = GT @ VT[subset]
+    return np.sqrt(offd)
+
+
 def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
     if step is None:
         step = golub_kahan_chase
