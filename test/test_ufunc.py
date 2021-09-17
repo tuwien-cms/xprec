@@ -32,6 +32,17 @@ def test_exp():
     _compare_ufunc(np.expm1, x, ulps=2)
 
 
+def test_cosh():
+    x = np.geomspace(1e-300, 700, 4953)
+    x = np.hstack([-x[::-1], 0, x])
+    _compare_ufunc(np.cosh, x)
+    _compare_ufunc(np.sinh, x)
+
+    thousand = xprec.ddouble.type(1000)
+    assert np.isinf(np.cosh(thousand))
+    assert np.isinf(np.cosh(-thousand))
+
+
 def test_hypot():
     x = np.geomspace(1e-300, 1e260, 47)
     x = np.hstack([-x[::-1], 0, x])

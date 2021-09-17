@@ -434,6 +434,10 @@ ddouble sinhq(ddouble a)
 
     if (absq(a).hi > 0.05) {
         ddouble ea = expq(a);
+        if (isinfq(ea))
+            return ea;
+        if (iszeroq(ea))
+            return negq(infq());
         return mul_pwr2(subqq(ea, reciprocalq(ea)), 0.5);
     }
 
@@ -461,6 +465,8 @@ ddouble coshq(ddouble a)
         return Q_ONE;
 
     ddouble ea = expq(a);
+    if (isinfq(ea) || iszeroq(ea))
+        return infq();
     return mul_pwr2(addqq(ea, reciprocalq(ea)), 0.5);
 }
 
