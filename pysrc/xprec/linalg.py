@@ -176,10 +176,11 @@ def svd_trunc_jacobi(A, tol=5e-32, max_iter=20):
     U = R.T.copy()
     _, n = U.shape
     VT = np.eye(n, dtype=U.dtype)
+    offd = np.empty((), ddouble)
 
     limit = tol * np.linalg.norm(U[:n,:n], 'fro')
     for _ in range(max_iter):
-        U, VT, offd = jacobi_sweep(U, VT)
+        jacobi_sweep(U, VT, out=(U, VT, offd))
         if offd <= limit:
             break
     else:
