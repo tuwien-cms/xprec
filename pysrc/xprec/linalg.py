@@ -15,6 +15,8 @@ givens_seq = _dd_linalg.givens_seq
 svd2x2 = _dd_linalg.svd2x2
 svvals2x2 = _dd_linalg.svvals2x2
 householder = _dd_linalg.householder
+jacobi_sweep = _dd_linalg.jacobi_sweep
+
 golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 rank1update = _dd_linalg.rank1update
 
@@ -174,10 +176,11 @@ def svd_trunc_jacobi(A, tol=5e-32, max_iter=20):
     U = R.T.copy()
     _, n = U.shape
     VT = np.eye(n, dtype=U.dtype)
+    offd = np.empty((), ddouble)
 
     limit = tol * np.linalg.norm(U[:n,:n], 'fro')
     for _ in range(max_iter):
-        offd = jacobi_sweep(U, VT)
+        jacobi_sweep(U, VT, out=(U, VT, offd))
         if offd <= limit:
             break
     else:
@@ -190,21 +193,6 @@ def svd_trunc_jacobi(A, tol=5e-32, max_iter=20):
     U_A = Q @ VT.T
     VT_B = U.T[:, p.argsort()]
     return U_A, s, VT_B
-
-
-def jacobi_sweep(U, VT):
-    _, n = U.shape
-    offd = 0
-    for i in range(n-1):
-        for j in range(i+1, n):
-            subset = [i, j]
-            usub = U[:, subset]
-            ux = usub.T @ usub
-            offd += np.square(ux[1,0])
-            G, _, GT = svd2x2(ux)
-            U[:,subset] = U[:,subset] @ G
-            VT[subset] = GT @ VT[subset]
-    return np.sqrt(offd)
 
 
 def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):

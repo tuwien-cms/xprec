@@ -89,3 +89,9 @@ def test_qr_pivot():
 
     Rdiag = np.abs(R.diagonal())
     assert (Rdiag[1:] <= Rdiag[:-1]).all()
+
+
+def test_jacobi():
+    A = np.vander(np.linspace(-1, 1, 60), 80).astype(ddouble)
+    U, s, VT = xprec.linalg.svd_trunc_jacobi(A)
+    np.testing.assert_allclose((U * s) @ VT - A, 0.0, atol=5e-30)

@@ -61,5 +61,10 @@ void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
              ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su);
 
 
+
+ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
+                     long svj, long ii, long jj);
+
+
 void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
                         ddouble shift, ddouble *rot);

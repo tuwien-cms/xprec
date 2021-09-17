@@ -188,6 +188,51 @@ void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
         lmul_givensq(cu, su, cx, negq(sx), *cu, *su);
 }
 
+ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
+                     long svj, long ii, long jj)
+{
+    ddouble _cu, _su, cv, sv, _smin, _smax;
+    ddouble offd = Q_ZERO;
+
+    if (ii < jj)
+        return nanq();
+
+    // Note that the inner loop only runs over the square portion!
+    for (long i = 0; i < jj - 1; ++i) {
+        for (long j = i + 1; j < jj; ++j) {
+            // Construct the matrix to be diagonalized
+            ddouble Hii = Q_ZERO, Hij = Q_ZERO, Hjj = Q_ZERO;
+            for (long k = 0; k != ii; ++k) {
+                ddouble u_ki = u[k * sui + i * suj];
+                ddouble u_kj = u[k * sui + j * suj];
+                Hii = addqq(Hii, mulqq(u_ki, u_ki));
+                Hij = addqq(Hij, mulqq(u_ki, u_kj));
+                Hjj = addqq(Hjj, mulqq(u_kj, u_kj));
+            }
+            offd = addqq(offd, sqrq(Hij));
+
+            // diagonalize
+            svd_2x2(Hii, Hij, Hij, Hjj, &_smin, &_smax, &cv, &sv, &_cu, &_su);
+
+            // apply rotation to VT
+            for (long k = 0; k < jj; ++k) {
+                ddouble *vt_ik = &vt[i * svi + k * svj];
+                ddouble *vt_jk = &vt[j * svi + k * svj];
+                lmul_givensq(vt_ik, vt_jk, cv, sv, *vt_ik, *vt_jk);
+            }
+
+            // apply transposed rotation to U
+            for (long k = 0; k < ii; ++k) {
+                ddouble *u_ki = &u[k * sui + i * suj];
+                ddouble *u_kj = &u[k * sui + j * suj];
+                lmul_givensq(u_ki, u_kj, cv, sv, *u_ki, *u_kj);
+            }
+        }
+    }
+    offd = sqrtq(offd);
+    return offd;
+}
+
 void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
                         ddouble shift, ddouble *rot)
 {
