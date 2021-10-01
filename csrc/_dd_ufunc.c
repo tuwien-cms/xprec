@@ -991,11 +991,16 @@ PyMODINIT_FUNC PyInit__dd_ufunc(void)
     PyArray_Descr *dtype = PyArray_DescrFromType(type_num);
     PyModule_AddObject(module, "dtype", (PyObject *)dtype);
 
+    /* Casts need to be defined before ufuncs, because numpy >= 1.21 caches
+     * casts/ufuncs in a way that is non-trivial... one should consider casts
+     * to be "more basic".
+     * See: https://github.com/numpy/numpy/issues/20009
+     */
+    if (register_casts() < 0)
+        return NULL;
     if (register_ufuncs() < 0)
         return NULL;
     if (register_dtype_in_dicts() < 0)
-        return NULL;
-    if (register_casts() < 0)
         return NULL;
     if (register_constants() < 0)
         return NULL;
