@@ -16,12 +16,11 @@ Example:
     print(2 * x)
 
 """
-__version__ = "0.3"
+__version__ = "1.0"
 
 import numpy as _np
 
 from . import _dd_ufunc
-from . import _dd_linalg
 
 ddouble = _dd_ufunc.dtype
 

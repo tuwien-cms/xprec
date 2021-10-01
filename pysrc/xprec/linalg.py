@@ -11,13 +11,7 @@ from . import _dd_linalg
 
 norm = _dd_linalg.norm
 givens = _dd_linalg.givens
-givens_seq = _dd_linalg.givens_seq
-svd2x2 = _dd_linalg.svd2x2
-svvals2x2 = _dd_linalg.svvals2x2
 householder = _dd_linalg.householder
-jacobi_sweep = _dd_linalg.jacobi_sweep
-
-golub_kahan_chase_ufunc = _dd_linalg.golub_kahan_chase
 rank1update = _dd_linalg.rank1update
 
 
@@ -135,41 +129,18 @@ def bidiag(A, reflectors=False):
     return Q, B, R.T
 
 
-def svd(A):
-    """Singular value decomposition of a rectangular matrix.
+def svd_trunc(A, tol=5e-32, max_iter=20):
+    """Truncated singular value decomposition.
 
     Decomposes a `(m, n)` matrix `A` into the product:
 
-        A == U @ (s[:,None] * VT)    # for m >= n
-        A == (U * s) @ VT            # for m <= n
+        A == U @ (s[:,None] * VT)
 
-    where `U` is a `(m, m)` orthogonal matrix, `VT` is a `(n, n)` orthogonal
-    matrix, and `s` are the singular values, a set of nonnegative numbers
-    in descending order.
+    where `U` is a `(m, k)` matrix with orthogonal columns, `VT` is a `(k, n)`
+    matrix with orthogonal rows and `s` are the singular values, a set of `k`
+    nonnegative numbers in non-ascending order.  The SVD is truncated in the
+    sense that singular values below `tol` are discarded.
     """
-    A = np.asarray(A)
-    m, n = A.shape
-    if m < n:
-        U, s, VT = svd(A.T)
-        return VT.T, s, U.T
-
-    U, B, VT = bidiag(A)
-    d = B.diagonal().copy()
-    f = B.diagonal(1).copy()
-    golub_kahan_svd(d, f, U, VT, 1000)
-    return U, d, VT
-
-
-def svd_trunc(A, tol=5e-32):
-    """Truncated singular value decomposition"""
-    Q, R, p = rrqr(A, tol)
-    U, s, VT = svd(R)
-    U = Q @ U[:, :s.size]
-    VT = VT[:s.size, p.argsort()]
-    return U, s, VT
-
-
-def svd_trunc_jacobi(A, tol=5e-32, max_iter=20):
     # RRQR is an excellent preconditioner for Jacobi.  One should then perform
     # Jacobi on RT
     Q, R, p = rrqr(A, tol)
@@ -180,7 +151,7 @@ def svd_trunc_jacobi(A, tol=5e-32, max_iter=20):
 
     limit = tol * np.linalg.norm(U[:n,:n], 'fro')
     for _ in range(max_iter):
-        jacobi_sweep(U, VT, out=(U, VT, offd))
+        _dd_linalg.jacobi_sweep(U, VT, out=(U, VT, offd))
         if offd <= limit:
             break
     else:
@@ -195,101 +166,8 @@ def svd_trunc_jacobi(A, tol=5e-32, max_iter=20):
     return U_A, s, VT_B
 
 
-def golub_kahan_svd(d, f, U, VH, max_iter=30, step=None):
-    if step is None:
-        step = golub_kahan_chase
-    n = d.size
-    n1 = 0
-    n2 = n-1
-    count = 0
-
-    # See LAWN3 page 6 and 22
-    _, sigma_minus = estimate_sbounds(d, f)
-    tol = 100 * 5e-32
-    thresh = tol * sigma_minus
-
-    for i_iter in range(50 * n):
-        # Search for biggest index for non-zero off diagonal value in e
-        for n2i in range(n2, 0, -1):
-            if abs(f[n2i-1]) > thresh:
-                n2 = n2i
-                break
-        else:
-            break # from iter loop
-
-        # Search for largest sub-bidiagonal matrix ending at n2
-        for _n1 in range(n2 - 1, -1, -1):
-            if abs(f[_n1]) < thresh:
-                n1 = _n1
-                break
-        else:
-            n1 = 0
-
-        #print("iter={}, range={}:{}".format(i_iter, n1, n2+1))
-
-        # TODO CHECK THIS!
-        if n1 == n2:
-            break # from iter loop
-
-        tail = np.array([d[n2-1],   f[n2-1],
-                         0 * d[n2], d[n2]]).reshape(2, 2)
-        shift = svvals2x2(tail)[1]
-        G_V, G_U = step(d[n1:n2+1], f[n1:n2], shift)
-
-        VHpart = VH[n1:n2+1, :]
-        UHpart = U[:, n1:n2+1].T
-        givens_seq(G_V, VHpart, out=VHpart)
-        givens_seq(G_U, UHpart, out=UHpart)
-    else:
-        warn("Did not converge after %d iterations!" % i_iter)
-
-    # Invert
-    VH[np.signbit(d)] = -VH[np.signbit(d)]
-    d[:] = np.abs(d)
-
-    # Sort
-    order = np.argsort(d)[::-1]
-    d[:] = d[order]
-    VH[:] = VH[order]
-    U[:,:n] = U[:,order]
-
-
-def golub_kahan_chase(d, e, shift):
-    n = d.size
-    ex = np.empty(d.shape, d.dtype)
-    ex[:-1] = e
-    Gs = np.empty((n, 4), d.dtype)
-    golub_kahan_chase_ufunc(d, ex, shift, out=(d, ex, Gs))
-    e[:] = ex[:-1]
-    Gs[-1] = 0
-    return Gs[:,:2], Gs[:,2:]
-
-
-def estimate_sbounds(d, f):
-    abs_d = np.abs(d)
-    abs_f = np.abs(f)
-    n = abs_d.size
-
-    def iter_backward():
-        lambda_ = abs_d[n-1]
-        yield lambda_
-        for j in range(n-2, -1, -1):
-            lambda_ = abs_d[j] * (lambda_ / (lambda_ + abs_f[j]))
-            yield lambda_
-
-    def iter_forward():
-        mu = abs_d[0]
-        yield mu
-        for j in range(n-1):
-            mu = abs_d[j+1] * (mu / (mu + abs_f[j]))
-            yield mu
-
-    smin = min(min(iter_backward()), min(iter_forward()))
-    smax = max(max(abs_d), max(abs_f))
-    return smax, smin
-
-
 def householder_update(A, Q):
+    """Reflects the zeroth column onto a multiple of the unit vector"""
     beta, v = householder(A[:,0])
     w = -beta * (A.T @ v)
     rank1update(A, v, w, out=A)
@@ -298,6 +176,7 @@ def householder_update(A, Q):
 
 
 def householder_apply(H, Q):
+    """Applies a set of reflectors to a matrix"""
     H = np.asarray(H)
     Q = Q.copy()
     m, r = H.shape

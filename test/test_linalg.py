@@ -46,27 +46,6 @@ def test_givens():
     np.testing.assert_allclose(diff.astype(float), 0, atol=1e-31)
 
 
-def test_svd_tri2x2():
-    A = np.array([[2.0, -3.0], [2.0, 4.0]], dtype=ddouble)
-    U, s, VH = xprec.linalg.svd2x2(A)
-    diff = A - (U * s) @ VH
-    np.testing.assert_allclose(diff.astype(float), 0, atol=2e-31)
-
-
-def test_svd():
-    rng = np.random.RandomState(4711)
-    Ax = rng.normal(size=(30,20)).astype(ddouble)
-    Ux, sx, VTx = xprec.linalg.svd(Ax)
-    diff = (Ux[:,:20] * sx) @ VTx - Ax
-    np.testing.assert_allclose(diff.astype(float), 0, atol=1e-29)
-
-    # Check singular value ordering
-    assert (sx >= 0).all()
-    assert (sx[1:] <= sx[:-1]).all()
-    np.testing.assert_allclose(Ux @ Ux.T - np.eye(30), 0, atol=1e-29)
-    np.testing.assert_allclose(VTx @ VTx.T - np.eye(20), 0, atol=1e-29)
-
-
 def test_qr():
     A = np.vander(np.linspace(-1, 1, 60), 80).astype(ddouble)
     Q, R = xprec.linalg.qr(A)
@@ -93,5 +72,5 @@ def test_qr_pivot():
 
 def test_jacobi():
     A = np.vander(np.linspace(-1, 1, 60), 80).astype(ddouble)
-    U, s, VT = xprec.linalg.svd_trunc_jacobi(A)
+    U, s, VT = xprec.linalg.svd_trunc(A)
     np.testing.assert_allclose((U * s) @ VT - A, 0.0, atol=5e-30)
