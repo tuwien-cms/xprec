@@ -291,8 +291,7 @@ int make_ddouble_type()
         .tp_methods = ddouble_methods
         };
 
-    //ddouble_type.tp_base = &PyFloatingArrType_Type;
-    ddouble_type.tp_base = &PyGenericArrType_Type;
+    ddouble_type.tp_base = &PyFloatingArrType_Type;
     if (PyType_Ready(&ddouble_type) < 0)
         return -1;
 
@@ -530,7 +529,7 @@ static int make_dtype()
     static PyArray_Descr ddouble_dtype = {
         PyObject_HEAD_INIT(NULL)
 
-        /* We must register bfloat16 with a kind other than "f", because numpy
+        /* We must register ddouble with a kind other than "f", because numpy
          * considers two types with the same kind and size to be equal, but
          * float128 != ddouble.  The downside of this is that NumPy scalar
          * promotion does not work with ddoubles.
@@ -539,8 +538,12 @@ static int make_dtype()
         .type = 'E',
         .byteorder = '=',
 
-        /* TODO: not sure why this must be there */
-        .flags = 0, //NPY_NEEDS_PYAPI | NPY_USE_GETITEM | NPY_USE_SETITEM,
+        /* NPY_USE_GETITEM is not needed, since we inherit from numpy scalar,
+         * which according to the docs means that "standard conversion" is
+         * used.  However, we still need to define and register getitem()
+         * below, otherwise PyArray_RegisterDataType complains.
+         */
+        .flags = 0,
         .elsize = sizeof(ddouble),
         .alignment = alignof(ddouble),
         .hash = -1
