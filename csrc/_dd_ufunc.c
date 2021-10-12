@@ -14,6 +14,7 @@
 #include <stdalign.h>
 
 #include "dd_arith.h"
+#include "dd_full.h"
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "numpy/ndarraytypes.h"
@@ -171,15 +172,15 @@ PYWRAP_UNARY(PyDDouble_Positive, posq)
 PYWRAP_UNARY(PyDDouble_Negative, negq)
 PYWRAP_UNARY(PyDDouble_Absolute, absq)
 
-PYWRAP_BINARY(PyDDouble_Add, addqq, nb_add)
-PYWRAP_BINARY(PyDDouble_Subtract, subqq, nb_subtract)
-PYWRAP_BINARY(PyDDouble_Multiply, mulqq, nb_multiply)
-PYWRAP_BINARY(PyDDouble_Divide, divqq, nb_true_divide)
+PYWRAP_BINARY(PyDDouble_Add, addqq_full, nb_add)
+PYWRAP_BINARY(PyDDouble_Subtract, subqq_full, nb_subtract)
+PYWRAP_BINARY(PyDDouble_Multiply, mulqq_full, nb_multiply)
+PYWRAP_BINARY(PyDDouble_Divide, divqq_full, nb_true_divide)
 
-PYWRAP_INPLACE(PyDDouble_InPlaceAdd, addqq)
-PYWRAP_INPLACE(PyDDouble_InPlaceSubtract, subqq)
-PYWRAP_INPLACE(PyDDouble_InPlaceMultiply, mulqq)
-PYWRAP_INPLACE(PyDDouble_InPlaceDivide, divqq)
+PYWRAP_INPLACE(PyDDouble_InPlaceAdd, addqq_full)
+PYWRAP_INPLACE(PyDDouble_InPlaceSubtract, subqq_full)
+PYWRAP_INPLACE(PyDDouble_InPlaceMultiply, mulqq_full)
+PYWRAP_INPLACE(PyDDouble_InPlaceDivide, divqq_full)
 
 static int PyDDouble_Nonzero(PyObject* _x)
 {
@@ -453,9 +454,9 @@ static int NPyDDouble_Fill(void *_buffer, npy_intp ii, void *arr)
         return -1;
 
     ddouble curr = buffer[1];
-    ddouble step = subqq(curr, buffer[0]);
+    ddouble step = subqq_full(curr, buffer[0]);
     for (npy_intp i = 2; i != ii; ++i) {
-        curr = addqq(curr, step);
+        curr = addqq_full(curr, step);
         buffer[i] = curr;
     }
     return 0;
@@ -480,7 +481,7 @@ static void NPyDDouble_DotFunc(void *_in1, npy_intp is1, void *_in2,
     char *_cin1 = (char *)_in1, *_cin2 = (char *)_in2;
     for (npy_intp i = 0; i < ii; ++i, _cin1 += is1, _cin2 += is2) {
         ddouble in1 = *(ddouble *)_cin1, in2 = *(ddouble *)_cin2;
-        out = addqq(out, mulqq(in1, in2));
+        out = addqq_full(out, mulqq_full(in1, in2));
     }
     *(ddouble *)_out = out;
     MARK_UNUSED(arr);
@@ -719,18 +720,18 @@ static int register_casts()
         MARK_UNUSED(data);                                              \
     }
 
-ULOOP_BINARY(u_addqd, addqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_subqd, subqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_mulqd, mulqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_divqd, divqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_adddq, adddq, ddouble, double, ddouble)
-ULOOP_BINARY(u_subdq, subdq, ddouble, double, ddouble)
-ULOOP_BINARY(u_muldq, muldq, ddouble, double, ddouble)
-ULOOP_BINARY(u_divdq, divdq, ddouble, double, ddouble)
-ULOOP_BINARY(u_addqq, addqq, ddouble, ddouble, ddouble)
-ULOOP_BINARY(u_subqq, subqq, ddouble, ddouble, ddouble)
-ULOOP_BINARY(u_mulqq, mulqq, ddouble, ddouble, ddouble)
-ULOOP_BINARY(u_divqq, divqq, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_addqd, addqd_full, ddouble, ddouble, double)
+ULOOP_BINARY(u_subqd, subqd_full, ddouble, ddouble, double)
+ULOOP_BINARY(u_mulqd, mulqd_full, ddouble, ddouble, double)
+ULOOP_BINARY(u_divqd, divqd_full, ddouble, ddouble, double)
+ULOOP_BINARY(u_adddq, adddq_full, ddouble, double, ddouble)
+ULOOP_BINARY(u_subdq, subdq_full, ddouble, double, ddouble)
+ULOOP_BINARY(u_muldq, muldq_full, ddouble, double, ddouble)
+ULOOP_BINARY(u_divdq, divdq_full, ddouble, double, ddouble)
+ULOOP_BINARY(u_addqq, addqq_full, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_subqq, subqq_full, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_mulqq, mulqq_full, ddouble, ddouble, ddouble)
+ULOOP_BINARY(u_divqq, divqq_full, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_copysignqq, copysignqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_copysignqd, copysignqd, ddouble, ddouble, double)
 ULOOP_BINARY(u_copysigndq, copysigndq, ddouble, double, ddouble)
