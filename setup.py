@@ -106,7 +106,7 @@ class BuildExtWithNumpy(build_ext):
 
         if platform.system() == 'unix':
             new_flags = {"-march": "native", "-mtune": "native",
-                         "-Wextra": None}
+                         "-Wextra": None, "-std": "c11"}
             self.compiler.compiler_so = update_flags(
                                     self.compiler.compiler_so, new_flags)
 
