@@ -151,8 +151,21 @@ def svd_trunc(A, tol=5e-32, max_iter=20):
     # RRQR is an excellent preconditioner for Jacobi.  One should then perform
     # Jacobi on RT
     Q, R, p = rrqr(A, tol)
-    U = R.T.copy()
-    _, n = U.shape
+    U, s, VT = svd_jacobi(R.T, tol, max_iter)
+
+    # Reconstruct A from QRs
+    U_A = Q @ VT.T
+    VT_B = U.T[:, p.argsort()]
+    return U_A, s, VT_B
+
+
+def svd_jacobi(A, tol=5e-32, max_iter=20):
+    """Singular value decomposition using Jacobi rotations."""
+    U = A.copy()
+    m, n = U.shape
+    if m < n:
+        raise RuntimeError("expecting tall matrix")
+
     VT = np.eye(n, dtype=U.dtype)
     offd = np.empty((), ddouble)
 
@@ -166,11 +179,7 @@ def svd_trunc(A, tol=5e-32, max_iter=20):
 
     s = norm(U.T)
     U = U / s
-
-    # Reconstruct A from QRs
-    U_A = Q @ VT.T
-    VT_B = U.T[:, p.argsort()]
-    return U_A, s, VT_B
+    return U, s, VT
 
 
 def householder_update(A, Q):

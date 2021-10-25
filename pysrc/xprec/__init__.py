@@ -21,6 +21,7 @@ __version__ = "1.0.1"
 import numpy as _np
 
 from . import _dd_ufunc
+from . import _dd_linalg    # needed for matmul
 
 ddouble = _dd_ufunc.dtype
 
