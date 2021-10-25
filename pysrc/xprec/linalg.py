@@ -95,6 +95,64 @@ def rrqr(A, tol=5e-32, reflectors=False):
     return Q, R, jpvt
 
 
+def svd(A, full_matrices=True):
+    """Truncated singular value decomposition.
+
+    Decomposes a `(m, n)` matrix `A` into the product:
+
+        A == U @ (s[:,None] * VT)
+
+    where `U` is a `(m, k)` matrix with orthogonal columns, `VT` is a `(k, n)`
+    matrix with orthogonal rows and `s` are the singular values, a set of `k`
+    nonnegative numbers in non-ascending order and `k = min(m, n)`.
+    """
+    A = np.asarray(A)
+    m, n = A.shape
+    if m < n:
+        U, s, VT = svd(A.T, full_matrices)
+        return VT.T, s, U.T
+
+    Q, B, RT = bidiag(A)
+    for _ in range(20 * n):
+        if svd_bidiag_step(Q, B, RT):
+            break
+    else:
+        warn("Did not converge")
+
+    U, s, VH = svd_normalize(Q, B.diagonal(), RT)
+    if not full_matrices:
+        U = U[:,:n]
+    return U, s, VH
+
+
+def svd_trunc(A, tol=5e-32, method='jacobi', max_iter=20):
+    """Truncated singular value decomposition.
+
+    Decomposes a `(m, n)` matrix `A` into the product:
+
+        A == U @ (s[:,None] * VT)
+
+    where `U` is a `(m, k)` matrix with orthogonal columns, `VT` is a `(k, n)`
+    matrix with orthogonal rows and `s` are the singular values, a set of `k`
+    nonnegative numbers in non-ascending order.  The SVD is truncated in the
+    sense that singular values below `tol` are discarded.
+    """
+    # RRQR is an excellent preconditioner for Jacobi.  One should then perform
+    # Jacobi on RT
+    Q, R, p = rrqr(A, tol)
+    if method == 'jacobi':
+        U, s, VT = svd_jacobi(R.T, tol, max_iter)
+    elif method == 'golub-kahan':
+        U, s, VT = svd(R.T, full_matrices=False)
+    else:
+        raise ValueError("invalid method")
+
+    # Reconstruct A from QRs
+    U_A = Q @ VT.T
+    VT_B = U.T[:, p.argsort()]
+    return U_A, s, VT_B
+
+
 def bidiag(A, reflectors=False, force_structure=False):
     """Biadiagonalizes an arbitray rectangular matrix.
 
@@ -134,29 +192,6 @@ def bidiag(A, reflectors=False, force_structure=False):
         Q = householder_apply(Q, np.eye(m, dtype=B.dtype))
         R = householder_apply(R, np.eye(n, dtype=B.dtype))
     return Q, B, R.T
-
-
-def svd_trunc(A, tol=5e-32, max_iter=20):
-    """Truncated singular value decomposition.
-
-    Decomposes a `(m, n)` matrix `A` into the product:
-
-        A == U @ (s[:,None] * VT)
-
-    where `U` is a `(m, k)` matrix with orthogonal columns, `VT` is a `(k, n)`
-    matrix with orthogonal rows and `s` are the singular values, a set of `k`
-    nonnegative numbers in non-ascending order.  The SVD is truncated in the
-    sense that singular values below `tol` are discarded.
-    """
-    # RRQR is an excellent preconditioner for Jacobi.  One should then perform
-    # Jacobi on RT
-    Q, R, p = rrqr(A, tol)
-    U, s, VT = svd_jacobi(R.T, tol, max_iter)
-
-    # Reconstruct A from QRs
-    U_A = Q @ VT.T
-    VT_B = U.T[:, p.argsort()]
-    return U_A, s, VT_B
 
 
 def svd_jacobi(A, tol=5e-32, max_iter=20):
@@ -211,6 +246,22 @@ def householder_apply(H, Q):
         w = -beta * (Qpart.T @ v)
         rank1update(Qpart, v, w, out=Qpart)
     return Q
+
+
+def svd_normalize(U, d, VH):
+    """Given a SVD-like decomposition, normalize"""
+    # Invert
+    n = d.size
+    VH[np.signbit(d)] = -VH[np.signbit(d)]
+    d = np.abs(d)
+
+    # Sort
+    order = np.argsort(d)[::-1]
+    d = d[order]
+    VH = VH[order]
+    U = U.copy()
+    U[:,:n] = U[:,order]
+    return U, d, VH
 
 
 def svd_bidiag_step(Q, B, RT):

@@ -28,6 +28,18 @@ def test_bidiag():
     np.testing.assert_allclose(diff.astype(float), 0, atol=1e-29)
 
 
+def test_svd():
+    rng = np.random.RandomState(4711)
+    A = rng.randn(100, 84)
+
+    U, s, VT = xprec.linalg.svd(A.astype(xprec.ddouble), full_matrices=False)
+    R = U * s @ VT - A
+    np.testing.assert_allclose(R.astype(float), 0, atol=5e-29, rtol=0)
+
+    _, sx, _ = np.linalg.svd(A.astype(float), full_matrices=False)
+    np.testing.assert_allclose(s, sx, atol=1e-14 * sx[0], rtol=0)
+
+
 def test_givens():
     f, g = np.array([3.0, -2.0], dtype=ddouble)
     c, s, r = xprec.linalg.givens_rotation(f, g)
