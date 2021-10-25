@@ -234,28 +234,26 @@ static void u_givens_seqq(
 static void u_golub_kahan_chaseq(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
-    // signature (n;i),(n;i),(n;)->(n;i),(n;i),(n;i,4)
+    // signature (n;i),(n;i)->(n;i),(n;i),(n;i,4)
     const npy_intp nn = dims[0], ii = dims[1];
     const npy_intp _san = steps[0], _sbn = steps[1],  _scn = steps[2],
-                   _sdn = steps[3], _sen = steps[4],  _sfn = steps[5],
-                   _sai = steps[6], _sbi = steps[7],  _sdi = steps[8],
-                   _sei = steps[9], _sfi = steps[10], _sf4 = steps[11];
+                   _sdn = steps[3], _sen = steps[4],  _sai = steps[5],
+                   _sbi = steps[6], _sci = steps[7],  _sdi = steps[8],
+                   _sei = steps[9], _se4 = steps[10];
     char *_a = args[0], *_b = args[1], *_c = args[2], *_d = args[3],
-         *_e = args[4], *_f = args[5];
+         *_e = args[4];
 
-    ensure_inplace_2(_a, _d, nn, _san, _sdn, ii, _sai, _sdi);
-    ensure_inplace_2(_b, _e, nn, _sbn, _sen, ii, _sbi, _sei);
-    if (_sf4 != sizeof(ddouble) || _sfi != 4 * sizeof(ddouble)) {
+    ensure_inplace_2(_a, _c, nn, _san, _scn, ii, _sai, _sci);
+    ensure_inplace_2(_b, _d, nn, _sbn, _sdn, ii, _sbi, _sdi);
+    if (_se4 != sizeof(ddouble) || _sei != 4 * sizeof(ddouble)) {
         fprintf(stderr, "rot is not contiguous, but needs to be");
         return;
     }
 
-    for (npy_intp n = 0; n != nn; ++n,
-            _c += _scn, _d += _sdn, _e += _sen, _f += _sfn) {
-        ddouble shift = *(ddouble *)_c;
-        golub_kahan_chaseq((ddouble *)_d, _sdi / sizeof(ddouble),
-                           (ddouble *)_e, _sei / sizeof(ddouble),
-                           ii, shift, (ddouble *)_f);
+    for (npy_intp n = 0; n != nn; ++n, _c += _scn, _d += _sdn, _e += _sen) {
+        golub_kahan_chaseq((ddouble *)_c, _sci / sizeof(ddouble),
+                           (ddouble *)_d, _sdi / sizeof(ddouble),
+                           ii, (ddouble *)_e);
     }
     MARK_UNUSED(data);
 }
@@ -431,7 +429,7 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "svvals2x2", "singular values of upper triangular 2x2 problem", false);
     gufunc(u_jacobisweepq, 2, 3, "(i,j),(j,j)->(i,j),(j,j),()",
            "jacobi_sweep", "Perform sweep of one-sided Jacobi rotations", false);
-    gufunc(u_golub_kahan_chaseq, 3, 3, "(i),(i),()->(i),(i),(i,4)",
+    gufunc(u_golub_kahan_chaseq, 2, 3, "(i),(i)->(i),(i),(i,4)",
            "golub_kahan_chase", "bidiagonal chase procedure", false);
 
     /* Make dtype */

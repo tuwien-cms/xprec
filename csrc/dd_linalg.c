@@ -233,12 +233,29 @@ ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
     return offd;
 }
 
+static ddouble gk_shift(ddouble d1, ddouble e1, ddouble d2)
+{
+    /* Get singular values of 2x2 triangular matrix formed from the lower
+     * right corner in the array:
+     *
+     *      [ d[ii-2]  e[ii-2] ]
+     *      [ 0        d[ii-1] ]
+     */
+    ddouble smin, smax;
+    svd_tri2x2(d1, e1, d2, &smin, &smax, NULL, NULL, NULL, NULL);
+
+    ddouble smin_dist = absq(subqq(smin, d2));
+    ddouble smax_dist = absq(subqq(smax, d2));
+    return lessqq(smin_dist, smax_dist) ? smin : smax;
+}
+
 void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
-                        ddouble shift, ddouble *rot)
+                        ddouble *rot)
 {
     if (ii < 2)
         return;
 
+    ddouble shift = gk_shift(d[(ii-2)*sd], e[(ii-2)*se], d[(ii-1)*sd]);
     ddouble g = e[0];
     ddouble f = addqq(copysigndq(1.0, d[0]), divqq(shift, d[0]));
     f = mulqq(f, subqq(absq(d[0]), shift));

@@ -67,4 +67,4 @@ ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
 
 
 void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
-                        ddouble shift, ddouble *rot);
+                        ddouble *rot);

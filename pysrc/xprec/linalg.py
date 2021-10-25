@@ -95,7 +95,7 @@ def rrqr(A, tol=5e-32, reflectors=False):
     return Q, R, jpvt
 
 
-def bidiag(A, reflectors=False):
+def bidiag(A, reflectors=False, force_structure=False):
     """Biadiagonalizes an arbitray rectangular matrix.
 
     Decomposes a `(m, n)` matrix `A` into the product:
@@ -123,6 +123,13 @@ def bidiag(A, reflectors=False):
     for j in range(n-2, rq):
         householder_update(B[j:,j:], Q[j:,j:])
 
+    if force_structure:
+        d = B.diagonal().copy()
+        e = B.diagonal(1).copy()
+        B[...] = 0
+        i = np.arange(n)
+        B[i, i] = d
+        B[i[:-1], i[:-1]+1] = e
     if not reflectors:
         Q = householder_apply(Q, np.eye(m, dtype=B.dtype))
         R = householder_apply(R, np.eye(n, dtype=B.dtype))
@@ -195,3 +202,57 @@ def householder_apply(H, Q):
         w = -beta * (Qpart.T @ v)
         rank1update(Qpart, v, w, out=Qpart)
     return Q
+
+
+def svd_bidiag_step(Q, B, RT):
+    """Single SVD step for a bidiagonal matrix"""
+    d = B.diagonal().copy()
+    e = np.hstack([B.diagonal(1), 0.0])
+
+    p, q = bidiag_partition(d, e)
+    if q <= 1:
+        return True
+
+    d_part = d[p:q]
+    e_part = e[p:q]
+    rot = np.empty((d_part.size, 4), d.dtype)
+    _dd_linalg.golub_kahan_chase(d_part, e_part, out=(d_part, e_part, rot))
+
+    i = np.arange(p, q)
+    B[i, i] = d_part
+    B[i[:-1], i[:-1]+1] = e_part[:-1]
+
+    rot_Q = rot[:, 2:]
+    rot_R = rot[:, :2]
+    QT_part = Q[:, p:q].T
+    RT_part = RT[p:q, :]
+    _dd_linalg.givens_seq(rot_Q, QT_part, out=QT_part)
+    _dd_linalg.givens_seq(rot_R, RT_part, out=RT_part)
+    return False
+
+
+def bidiag_partition(d, e, eps=5e-32):
+    """Partition bidiagonal matrix into blocks for implicit QR.
+
+    Return `p,q` which partions a bidiagonal `B` matrix into three blocks:
+
+      - B[0:p, 0:p], an arbitrary bidiaonal matrix
+      - B[p:q, p:q], a matrix with all off-diagonal elements nonzero
+      - B[q:,  q:],  a diagonal matrix
+    """
+    abs_e = np.abs(e)
+    abs_d = np.abs(d)
+    e_zero = abs_e <= eps * (abs_d + abs_e)
+    e[e_zero] = 0
+
+    q = _find_last(~e_zero) + 1
+    if q <= 0:
+        return 0, 0
+    p = _find_last(e_zero[:q]) + 1
+    return p, q + 1
+
+
+def _find_last(a, axis=-1):
+    a = a.astype(bool)
+    maxloc = a.shape[axis] - 1 - a[::-1].argmax(axis)
+    return np.where(a[maxloc], maxloc, -1)
