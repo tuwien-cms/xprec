@@ -30,3 +30,11 @@ def test_cast_to(other):
     x = np.eye(3, dtype=ddouble)
     y = x.astype(other)
     assert (x == y).all()
+
+
+def test_i64():
+    x = np.int64((1 << 62) + 1)
+    assert x == x.astype(ddouble).astype(x.dtype)
+
+    x = x.astype(np.uint64)
+    assert x == x.astype(ddouble).astype(x.dtype)

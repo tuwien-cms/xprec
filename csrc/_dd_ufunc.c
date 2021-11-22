@@ -612,6 +612,18 @@ static int make_dtype()
         MARK_UNUSED(_arr_to);                                        \
     }
 
+#define NPY_CAST_TO_I64(func, to_type)                               \
+    static void func(void *_from, void *_to, npy_intp n,             \
+                     void *_arr_from, void *_arr_to)                 \
+    {                                                                \
+        to_type *to = (to_type *)_to;                                \
+        const ddouble *from = (const ddouble *)_from;                \
+        for (npy_intp i = 0; i < n; ++i)                             \
+            to[i] = (to_type) from[i].hi + (to_type) from[i].lo;     \
+        MARK_UNUSED(_arr_from);                                      \
+        MARK_UNUSED(_arr_to);                                        \
+    }
+
 // These casts are all loss-less
 NPY_CAST_FROM(from_double, double)
 NPY_CAST_FROM(from_float, float)
@@ -634,11 +646,13 @@ NPY_CAST_TO(to_bool, bool)
 NPY_CAST_TO(to_int8, int8_t)
 NPY_CAST_TO(to_int16, int16_t)
 NPY_CAST_TO(to_int32, int32_t)
-NPY_CAST_TO(to_int64, int64_t)
 NPY_CAST_TO(to_uint8, uint8_t)
 NPY_CAST_TO(to_uint16, uint16_t)
 NPY_CAST_TO(to_uint32, uint32_t)
-NPY_CAST_TO(to_uint64, uint64_t)
+
+// These casts can be made more accurate
+NPY_CAST_TO_I64(to_int64, int64_t)
+NPY_CAST_TO_I64(to_uint64, uint64_t)
 
 
 static bool register_cast(int other_type, PyArray_VectorUnaryFunc from_other,
