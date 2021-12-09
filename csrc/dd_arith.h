@@ -514,3 +514,5 @@ ddouble cosq(ddouble a);
 ddouble sinhq(ddouble a);
 ddouble coshq(ddouble a);
 ddouble tanhq(ddouble a);
+
+ddouble strtodq(const char *str, const char **endptr);

@@ -9,6 +9,9 @@
  */
 #include "dd_arith.h"
 
+#include <ctype.h>
+#include <stdint.h>
+
 // 2**500 and 2**(-500);
 static const double LARGE = 3.273390607896142e+150;
 static const double INV_LARGE = 3.054936363499605e-151;
@@ -485,4 +488,123 @@ ddouble tanhq(ddouble a)
     s = sinhq(a);
     c = sqrtq(adddq(1.0, sqrq(s)));
     return divqq(s, c);
+}
+
+static bool _striconsume(const char **cur, const char *b)
+{
+    const char *a = *cur;
+    while (*b != '\0') {
+        if (tolower(*(a++)) != *(b++))
+            return false;
+    }
+    *cur = a;
+    return true;
+}
+
+static bool _strnext(const char **cur, char i)
+{
+    if (**cur == i) {
+        ++*cur;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static int _strsign(const char **cur)
+{
+    if (_strnext(cur, '-'))
+        return -1;
+    _strnext(cur, '+');
+    return 1;
+}
+
+ddouble strtodq(const char *str, const char **endptr)
+{
+    const char *cur = str;
+    ddouble result = Q_ZERO;
+    short sign = 1;
+
+    while (isspace(*cur))
+        ++cur;
+
+    // Nan values
+    if (_striconsume(&cur, "nan")) {
+        // TODO: allow NaN(some_text_here)
+        result = nanq();
+        goto end;
+    }
+
+    // Sign bit
+    sign = _strsign(&cur);
+
+    // Infinities
+    if (_striconsume(&cur, "inf")) {
+        _striconsume(&cur, "inity");
+        result = infq();
+        goto end;
+    }
+
+    // Integer and fractional part
+    const static uint64_t LARGE = 1UL << 53;
+    uint64_t hi = 0, lo = 0;
+    int exp = 0;
+    bool fractional = false, have_digit = false;
+
+    for (;; ++cur) {
+        if (!fractional && *cur == '.') {
+            fractional = true;
+        } else if (*cur >= '0' && *cur <= '9') {
+            have_digit = true;
+            if (hi >= LARGE) {
+                if (!fractional)
+                    exp += 1;
+            } else {
+                if (fractional)
+                    exp -= 1;
+                lo = 10 * lo + (*cur - '0');
+                hi = 10 * hi + lo / LARGE;
+                lo %= LARGE;
+            }
+        } else {
+            break;
+        }
+    }
+    if (!have_digit) {
+        cur = str;
+        goto end;
+    }
+
+    // Exponent
+    const char *before_exp = cur;
+    if (_strnext(&cur, 'e') || _strnext(&cur, 'E')) {
+        short esign = _strsign(&cur);
+        int eexp = 0;
+        bool have_exponent = false;
+
+        for (; *cur >= '0' && *cur <= '9'; ++cur) {
+            have_exponent = true;
+            eexp = 10 * eexp + (*cur - '0');
+            if (eexp >= 10000)
+                break;
+        }
+        if (have_exponent)
+            exp += esign * eexp;
+        else
+            cur = before_exp;
+    }
+
+    // Process result
+    double fact = pow(10.0, exp);
+    result.hi = hi * fact;
+    result.lo = lo * fact;
+    if (isfiniteq(result))
+        result = two_sum_quick(result.hi, result.lo);
+
+end:
+    if (sign < 0)
+        result = negq(result);
+    if (endptr != NULL)
+        *endptr = cur;
+    return result;
 }
