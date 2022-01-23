@@ -1,9 +1,7 @@
 name: Build and upload to PyPI
 
-# Publish when a (published) GitHub Release is created, use the following:
+# Publish only when a (published) GitHub Release is created
 on:
-  push:
-  pull_request:
   release:
     types:
       - published
