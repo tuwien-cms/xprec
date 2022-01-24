@@ -1,7 +1,6 @@
 [tool.cibuildwheel]
 # Skip 32-bit builds on windows and PyPy
-# Only cp39-* will be built (for now)
-skip = ["cp36*", "cp37*", "cp38*", "cp310*", "*-win32", "pp*"]
+skip = ["*-win32", "pp*"]
 
 # Build `universal2` and `arm64` wheels on an Intel runner.
 # Note that the `arm64` wheel and the `arm64` part of the `universal2`
