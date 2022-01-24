@@ -105,8 +105,7 @@ class BuildExtWithNumpy(build_ext):
             compiler_make = 'msvc'
 
         if platform.system() == 'unix':
-            new_flags = {"-march": "native", "-mtune": "native",
-                         "-Wextra": None, "-std": "c11"}
+            new_flags = {"-Wextra": None, "-std": "c11"}
             self.compiler.compiler_so = update_flags(
                                     self.compiler.compiler_so, new_flags)
 
