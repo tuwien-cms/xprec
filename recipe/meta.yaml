@@ -25,6 +25,12 @@ requirements:
 test:
   imports:
     - xprec
+  source_files:
+    - test/*.py
+  requires:
+    - pytest
+  commands:
+    - pytest test/
 
 about:
   home: "https://github.com/tuwien-cms/xprec"
