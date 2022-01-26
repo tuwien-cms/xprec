@@ -7,7 +7,7 @@
  * Copyright (C) 2021 Markus Wallerberger and others
  * SPDX-License-Identifier: MIT, BSD
  */
-#include "dd_arith.h"
+#include "./dd_arith.h"
 
 // 2**500 and 2**(-500);
 static const double LARGE = 3.273390607896142e+150;
