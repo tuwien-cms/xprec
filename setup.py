@@ -9,7 +9,7 @@ import re
 
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
-from setuptools.command.build_ext import build_ext
+from setuptools.command.build_ext import build_ext as BuildExt
 
 
 def readfile(*parts):
@@ -60,9 +60,9 @@ def update_flags(exec, update):
     return [cc_so] + cflags_so
 
 
-class BuildExtWithNumpy(build_ext):
+class BuildExtWithNumpy(BuildExt):
     """Wrapper class for building numpy extensions"""
-    user_options = build_ext.user_options + [
+    user_options = BuildExt.user_options + [
         ("with-openmp=", None, "use openmp to build (default: true)"),
         ("numpy-include-dir=", None, "numpy include directory"),
         ]
@@ -132,6 +132,37 @@ class BuildExtWithNumpy(build_ext):
 
         super().build_extensions()
 
+    def get_source_files(self):
+        """Return list of files to include in source dist"""
+        # Specifying include_dirs= argument in Extension adds headers from that
+        # directory to the sdist ... on some machines.  On others, not.  Note
+        # that overriding sdist will not save you, since this is not called
+        # from sdist.add_defaults(), as you might expect. (With setuptools, it
+        # is never what you expect.)  Instead, sdist requires egg_info, which
+        # hooks into a hidden manifest_maker class derived from sdist, where
+        # add_defaults() called, the list passed back to sdist, sidestepping
+        # the method in the orginal class.  Kudos.
+        #
+        # Really, if you have monkeys type out 1000 pages on typewriters, use
+        # the result as toilet paper for a month, unfold it, scan it at 20 dpi,
+        # and run it through text recognition software, it would still yield
+        # better code than setuptools.
+        source_files = super().get_source_files()
+        header_regex = re.compile(r"\.(?:h|hh|hpp|hxx|H|HH|HPP|HXX)$")
+
+        include_dirs = set()
+        for ext in self.extensions:
+            include_dirs.update(ext.include_dirs)
+        for dir in include_dirs:
+            for entry in os.scandir(dir):
+                if not entry.is_file():
+                    continue
+                if not header_regex.search(entry.name):
+                    continue
+                source_files.append(entry.path)
+
+        return source_files
+
 
 VERSION = extract_version('pysrc', 'xprec', '__init__.py')
 REPO_URL = "https://github.com/tuwien-cms/xprec"
@@ -180,9 +211,11 @@ setup(
         ],
     setup_requires=[
         'numpy>=1.16',
+        'setuptools>=50',
         ],
     cmdclass={
-        'build_ext': BuildExtWithNumpy
+        'build_ext': BuildExtWithNumpy,
+        #'sdist': MySDist,
         },
 
     package_dir={'': 'pysrc'},
