@@ -25,7 +25,6 @@ def extract_version(*parts):
     initfile = readfile(*parts)
     version_re = re.compile(r"(?m)^__version__\s*=\s*['\"]([^'\"]*)['\"]")
     match = version_re.search(initfile)
-    assert match is not None
     return match.group(1)
 
 
