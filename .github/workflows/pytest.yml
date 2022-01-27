@@ -1,6 +1,12 @@
 name: xprec python package
 
-on: [push]
+on:
+  push:
+    branches:
+      mainline
+  pull_request:
+    branches:
+      mainline
 
 jobs:
   build:
