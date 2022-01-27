@@ -210,12 +210,10 @@ setup(
                   include_dirs=["csrc"]),
         ],
     setup_requires=[
-        'numpy>=1.16',
-        'setuptools>=50',
+        'numpy>=1.16'
         ],
     cmdclass={
-        'build_ext': BuildExtWithNumpy,
-        #'sdist': MySDist,
+        'build_ext': BuildExtWithNumpy
         },
 
     package_dir={'': 'pysrc'},
