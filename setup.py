@@ -25,6 +25,7 @@ def extract_version(*parts):
     initfile = readfile(*parts)
     version_re = re.compile(r"(?m)^__version__\s*=\s*['\"]([^'\"]*)['\"]")
     match = version_re.search(initfile)
+    assert match is not None
     return match.group(1)
 
 
@@ -92,6 +93,7 @@ class BuildExtWithNumpy(build_ext):
 
         compiler_binary = getattr(self.compiler, 'compiler', [''])[0]
         compiler_binary = os.path.basename(compiler_binary)
+        compiler_make = ''
         if 'gcc' in compiler_binary or 'g++' in compiler_binary:
             compiler_make = 'gcc'
         elif 'clang' in compiler_binary:
