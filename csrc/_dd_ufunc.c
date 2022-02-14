@@ -277,7 +277,7 @@ int make_ddouble_type()
     static PyMethodDef ddouble_methods[] = {
         {"__finfo__", PyDDoubleGetFinfo, METH_NOARGS | METH_CLASS,
          "floating point information for type"},
-        {NULL}
+        {NULL, NULL, 0, NULL}
         };
     static PyTypeObject ddouble_type = {
         PyVarObject_HEAD_INIT(NULL, 0)
@@ -356,7 +356,7 @@ static int make_finfo()
                    "number of bits in mantissa"},
         {"machar", T_OBJECT_EX, offsetof(PyDDoubleFInfo, machar), READONLY,
                    "machar object (unused)"},
-        {NULL}
+        {NULL, 0, 0, 0, NULL}
         };
     static PyTypeObject finfo_type = {
         PyVarObject_HEAD_INIT(NULL, 0)
