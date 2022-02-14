@@ -1,6 +1,7 @@
 import os
 
 HEREPATH = os.path.abspath(os.path.dirname(__file__))
+print("HEREPATH", HEREPATH)
 ROOTDIR = os.path.abspath(os.path.join(HEREPATH, os.path.pardir))
 PYSRCDIR = os.path.join(ROOTDIR, "pysrc", "xprec")
 CSCRDIR = os.path.join(ROOTDIR, "csrc")
