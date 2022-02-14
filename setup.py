@@ -88,6 +88,7 @@ class BuildExtWithNumpy(BuildExt):
         # This must be deferred to build time, because that is when
         # self.compiler starts being a compiler instance (before, it is
         # a flag)  *slow-clap*
+        # compiler type is either 'unix', 'msvc' or 'mingw'
         compiler_type = self.compiler.compiler_type
 
         compiler_binary = getattr(self.compiler, 'compiler', [''])[0]
@@ -105,8 +106,9 @@ class BuildExtWithNumpy(BuildExt):
             # break with its own derived classes.  *slow-clap*
             compiler_make = 'msvc'
 
-        if platform.system() == 'unix':
-            new_flags = {"-Wextra": None, "-std": "c11"}
+        if compiler_type != 'msvc':
+            new_flags = {"-Wextra": None, "-std": "c11",
+                         "-march": "native", "-mtune": "native"}
             self.compiler.compiler_so = update_flags(
                                     self.compiler.compiler_so, new_flags)
 

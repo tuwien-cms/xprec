@@ -117,6 +117,8 @@ PyObject* PyDDouble_New(PyTypeObject *type, PyObject *args, PyObject *kwds)
                      arg->ob_type->tp_name);
         return NULL;
     }
+    MARK_UNUSED(type);
+    MARK_UNUSED(kwds);
 }
 
 static PyObject* PyDDouble_Float(PyObject* self)
@@ -250,6 +252,7 @@ PyObject *PyDDoubleGetFinfo(PyObject *self, PyObject *_dummy)
 {
     Py_INCREF(pyddouble_finfo);
     return pyddouble_finfo;
+    MARK_UNUSED(self);
     MARK_UNUSED(_dummy);
 }
 
@@ -337,14 +340,22 @@ static PyObject *PPyDDoubleFInfo_Make()
 static int make_finfo()
 {
     static PyMemberDef finfo_members[] = {
-        {"dtype",  T_OBJECT_EX, offsetof(PyDDoubleFInfo, dtype),  READONLY},
-        {"bits",   T_INT,       offsetof(PyDDoubleFInfo, bits),   READONLY},
-        {"max",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, max),    READONLY},
-        {"min",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, min),    READONLY},
-        {"eps",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, eps),    READONLY},
-        {"nexp",   T_INT,       offsetof(PyDDoubleFInfo, nexp),   READONLY},
-        {"nmant",  T_INT,       offsetof(PyDDoubleFInfo, nmant),  READONLY},
-        {"machar", T_OBJECT_EX, offsetof(PyDDoubleFInfo, machar), READONLY},
+        {"dtype",  T_OBJECT_EX, offsetof(PyDDoubleFInfo, dtype),  READONLY,
+                   "underlying dtype object"},
+        {"bits",   T_INT,       offsetof(PyDDoubleFInfo, bits),   READONLY,
+                   "storage size of object in bits"},
+        {"max",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, max),    READONLY,
+                   "largest positive number"},
+        {"min",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, min),    READONLY,
+                   "largest negative number"},
+        {"eps",    T_OBJECT_EX, offsetof(PyDDoubleFInfo, eps),    READONLY,
+                   "machine epsilon"},
+        {"nexp",   T_INT,       offsetof(PyDDoubleFInfo, nexp),   READONLY,
+                   "number of bits in exponent"},
+        {"nmant",  T_INT,       offsetof(PyDDoubleFInfo, nmant),  READONLY,
+                   "number of bits in mantissa"},
+        {"machar", T_OBJECT_EX, offsetof(PyDDoubleFInfo, machar), READONLY,
+                   "machar object (unused)"},
         {NULL}
         };
     static PyTypeObject finfo_type = {
