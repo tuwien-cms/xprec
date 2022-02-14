@@ -14,8 +14,6 @@ jobs:
       matrix:
         #os: [ubuntu-latest, windows-latest, macOS-latest]
         os: [ubuntu-latest]
-        #python-version: ["3.6", "3.7", "3.8", "3.9"] # 3.10 does not work for now
-        python-version: ["3.6"]
 
     steps:
     - uses: actions/checkout@v2
@@ -25,7 +23,6 @@ jobs:
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
-        python-version: ${{ matrix.python-version }}
     - name: debug
       run: |
         pip3 --version
@@ -39,5 +36,6 @@ jobs:
       env:
         ANACONDA_API_TOKEN: ${{secrets.ANACONDA_TOKEN}}
       run: |
+        python3 --version
         conda config --set anaconda_upload yes
         conda build recipe
