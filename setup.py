@@ -107,11 +107,14 @@ class BuildExtWithNumpy(BuildExt):
             compiler_make = 'msvc'
 
         if compiler_type != 'msvc':
-            new_flags = {"-Wextra": None, "-std": "c11",
-                         "-march": "native", "-mtune": "native"}
+#            new_flags = {"-Wextra": None, "-std": "c11",
+#                         "-march": "native", "-mtune": "native"}
+            new_flags = {"-Wextra": None, "-std": "c11"}
             self.compiler.compiler_so = update_flags(
                                     self.compiler.compiler_so, new_flags)
-        print("debug", self.compiler.compiler_so)
+
+        # Remove 
+        print(self.compiler.compiler_so)
         assert False
 
         # This has to be set to false because MacOS does not ship openmp
