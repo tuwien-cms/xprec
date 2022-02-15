@@ -1,4 +1,5 @@
 FROM continuumio/anaconda3
+#FROM continuumio/anaconda3:2020.02
 
 ENV PYTHONUNBUFFERED=1
 
