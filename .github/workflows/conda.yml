@@ -12,26 +12,17 @@ jobs:
     runs-on: ${{ matrix .os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        #os: [ubuntu-latest]
+        #os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [windows-latest]
 
     steps:
     - uses: actions/checkout@v2
-#    - name: Set up Python
-#      uses: actions/setup-python@v2
     - name: Set up Conda
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
-    - name: debug
-      run: |
-        pip3 --version
-        which python
-        python3 --version
     - name: Install dependencies
       run: |
-        # --freeze-installed flag prevents python from being updated.
-        #conda install --freeze-installed conda-build anaconda-client -y
         conda install conda-build anaconda-client -y
     - name: Bulid and upload
       env:
