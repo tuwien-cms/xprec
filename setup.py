@@ -111,6 +111,8 @@ class BuildExtWithNumpy(BuildExt):
                          "-march": "native", "-mtune": "native"}
             self.compiler.compiler_so = update_flags(
                                     self.compiler.compiler_so, new_flags)
+        print("debug", self.compiler.compiler_so)
+        assert False
 
         # This has to be set to false because MacOS does not ship openmp
         # by default.
