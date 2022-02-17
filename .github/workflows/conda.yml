@@ -1,11 +1,10 @@
 name: Build and upload conda packages
 
 # Triggered a new tag starting with "v" is pushed
-#on:
-#  push:
-#    tags:
-#      - 'v*'
-on: push
+on:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build:
