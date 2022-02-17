@@ -60,10 +60,11 @@ def update_flags(exec, update):
     return [cc_so] + cflags_so
 
 
-class BuildExtWithNumpy(BuildExt):
-    """Wrapper class for building numpy extensions"""
-    user_options = BuildExt.user_options + [
-        ("with-openmp=", None, "use openmp to build (default: true)"),
+class OptionsMixin:
+    _convert_to_bool = {"true": True, "false": False}
+    user_options = [
+        ("with-openmp=", None, "use openmp to build (default: false)"),
+        ("opt-arch=", None, "optimized for architecture"),
         ("numpy-include-dir=", None, "numpy include directory"),
         ]
 
@@ -71,17 +72,22 @@ class BuildExtWithNumpy(BuildExt):
         super().initialize_options()
         self.with_openmp = None
         self.numpy_include_dir = None
+        self.opt_arch = None
 
     def finalize_options(self):
-        """Add numpy and scipy include directories to the include paths."""
-        super().finalize_options()
-
-        _convert_to_bool = {None: None, "true": True, "false": False}
         if self.with_openmp is not None:
-            self.with_openmp = _convert_to_bool[self.with_openmp.lower()]
+            self.with_openmp = self._convert_to_bool[self.with_openmp.lower()]
+        if self.opt_arch is not None:
+            self.opt_arch = self._convert_to_bool[self.opt_arch.lower()]
         if self.numpy_include_dir is not None:
             if not os.path.isdir(self.numpy_include_dir):
                 raise ValueError("include directory must exist")
+        super().finalize_options()
+
+
+class BuildExtWithNumpy(OptionsMixin, BuildExt):
+    """Wrapper class for building numpy extensions"""
+    user_options = BuildExt.user_options + OptionsMixin.user_options
 
     def build_extensions(self):
         """Modify paths according to options"""
@@ -107,13 +113,13 @@ class BuildExtWithNumpy(BuildExt):
             compiler_make = 'msvc'
 
         if compiler_type != 'msvc':
-            # Prevent generation of code for the compiling machine (for the moment)
-            # This is harmful when building a binary package.
-            # new_flags = {"-Wextra": None, "-std": "c11",
-            #       "-march": "native", "-mtune": "native"}
             new_flags = {"-Wextra": None, "-std": "c11"}
+            # By default, we do not optimize for the architecture by default,
+            # because this is harmful when building a binary package.
+            if self.opt_arch:
+                new_flags["-mtune"] = new_flags["-march"] = "native"
             self.compiler.compiler_so = update_flags(
-                                    self.compiler.compiler_so, new_flags)
+            self.compiler.compiler_so, new_flags)
 
         # This has to be set to false because MacOS does not ship openmp
         # by default.
