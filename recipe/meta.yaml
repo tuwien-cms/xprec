@@ -7,7 +7,7 @@ package:
   version: "{{ version }}"
 
 source:
-  git_url: ../
+  path: ../
 
 build:
   number: 0
@@ -23,17 +23,6 @@ requirements:
   run:
     - python {{ python }}
     - numpy {{ numpy }}
-
-test:
-  imports:
-    - xprec
-  source_files:
-    - test/*.py
-  requires:
-    - pytest
-  commands:
-    #- pytest test/
-    - find test -name "test*.py" -not -path "*/test_whitespace.py" | xargs pytest
 
 about:
   home: "https://github.com/tuwien-cms/xprec"
