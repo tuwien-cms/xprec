@@ -6,14 +6,17 @@ on:
     tags:
       - 'v*'
 
+#on:
+#  push:
+#    branches:
+#      debug
+
 jobs:
   build:
     runs-on: ${{ matrix .os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        #os: [windows-latest]
-        #os: [macOS-latest]
+        os: [ubuntu-latest, windows-2019, macOS-latest]
 
     steps:
     - uses: actions/checkout@v2
