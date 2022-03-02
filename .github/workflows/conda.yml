@@ -33,4 +33,4 @@ jobs:
       run: |
         python3 --version
         conda config --set anaconda_upload yes
-        conda build .conda
+        conda build .conda --user SpM-lab
