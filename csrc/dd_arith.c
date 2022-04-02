@@ -181,6 +181,11 @@ ddouble expm1q(ddouble a)
     return subqd(sum, 1.0);
 }
 
+ddouble inline ldexpqi(ddouble a, int exp)
+{
+    return ldexpq(a, exp);
+}
+
 ddouble logq(ddouble a)
 {
     /* Strategy.  The Taylor series for log converges much more

@@ -639,6 +639,7 @@ static int make_dtype()
 NPY_CAST_FROM(from_double, double)
 NPY_CAST_FROM(from_float, float)
 NPY_CAST_FROM(from_bool, bool)
+NPY_CAST_FROM(from_int, int)
 NPY_CAST_FROM(from_int8, int8_t)
 NPY_CAST_FROM(from_int16, int16_t)
 NPY_CAST_FROM(from_int32, int32_t)
@@ -654,6 +655,7 @@ NPY_CAST_FROM_I64(from_uint64, uint64_t)
 NPY_CAST_TO(to_double, double)
 NPY_CAST_TO(to_float, float)
 NPY_CAST_TO(to_bool, bool)
+NPY_CAST_TO(to_int, int)
 NPY_CAST_TO(to_int8, int8_t)
 NPY_CAST_TO(to_int16, int16_t)
 NPY_CAST_TO(to_int32, int32_t)
@@ -698,6 +700,7 @@ static int register_casts()
     bool ok = register_cast(NPY_DOUBLE, from_double, to_double)
         && register_cast(NPY_FLOAT,  from_float,  to_float)
         && register_cast(NPY_BOOL,   from_bool,   to_bool)
+        && register_cast(NPY_INT,    from_int,    to_int)
         && register_cast(NPY_INT8,   from_int8,   to_int8)
         && register_cast(NPY_INT16,  from_int16,  to_int16)
         && register_cast(NPY_INT32,  from_int32,  to_int32)
@@ -786,6 +789,7 @@ ULOOP_BINARY(u_fmaxdq, fmaxdq, ddouble, double, ddouble)
 ULOOP_BINARY(u_hypotqq, hypotqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_hypotdq, hypotdq, ddouble, double, ddouble)
 ULOOP_BINARY(u_hypotqd, hypotqd, ddouble, ddouble, double)
+ULOOP_BINARY(u_ldexpqi, ldexpqi, ddouble, ddouble, int)
 
 ULOOP_UNARY(u_signbitq, signbitq, bool, ddouble)
 ULOOP_UNARY(u_signq, signq, ddouble, ddouble)
@@ -872,6 +876,30 @@ error:
     return false;
 }
 
+static int register_ldexp(PyUFuncGenericFunction func, int ret_dtype,
+                          const char *name)
+{
+    PyUFuncObject *ufunc;
+    int *arg_types = NULL, retcode = 0;
+
+    ufunc = (PyUFuncObject *)PyObject_GetAttrString(numpy_module, name);
+    if (ufunc == NULL) goto error;
+
+    arg_types = PyMem_New(int, 3);
+    if (arg_types == NULL) goto error;
+
+    arg_types[0] = type_num;
+    arg_types[1] = NPY_INTP;
+    arg_types[2] = ret_dtype;
+    retcode = PyUFunc_RegisterLoopForType(ufunc, type_num,
+                                          func, arg_types, NULL);
+    if (retcode < 0) goto error;
+    return true;
+
+error:
+    return false;
+}
+
 static int register_ufuncs()
 {
     bool ok = register_unary(u_negq, type_num, "negative")
@@ -896,6 +924,7 @@ static int register_ufuncs()
         && register_unary(u_coshq, type_num, "cosh")
         && register_unary(u_tanhq, type_num, "tanh")
         && register_unary(u_signq, type_num, "sign")
+        && register_ldexp(u_ldexpqi, type_num, "ldexp")
         && register_binary(u_adddq, u_addqd, u_addqq, type_num, "add")
         && register_binary(u_subdq, u_subqd, u_subqq, type_num, "subtract")
         && register_binary(u_muldq, u_mulqd, u_mulqq, type_num, "multiply")

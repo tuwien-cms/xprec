@@ -508,6 +508,7 @@ static inline ddouble hypotqd(ddouble x, double y)
 
 ddouble expq(ddouble a);
 ddouble expm1q(ddouble a);
+ddouble ldexpqi(ddouble a, int m);
 ddouble logq(ddouble a);
 ddouble sinq(ddouble a);
 ddouble cosq(ddouble a);
