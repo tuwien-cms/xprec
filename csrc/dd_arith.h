@@ -512,6 +512,7 @@ ddouble ldexpqi(ddouble a, int m);
 ddouble logq(ddouble a);
 ddouble sinq(ddouble a);
 ddouble cosq(ddouble a);
+ddouble tanq(ddouble a);
 ddouble sinhq(ddouble a);
 ddouble coshq(ddouble a);
 ddouble tanhq(ddouble a);

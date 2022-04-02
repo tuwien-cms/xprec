@@ -491,3 +491,20 @@ ddouble tanhq(ddouble a)
     c = sqrtq(adddq(1.0, sqrq(s)));
     return divqq(s, c);
 }
+
+ddouble tanq(ddouble a)
+{
+    if (iszeroq(a))
+        return Q_ZERO;
+    
+    ddouble s, c;
+    s = sinq(a);
+    c = cosq(a);
+    return divqq(s, c);
+}
+
+// ddouble atanq(ddouble a)
+// {
+
+// }
+

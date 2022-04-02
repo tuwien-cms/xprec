@@ -545,7 +545,7 @@ static int make_dtype()
          * float128 != ddouble.  The downside of this is that NumPy scalar
          * promotion does not work with ddoubles.
          */
-        .kind = 'V',
+        .kind = 'f',
         .type = 'E',
         .byteorder = '=',
 
@@ -807,6 +807,7 @@ ULOOP_UNARY(u_expm1q, expm1q, ddouble, ddouble)
 ULOOP_UNARY(u_logq, logq, ddouble, ddouble)
 ULOOP_UNARY(u_sinq, sinq, ddouble, ddouble)
 ULOOP_UNARY(u_cosq, cosq, ddouble, ddouble)
+ULOOP_UNARY(u_tanq, tanq, ddouble, ddouble)
 ULOOP_UNARY(u_sinhq, sinhq, ddouble, ddouble)
 ULOOP_UNARY(u_coshq, coshq, ddouble, ddouble)
 ULOOP_UNARY(u_tanhq, tanhq, ddouble, ddouble)
@@ -917,6 +918,7 @@ static int register_ufuncs()
         && register_unary(u_logq, type_num, "log")
         && register_unary(u_sinq, type_num, "sin")
         && register_unary(u_cosq, type_num, "cos")
+        && register_unary(u_tanq, type_num, "tan")
         && register_unary(u_sinhq, type_num, "sinh")
         && register_unary(u_coshq, type_num, "cosh")
         && register_unary(u_tanhq, type_num, "tanh")
