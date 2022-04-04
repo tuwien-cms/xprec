@@ -298,6 +298,7 @@ static const ddouble Q_2PI = {6.283185307179586232e+00, 2.449293598294706414e-16
 static const ddouble Q_PI = {3.141592653589793116e+00, 1.224646799147353207e-16};
 static const ddouble Q_PI_2 = {1.570796326794896558e+00, 6.123233995736766036e-17};
 static const ddouble Q_PI_4 = {7.853981633974482790e-01, 3.061616997868383018e-17};
+static const ddouble Q_3PI_4 = {2.356194490192344837e+00, 9.1848509936051484375e-17};
 static const ddouble Q_E = {2.718281828459045091e+00, 1.445646891729250158e-16};
 static const ddouble Q_LOG2 = {6.931471805599452862e-01, 2.319046813846299558e-17};
 static const ddouble Q_LOG10 = {2.302585092994045901e+00, -2.170756223382249351e-16};
@@ -516,3 +517,4 @@ ddouble tanq(ddouble a);
 ddouble sinhq(ddouble a);
 ddouble coshq(ddouble a);
 ddouble tanhq(ddouble a);
+ddouble atanq(ddouble a);

@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: MIT, BSD
  */
 #include "./dd_arith.h"
+#include <math.h>
 
 // 2**500 and 2**(-500);
 static const double LARGE = 3.273390607896142e+150;
@@ -503,8 +504,66 @@ ddouble tanq(ddouble a)
     return divqq(s, c);
 }
 
-// ddouble atanq(ddouble a)
-// {
+ddouble atan2qq(ddouble y, ddouble x) {
+    /* Strategy: Instead of using Taylor series to compute 
+        arctan, we instead use Newton's iteration to solve
+        the equation
 
-// }
+            sin(z) = y/r    or    cos(z) = x/r
+
+        where r = sqrt(x^2 + y^2).
+        The iteration is given by
+
+            z' = z + (y - sin(z)) / cos(z)          (for equation 1)
+            z' = z - (x - cos(z)) / sin(z)          (for equation 2)
+
+        Here, x and y are normalized so that x^2 + y^2 = 1.
+        If |x| > |y|, then first iteration is used since the 
+        denominator is larger.  Otherwise, the second is used.
+    */
+
+    if (iszeroq(x)) {
+    
+        if (iszeroq(y)) {
+        /* Both x and y is zero. */
+        return nanq();
+    }
+
+    return (ispositiveq(y)) ? Q_PI_2 : negq(Q_PI_2);
+    } else if (iszeroq(y)) {
+        return (ispositiveq(x)) ? Q_ZERO : Q_PI;
+    }
+
+    if (equalqq(x, y)) {
+        return (ispositiveq(y)) ? Q_PI_4: negq(Q_3PI_4);
+    }
+
+    if (equalqq(x, negq(y))) {
+        return (ispositiveq(y)) ? Q_3PI_4 : negq(Q_PI_4);
+    }
+
+    ddouble r = sqrtq(addqq(sqrq(x), sqrq(y)));
+    ddouble xx = divqq(x, r);
+    ddouble yy = divqq(y, r);
+
+    /* Compute double precision approximation to atan. */
+    ddouble z = (ddouble){atan2(y.hi, x.hi), 0.};
+    ddouble sin_z, cos_z;
+
+    if (fabs(xx.hi) > fabs(yy.hi)) {
+        /* Use Newton iteration 1.  z' = z + (y - sin(z)) / cos(z)  */
+        sincos_taylor(z, &sin_z, &cos_z);
+        z = addqq(z, divqq(subqq(yy, sin_z), cos_z));
+    } else {
+        /* Use Newton iteration 2.  z' = z - (x - cos(z)) / sin(z)  */
+        sincos_taylor(z, &sin_z, &cos_z);
+        z = subqq(z, divqq(subqq(xx, cos_z), sin_z));
+    }
+
+  return z;
+}
+
+ddouble atanq(const ddouble a) {
+    return atan2qq(a, Q_ONE);
+}
 
