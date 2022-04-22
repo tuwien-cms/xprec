@@ -201,6 +201,8 @@ ddouble logq(ddouble a)
      */
     if (isoneq(a))
         return Q_ZERO;
+    if (iszeroq(a))
+        return negq(infq());
     if (a.hi <= 0.0)
         return nanq();
 

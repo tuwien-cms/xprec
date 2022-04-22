@@ -16,6 +16,9 @@ def test_log():
     x = np.geomspace(1e-300, 1e300, 1953)
     _compare_ufunc(np.log, x)
 
+    zeroq = xprec.ddouble.type(0)
+    assert np.isinf(np.log(zeroq))
+
 
 def test_sqrt():
     x = np.geomspace(1e-300, 1e300, 1953)
