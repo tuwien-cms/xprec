@@ -545,7 +545,7 @@ static int make_dtype()
          * float128 != ddouble.  The downside of this is that NumPy scalar
          * promotion does not work with ddoubles.
          */
-        .kind = 'f',
+        .kind = 'V',
         .type = 'E',
         .byteorder = '=',
 
