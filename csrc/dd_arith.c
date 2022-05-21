@@ -207,7 +207,9 @@ ddouble logq(ddouble a)
      */
     if (isoneq(a))
         return Q_ZERO;
-    if (a.hi <= 0.0)
+    if (iszeroq(a))
+        return negq(infq());
+    if (!ispositiveq(a))
         return nanq();
 
     ddouble x = {log(a.hi), 0.0}; /* Initial approximation */

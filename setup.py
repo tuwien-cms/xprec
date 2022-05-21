@@ -191,10 +191,11 @@ setup(
         'double-double'
         ]),
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: MIT License',
         ],
 
     url=REPO_URL,
