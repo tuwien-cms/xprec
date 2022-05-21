@@ -744,7 +744,7 @@ static int register_casts()
         MARK_UNUSED(data);                                              \
     }
 
-#define ULOOP_MODF(func_name, inner_func, type_out, type_a, type_b)   \
+#define ULOOP_MODF(func_name, inner_func, type_out, type_a, type_b)     \
     static void func_name(char **args, const npy_intp *dimensions,      \
                           const npy_intp* steps, void *data)            \
     {                                                                   \
@@ -753,11 +753,11 @@ static int register_casts()
                        bs = steps[1] / sizeof(type_b),                  \
                        os = steps[2] / sizeof(type_out);                \
         const type_a *a = (const type_a *)args[0];                      \
-        type_b *b = (type_b *)args[1];                      \
-        type_out *out = (type_out *)args[2];                            \
+        type_b *b = (type_b *)args[2];                                  \
+        type_out *out = (type_out *)args[1];                            \
                                                                         \
         for (npy_intp i = 0; i < n; ++i) {                              \
-            out[i * os] = inner_func(a[i * as], &b[i * bs]);             \
+            out[i * os] = inner_func(a[i * as], &b[i * bs]);            \
         }                                                               \
         MARK_UNUSED(data);                                              \
     }
