@@ -518,3 +518,21 @@ ddouble sinhq(ddouble a);
 ddouble coshq(ddouble a);
 ddouble tanhq(ddouble a);
 ddouble atanq(ddouble a);
+ddouble acosq(ddouble a);
+ddouble asinq(ddouble a);
+ddouble atanhq(ddouble a);
+ddouble acoshq(ddouble a);
+ddouble asinhq(ddouble a);
+ddouble atan2qd(ddouble a, double b);
+ddouble atan2dq(double a, ddouble b);
+ddouble atan2qq(ddouble a, ddouble b);
+ddouble fmodqq(ddouble a, ddouble b);
+ddouble fmodqd(ddouble a, double b);
+ddouble fmoddq(double a, ddouble b);
+ddouble powqq(ddouble a, ddouble b);
+ddouble powqd(ddouble a, double b);
+ddouble powdq(double a, ddouble b);
+ddouble modfqq(ddouble a, ddouble *b);
+
+
+

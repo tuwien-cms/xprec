@@ -563,7 +563,98 @@ ddouble atan2qq(ddouble y, ddouble x) {
   return z;
 }
 
+ddouble atan2dq(const double a, const ddouble b) {
+    return atan2qq(adddq(a, Q_ZERO), b);
+}
+
+ddouble atan2qd(const ddouble a, const double b) {
+    return atan2qq(a, adddq(b, Q_ZERO));
+}
+
 ddouble atanq(const ddouble a) {
     return atan2qq(a, Q_ONE);
 }
 
+ddouble acosq(const ddouble a) {
+    ddouble abs_a = absq(a);
+
+    if (greaterqq(abs_a, Q_ONE)) {
+        return nanq();
+    }
+
+    if (isoneq(abs_a)) {
+        return (ispositiveq(a)) ? Q_ZERO : Q_PI;
+    }
+
+    return atan2qq(sqrtq(subdq(1.0, sqrq(a))), a);
+}
+
+ddouble asinq(const ddouble a) {
+    ddouble abs_a = absq(a);
+
+    if (greaterqd(abs_a, 1.0)) {
+        return nanq();
+    }
+
+    if (isoneq(abs_a)) {
+        return (ispositiveq(a)) ? Q_PI_2 : negq(Q_PI_2);
+    }
+
+    return atan2qq(a, sqrtq(subdq(1.0, sqrq(a))));
+}
+
+ddouble asinhq(const ddouble a) {
+    return logq(addqq(a,sqrtq(addqd(sqrq(a),1.0))));
+}
+
+ddouble acoshq(const ddouble a) {
+    if (lessqd(a, 1.0)) {
+        return nanq();
+    }
+
+    return logq(addqq(a, sqrtq(subqd(sqrq(a), 1.0))));
+}
+
+ddouble atanhq(const ddouble a) {
+    if (greaterequalqd(absq(a), 1.0)) {
+        return nanq();
+    }
+
+    return mul_pwr2(logq(divqq(adddq(1.0, a) , subdq(1.0, a))), 0.5);
+}
+
+ddouble fmodqq(const ddouble a, const ddouble b) {
+    ddouble n = floorq(divqq(a, b));
+    return (mulqq(subqq(a, b), n));
+}
+
+ddouble fmodqd(const ddouble a, const double b) {
+    ddouble n = floorq(divqd(a, b));
+    return (mulqq(subqd(a, b), n));
+}
+
+ddouble fmoddq(const double a, const ddouble b) {
+    ddouble n = floorq(divdq(a, b));
+    return (mulqq(subdq(a, b), n));
+}
+
+ddouble powqq(const ddouble a, const ddouble b) {
+    return expq(mulqq(b, logq(a)));
+}
+
+ddouble powqd(const ddouble a, const double b) {
+    return expq(muldq(b, logq(a)));
+}
+
+ddouble powdq(const double a, const ddouble b) {
+    powqq(adddq(a, Q_ZERO), b);
+}
+
+ddouble modfqq(const ddouble a, ddouble *b) {
+    if (isnegativeq(a)) {
+        *b = ceilq(a);
+    } else {
+        *b = floorq(a);
+    }
+    return subqq(a, *b);
+}
