@@ -16,7 +16,7 @@ Example:
     print(2 * x)
 
 """
-__version__ = "1.2.13"
+__version__ = "1.2.14"
 
 import numpy as _np
 
