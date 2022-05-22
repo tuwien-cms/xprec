@@ -299,6 +299,7 @@ static const ddouble Q_PI = {3.141592653589793116e+00, 1.224646799147353207e-16}
 static const ddouble Q_PI_2 = {1.570796326794896558e+00, 6.123233995736766036e-17};
 static const ddouble Q_PI_4 = {7.853981633974482790e-01, 3.061616997868383018e-17};
 static const ddouble Q_3PI_4 = {2.356194490192344837e+00, 9.1848509936051484375e-17};
+static const ddouble Q_PI_16 = {1.963495408493620697e-01, 7.654042494670957545e-18};
 static const ddouble Q_E = {2.718281828459045091e+00, 1.445646891729250158e-16};
 static const ddouble Q_LOG2 = {6.931471805599452862e-01, 2.319046813846299558e-17};
 static const ddouble Q_LOG10 = {2.302585092994045901e+00, -2.170756223382249351e-16};
@@ -507,6 +508,14 @@ static inline ddouble hypotqd(ddouble x, double y)
     return hypotqq(x, (ddouble){y, 0});
 }
 
+/* Computes the nearest integer to d. */
+inline ddouble nintq(ddouble d) {
+    if (equalqq(d, floorq(d))) {
+        return d;
+    }
+    return floorq(addqq(d, (ddouble){0.5, 0}));
+}
+
 ddouble expq(ddouble a);
 ddouble expm1q(ddouble a);
 ddouble ldexpqi(ddouble a, int m);
@@ -533,6 +542,3 @@ ddouble powqq(ddouble a, ddouble b);
 ddouble powqd(ddouble a, double b);
 ddouble powdq(double a, ddouble b);
 ddouble modfqq(ddouble a, ddouble *b);
-
-
-

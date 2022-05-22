@@ -50,3 +50,52 @@ def test_hypot():
     x = np.geomspace(1e-300, 1e260, 47)
     x = np.hstack([-x[::-1], 0, x])
     _compare_ufunc(np.hypot, x[:,None], x[None,:])
+
+
+def test_modf():
+    ulps = 1
+    x = np.linspace(-100, 100, 100)
+    x_d = x.astype(xprec.ddouble)
+
+    fx_d = np.modf(x)
+    fx_q = np.modf(x_d)
+
+    # Ensure relative accuracy of 1 ulp
+    np.testing.assert_array_almost_equal_nulp(fx_d[0], fx_q[0].astype(float), ulps)
+    np.testing.assert_array_almost_equal_nulp(fx_d[1], fx_q[1].astype(float), ulps)
+
+
+def test_power():
+    x = np.linspace(0, 100, 100)
+    _compare_ufunc(np.power, x[:,None], x[None,:])
+
+
+def test_arctan2():
+    x = np.linspace(-100, 100, 100)
+    _compare_ufunc(np.arctan2, x[:,None], x[None,:])
+
+
+def test_arcsincos():
+    x = np.linspace(-1, 1, 100)
+    _compare_ufunc(np.arcsin, x)
+    _compare_ufunc(np.arccos, x)
+
+
+def test_arctan():
+    x = np.linspace(-100, 100, 100)
+    _compare_ufunc(np.arctan, x)
+
+
+def test_arccosh():
+    x = np.linspace(1, 100, 100)
+    _compare_ufunc(np.arccosh, x)
+
+
+def test_arcsinh():
+    x = np.linspace(-100, 100, 100)
+    _compare_ufunc(np.arcsinh, x)
+
+
+def test_arctanh():
+    x = np.linspace(-0.99, 0.99, 100)
+    _compare_ufunc(np.arctanh, x)
