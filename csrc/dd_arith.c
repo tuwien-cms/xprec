@@ -703,21 +703,6 @@ ddouble atanhq(const ddouble a) {
     return mul_pwr2(logq(divqq(adddq(1.0, a) , subdq(1.0, a))), 0.5);
 }
 
-ddouble fmodqq(const ddouble a, const ddouble b) {
-    ddouble n = floorq(divqq(a, b));
-    return (mulqq(subqq(a, b), n));
-}
-
-ddouble fmodqd(const ddouble a, const double b) {
-    ddouble n = floorq(divqd(a, b));
-    return (mulqq(subqd(a, b), n));
-}
-
-ddouble fmoddq(const double a, const ddouble b) {
-    ddouble n = floorq(divdq(a, b));
-    return (mulqq(subdq(a, b), n));
-}
-
 ddouble powqq(const ddouble a, const ddouble b) {
     if (equalqq(a, Q_ZERO) && equalqq(b, Q_ZERO)) {
         return Q_ONE;
