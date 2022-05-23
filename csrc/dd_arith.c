@@ -635,13 +635,11 @@ ddouble atan2qq(ddouble y, ddouble x) {
 }
 
 ddouble atan2dq(const double a, const ddouble b) {
-    ddouble c = (ddouble){a, 0.};
-    return atan2qq(c, b);
+    return atan2qq((ddouble){a, 0.}, b);
 }
 
 ddouble atan2qd(const ddouble a, const double b) {
-    ddouble c = (ddouble){b, 0.};
-    return atan2qq(a, c);
+    return atan2qq(a, (ddouble){b, 0.});
 }
 
 ddouble atanq(const ddouble a) {
