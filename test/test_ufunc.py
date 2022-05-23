@@ -77,7 +77,7 @@ def test_arctan2():
 
 def test_arcsin():
     x = np.linspace(-1, 1, 100)
-    _compare_ufunc(np.arcsin, x)
+    _compare_ufunc(np.arcsin, x, ulps=2)
 
 
 def test_arccos():
