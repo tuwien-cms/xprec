@@ -509,7 +509,7 @@ static inline ddouble hypotqd(ddouble x, double y)
 }
 
 /* Computes the nearest integer to d. */
-inline ddouble nintq(ddouble d) {
+static inline ddouble nintq(ddouble d) {
     if (equalqq(d, floorq(d))) {
         return d;
     }

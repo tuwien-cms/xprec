@@ -75,9 +75,13 @@ def test_arctan2():
     _compare_ufunc(np.arctan2, x[:,None], x[None,:])
 
 
-def test_arcsincos():
+def test_arcsin():
     x = np.linspace(-1, 1, 100)
     _compare_ufunc(np.arcsin, x)
+
+
+def test_arccos():
+    x = np.linspace(-1, 1, 100)
     _compare_ufunc(np.arccos, x)
 
 

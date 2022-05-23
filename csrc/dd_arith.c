@@ -182,7 +182,7 @@ ddouble expm1q(ddouble a)
     return subqd(sum, 1.0);
 }
 
-ddouble inline ldexpqi(ddouble a, int exp)
+ddouble ldexpqi(ddouble a, int exp)
 {
     return ldexpq(a, exp);
 }
@@ -523,11 +523,11 @@ void sincos(const ddouble a, ddouble *sin_a, ddouble *cos_a) {
     double q = floor(r.hi / Q_PI_2.hi + 0.5);
     t = subqq(r, mulqd(Q_PI_2, q));
     int j = (int)(q);
-    int abs_j = (int)(fabs(j));
+    int abs_j = abs(j);
     q = floor(t.hi / Q_PI_16.hi + 0.5);
     t = subqq(t, mulqd(Q_PI_16, q));
     int k = (int)(q);
-    int abs_k = (int)(fabs(k));
+    int abs_k = abs(k);
 
     if (abs_j > 2) {
         // dd_real::error("(dd_real::sincos): Cannot reduce modulo pi/2.");
@@ -597,12 +597,8 @@ ddouble atan2qq(ddouble y, ddouble x) {
     */
 
     if (iszeroq(x)) {
-
-        if (iszeroq(y)) {
-            /* Both x and y is zero. */
-            return Q_ZERO;
-    }
-
+        if (iszeroq(y))
+            return Q_ZERO; /* Both x and y are zero. */
         return (ispositiveq(y)) ? Q_PI_2 : negq(Q_PI_2);
     } else if (iszeroq(y)) {
         return (ispositiveq(x)) ? Q_ZERO : Q_PI;
@@ -621,8 +617,7 @@ ddouble atan2qq(ddouble y, ddouble x) {
     ddouble yy = divqq(y, r);
 
     /* Compute double precision approximation to atan. */
-    // ddouble z = (ddouble){atan2(y.hi, x.hi), 0.};
-    ddouble z = adddq(atan2(y.hi, x.hi), Q_ZERO);
+    ddouble z = (ddouble){atan2(y.hi, x.hi), 0.};
     ddouble sin_z, cos_z;
 
     if (fabs(xx.hi) > fabs(yy.hi)) {
@@ -640,11 +635,13 @@ ddouble atan2qq(ddouble y, ddouble x) {
 }
 
 ddouble atan2dq(const double a, const ddouble b) {
-    return atan2qq(adddq(a, Q_ZERO), b);
+    ddouble c = (ddouble){a, 0.};
+    return atan2qq(c, b);
 }
 
 ddouble atan2qd(const ddouble a, const double b) {
-    return atan2qq(a, adddq(b, Q_ZERO));
+    ddouble c = (ddouble){b, 0.};
+    return atan2qq(a, c);
 }
 
 ddouble atanq(const ddouble a) {
@@ -694,7 +691,7 @@ ddouble acoshq(const ddouble a) {
 ddouble atanhq(const ddouble a) {
     if (equalqd(a, -1.0)) {
         return negq(infq());
-    } else if (equalqd(a, 1.0)) {
+    } else if (isoneq(a)) {
         return infq();
     } else if (greaterqd(absq(a), 1.0)) {
         return nanq();
@@ -704,9 +701,9 @@ ddouble atanhq(const ddouble a) {
 }
 
 ddouble powqq(const ddouble a, const ddouble b) {
-    if (equalqq(a, Q_ZERO) && equalqq(b, Q_ZERO)) {
+    if (iszeroq(a) && iszeroq(b)) {
         return Q_ONE;
-    } else if (equalqq(a, Q_ZERO) && !equalqq(b, Q_ZERO)) {
+    } else if (iszeroq(a) && !iszeroq(b)) {
         return Q_ZERO;
     } else {
         return expq(mulqq(b, logq(a)));
@@ -714,9 +711,9 @@ ddouble powqq(const ddouble a, const ddouble b) {
 }
 
 ddouble powqd(const ddouble a, const double b) {
-    if (equalqq(a, Q_ZERO) && equaldq(b, Q_ZERO)) {
+    if (iszeroq(a) && b == 0) {
         return Q_ONE;
-    } else if (equalqq(a, Q_ZERO) && !equaldq(b, Q_ZERO)) {
+    } else if (iszeroq(a) && b != 0) {
         return Q_ZERO;
     } else {
         return expq(muldq(b, logq(a)));
@@ -724,7 +721,13 @@ ddouble powqd(const ddouble a, const double b) {
 }
 
 ddouble powdq(const double a, const ddouble b) {
-    powqq(adddq(a, Q_ZERO), b);
+    if (a == 0 && iszeroq(b)) {
+        return Q_ONE;
+    } else if (a == 0 && !iszeroq(b)) {
+        return Q_ZERO;
+    } else {
+        return expq(mulqd(b, log(a)));
+    }
 }
 
 ddouble modfqq(const ddouble a, ddouble *b) {
