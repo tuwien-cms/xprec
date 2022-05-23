@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: MIT, BSD
  */
 #include "./dd_arith.h"
+#include <math.h>
 
 // 2**500 and 2**(-500);
 static const double LARGE = 3.273390607896142e+150;
@@ -179,6 +180,11 @@ ddouble expm1q(ddouble a)
     sum = addqd(sum, 1.0);
     sum = ldexpq(sum, (int)m);
     return subqd(sum, 1.0);
+}
+
+ddouble ldexpqi(ddouble a, int exp)
+{
+    return ldexpq(a, exp);
 }
 
 ddouble logq(ddouble a)
@@ -487,4 +493,246 @@ ddouble tanhq(ddouble a)
     s = sinhq(a);
     c = sqrtq(adddq(1.0, sqrq(s)));
     return divqq(s, c);
+}
+
+ddouble tanq(ddouble a)
+{
+    if (iszeroq(a))
+        return Q_ZERO;
+
+    ddouble s, c;
+    s = sinq(a);
+    c = cosq(a);
+    return divqq(s, c);
+}
+
+void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a) {
+
+    if (iszeroq(a)) {
+        *sin_a = Q_ZERO;
+        *cos_a = Q_ONE;
+        return;
+    }
+
+    // approximately reduce modulo 2*pi
+    ddouble z = nintq(divqq(a, Q_2PI));
+    ddouble r = subqq(a, mulqq(Q_2PI, z));
+
+    // approximately reduce module pi/2 and pi/16
+    ddouble t;
+    double q = floor(r.hi / Q_PI_2.hi + 0.5);
+    t = subqq(r, mulqd(Q_PI_2, q));
+    int j = (int)(q);
+    int abs_j = abs(j);
+    q = floor(t.hi / Q_PI_16.hi + 0.5);
+    t = subqq(t, mulqd(Q_PI_16, q));
+    int k = (int)(q);
+    int abs_k = abs(k);
+
+    if (abs_j > 2) {
+        // dd_real::error("(dd_real::sincos): Cannot reduce modulo pi/2.");
+        *cos_a = *sin_a = nanq();
+        return;
+    }
+
+    if (abs_k > 4) {
+        // dd_real::error("(dd_real::sincos): Cannot reduce modulo pi/16.");
+        *cos_a = *sin_a = nanq();
+        return;
+    }
+
+    ddouble sin_t, cos_t;
+    ddouble s, c;
+
+    sincos_taylor(t, &sin_t, &cos_t);
+
+    if (abs_k == 0) {
+        s = sin_t;
+        c = cos_t;
+    } else {
+        ddouble u = _cos_table[abs_k - 1];
+        ddouble v = _sin_table[abs_k - 1];
+
+        if (k > 0) {
+            s = addqq(mulqq(u, sin_t), mulqq(v, cos_t));
+            c = subqq(mulqq(u, cos_t), mulqq(v, sin_t));
+        } else {
+            s = subqq(mulqq(u, sin_t), mulqq(v, cos_t));
+            c = addqq(mulqq(u, cos_t), mulqq(v, sin_t));
+        }
+    }
+    if (abs_j == 0) {
+        *sin_a = s;
+        *cos_a = c;
+    } else if (j == 1) {
+        *sin_a = c;
+        *cos_a = negq(s);
+    } else if (j == -1) {
+        *sin_a = negq(c);
+        *cos_a = s;
+    } else {
+        *sin_a = negq(s);
+        *cos_a = negq(c);
+    }
+
+}
+
+
+ddouble atan2qq(ddouble y, ddouble x) {
+    /* Strategy: Instead of using Taylor series to compute
+        arctan, we instead use Newton's iteration to solve
+        the equation
+
+            sin(z) = y/r    or    cos(z) = x/r
+
+        where r = sqrt(x^2 + y^2).
+        The iteration is given by
+
+            z' = z + (y - sin(z)) / cos(z)          (for equation 1)
+            z' = z - (x - cos(z)) / sin(z)          (for equation 2)
+
+        Here, x and y are normalized so that x^2 + y^2 = 1.
+        If |x| > |y|, then first iteration is used since the
+        denominator is larger.  Otherwise, the second is used.
+    */
+
+    if (iszeroq(x)) {
+        if (iszeroq(y))
+            return Q_ZERO; /* Both x and y are zero. */
+        return (ispositiveq(y)) ? Q_PI_2 : negq(Q_PI_2);
+    } else if (iszeroq(y)) {
+        return (ispositiveq(x)) ? Q_ZERO : Q_PI;
+    }
+
+    if (equalqq(x, y)) {
+        return (ispositiveq(y)) ? Q_PI_4: negq(Q_3PI_4);
+    }
+
+    if (equalqq(x, negq(y))) {
+        return (ispositiveq(y)) ? Q_3PI_4 : negq(Q_PI_4);
+    }
+
+    ddouble r = sqrtq(addqq(sqrq(x), sqrq(y)));
+    ddouble xx = divqq(x, r);
+    ddouble yy = divqq(y, r);
+
+    /* Compute double precision approximation to atan. */
+    ddouble z = (ddouble){atan2(y.hi, x.hi), 0.};
+    ddouble sin_z, cos_z;
+
+    if (fabs(xx.hi) > fabs(yy.hi)) {
+        /* Use Newton iteration 1.  z' = z + (y - sin(z)) / cos(z)  */
+        sincosq(z, &sin_z, &cos_z);
+        z = addqq(z, divqq(subqq(yy, sin_z), cos_z));
+    } else {
+
+        /* Use Newton iteration 2.  z' = z - (x - cos(z)) / sin(z)  */
+        sincosq(z, &sin_z, &cos_z);
+        z = subqq(z, divqq(subqq(xx, cos_z), sin_z));
+    }
+
+  return z;
+}
+
+ddouble atan2dq(const double a, const ddouble b) {
+    return atan2qq((ddouble){a, 0.}, b);
+}
+
+ddouble atan2qd(const ddouble a, const double b) {
+    return atan2qq(a, (ddouble){b, 0.});
+}
+
+ddouble atanq(const ddouble a) {
+    return atan2qq(a, Q_ONE);
+}
+
+ddouble acosq(const ddouble a) {
+    ddouble abs_a = absq(a);
+
+    if (greaterqq(abs_a, Q_ONE)) {
+        return nanq();
+    }
+
+    if (isoneq(abs_a)) {
+        return (ispositiveq(a)) ? Q_ZERO : Q_PI;
+    }
+
+    return atan2qq(sqrtq(subdq(1.0, sqrq(a))), a);
+}
+
+ddouble asinq(const ddouble a) {
+    ddouble abs_a = absq(a);
+
+    if (greaterqd(abs_a, 1.0)) {
+        return nanq();
+    }
+
+    if (isoneq(abs_a)) {
+        return (ispositiveq(a)) ? Q_PI_2 : negq(Q_PI_2);
+    }
+
+    return atan2qq(a, sqrtq(subdq(1.0, sqrq(a))));
+}
+
+ddouble asinhq(const ddouble a) {
+    return logq(addqq(a,sqrtq(addqd(sqrq(a),1.0))));
+}
+
+ddouble acoshq(const ddouble a) {
+    if (lessqd(a, 1.0)) {
+        return nanq();
+    }
+
+    return logq(addqq(a, sqrtq(subqd(sqrq(a), 1.0))));
+}
+
+ddouble atanhq(const ddouble a) {
+    if (equalqd(a, -1.0)) {
+        return negq(infq());
+    } else if (isoneq(a)) {
+        return infq();
+    } else if (greaterqd(absq(a), 1.0)) {
+        return nanq();
+    }
+
+    return mul_pwr2(logq(divqq(adddq(1.0, a) , subdq(1.0, a))), 0.5);
+}
+
+ddouble powqq(const ddouble a, const ddouble b) {
+    if (iszeroq(a) && iszeroq(b)) {
+        return Q_ONE;
+    } else if (iszeroq(a) && !iszeroq(b)) {
+        return Q_ZERO;
+    } else {
+        return expq(mulqq(b, logq(a)));
+    }
+}
+
+ddouble powqd(const ddouble a, const double b) {
+    if (iszeroq(a) && b == 0) {
+        return Q_ONE;
+    } else if (iszeroq(a) && b != 0) {
+        return Q_ZERO;
+    } else {
+        return expq(muldq(b, logq(a)));
+    }
+}
+
+ddouble powdq(const double a, const ddouble b) {
+    if (a == 0 && iszeroq(b)) {
+        return Q_ONE;
+    } else if (a == 0 && !iszeroq(b)) {
+        return Q_ZERO;
+    } else {
+        return expq(mulqd(b, log(a)));
+    }
+}
+
+ddouble modfqq(const ddouble a, ddouble *b) {
+    if (isnegativeq(a)) {
+        *b = ceilq(a);
+    } else {
+        *b = floorq(a);
+    }
+    return subqq(a, *b);
 }
