@@ -506,7 +506,7 @@ ddouble tanq(ddouble a)
     return divqq(s, c);
 }
 
-void sincos(const ddouble a, ddouble *sin_a, ddouble *cos_a) {
+void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a) {
 
     if (iszeroq(a)) {
         *sin_a = Q_ZERO;
@@ -622,12 +622,12 @@ ddouble atan2qq(ddouble y, ddouble x) {
 
     if (fabs(xx.hi) > fabs(yy.hi)) {
         /* Use Newton iteration 1.  z' = z + (y - sin(z)) / cos(z)  */
-        sincos(z, &sin_z, &cos_z);
+        sincosq(z, &sin_z, &cos_z);
         z = addqq(z, divqq(subqq(yy, sin_z), cos_z));
     } else {
 
         /* Use Newton iteration 2.  z' = z - (x - cos(z)) / sin(z)  */
-        sincos(z, &sin_z, &cos_z);
+        sincosq(z, &sin_z, &cos_z);
         z = subqq(z, divqq(subqq(xx, cos_z), sin_z));
     }
 
