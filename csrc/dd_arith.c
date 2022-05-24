@@ -290,6 +290,32 @@ static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
     }
 }
 
+static ddouble mod_pi16(ddouble a, int *j, int *k)
+{
+    /* To compute sin(x), we choose integers a, b so that
+     *
+     *   x = t + j * (pi/2) + k * (pi/16)
+     *
+     * and |t| <= pi/32.
+     */
+
+    // approximately reduce modulo 2*pi
+    ddouble z = roundq(divqq(a, Q_2PI));
+    ddouble r = subqq(a, mulqq(Q_2PI, z));
+
+    // approximately reduce modulo pi/2
+    double q = floor(r.hi / Q_PI_2.hi + 0.5);
+    ddouble t = subqq(r, mulqd(Q_PI_2, q));
+    *j = (int)q;
+
+    // approximately reduce modulo pi/16.
+    q = floor(t.hi / _pi_16.hi + 0.5);
+    t = subqq(t, mulqd(_pi_16, q));
+    *k = (int)q;
+    return t;
+}
+
+
 ddouble sinq(ddouble a)
 {
     /* Strategy.  To compute sin(x), we choose integers a, b so that
@@ -306,19 +332,9 @@ ddouble sinq(ddouble a)
     if (iszeroq(a))
         return Q_ZERO;
 
-    // approximately reduce modulo 2*pi
-    ddouble z = roundq(divqq(a, Q_2PI));
-    ddouble r = subqq(a, mulqq(Q_2PI, z));
-
-    // approximately reduce modulo pi/2 and then modulo pi/16.
-    ddouble t;
-    double q = floor(r.hi / Q_PI_2.hi + 0.5);
-    t = subqq(r, mulqd(Q_PI_2, q));
-    int j = (int)q;
-    q = floor(t.hi / _pi_16.hi + 0.5);
-    t = subqq(t, mulqd(_pi_16, q));
-    int k = (int)q;
-    int abs_k = abs(k);
+    int j, k;
+    ddouble t = mod_pi16(a, &j, &k);
+    int abs_j = abs(j), abs_k = abs(k);
 
     if (j < -2 || j > 2)
         return nanq();
@@ -342,7 +358,7 @@ ddouble sinq(ddouble a)
 
     ddouble u = _cos_table[abs_k - 1];
     ddouble v = _sin_table[abs_k - 1];
-    ddouble sin_x, cos_x;
+    ddouble sin_x, cos_x, r;
     sincos_taylor(t, &sin_x, &cos_x);
     if (j == 0) {
         if (k > 0)
@@ -373,19 +389,9 @@ ddouble cosq(ddouble a)
     if (iszeroq(a))
         return Q_ONE;
 
-    // approximately reduce modulo 2*pi
-    ddouble z = roundq(divqq(a, Q_2PI));
-    ddouble r = subqq(a, mulqq(Q_2PI, z));
-
-    // approximately reduce modulo pi/2 and then modulo pi/16.
-    ddouble t;
-    double q = floor(r.hi / Q_PI_2.hi + 0.5);
-    t = subqq(r, mulqd(Q_PI_2, q));
-    int j = (int)q;
-    q = floor(t.hi / _pi_16.hi + 0.5);
-    t = subqq(t, mulqd(_pi_16, q));
-    int k = (int)q;
-    int abs_k = abs(k);
+    int j, k;
+    ddouble t = mod_pi16(a, &j, &k);
+    int abs_j = abs(j), abs_k = abs(k);
 
     if (j < -2 || j > 2)
         return nanq();
@@ -406,7 +412,7 @@ ddouble cosq(ddouble a)
         }
     }
 
-    ddouble sin_x, cos_x;
+    ddouble sin_x, cos_x, r;
     sincos_taylor(t, &sin_x, &cos_x);
     ddouble u = _cos_table[abs_k - 1];
     ddouble v = _sin_table[abs_k - 1];
