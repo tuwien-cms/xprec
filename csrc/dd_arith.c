@@ -506,8 +506,8 @@ ddouble tanq(ddouble a)
     return divqq(s, c);
 }
 
-void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a) {
-
+void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a)
+{
     if (iszeroq(a)) {
         *sin_a = Q_ZERO;
         *cos_a = Q_ONE;
@@ -577,8 +577,8 @@ void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a) {
 
 }
 
-
-ddouble atan2qq(ddouble y, ddouble x) {
+ddouble atan2qq(ddouble y, ddouble x)
+{
     /* Strategy: Instead of using Taylor series to compute
         arctan, we instead use Newton's iteration to solve
         the equation
@@ -604,13 +604,11 @@ ddouble atan2qq(ddouble y, ddouble x) {
         return (ispositiveq(x)) ? Q_ZERO : Q_PI;
     }
 
-    if (equalqq(x, y)) {
+    if (equalqq(x, y))
         return (ispositiveq(y)) ? Q_PI_4: negq(Q_3PI_4);
-    }
 
-    if (equalqq(x, negq(y))) {
+    if (equalqq(x, negq(y)))
         return (ispositiveq(y)) ? Q_3PI_4 : negq(Q_PI_4);
-    }
 
     ddouble r = sqrtq(addqq(sqrq(x), sqrq(y)));
     ddouble xx = divqq(x, r);
@@ -634,101 +632,100 @@ ddouble atan2qq(ddouble y, ddouble x) {
   return z;
 }
 
-ddouble atan2dq(const double a, const ddouble b) {
+ddouble atan2dq(const double a, const ddouble b)
+{
     return atan2qq((ddouble){a, 0.}, b);
 }
 
-ddouble atan2qd(const ddouble a, const double b) {
+ddouble atan2qd(const ddouble a, const double b)
+{
     return atan2qq(a, (ddouble){b, 0.});
 }
 
-ddouble atanq(const ddouble a) {
+ddouble atanq(const ddouble a)
+{
     return atan2qq(a, Q_ONE);
 }
 
-ddouble acosq(const ddouble a) {
+ddouble acosq(const ddouble a)
+{
     ddouble abs_a = absq(a);
-
-    if (greaterqq(abs_a, Q_ONE)) {
+    if (greaterqq(abs_a, Q_ONE))
         return nanq();
-    }
-
-    if (isoneq(abs_a)) {
+    if (isoneq(abs_a))
         return (ispositiveq(a)) ? Q_ZERO : Q_PI;
-    }
 
     return atan2qq(sqrtq(subdq(1.0, sqrq(a))), a);
 }
 
-ddouble asinq(const ddouble a) {
+ddouble asinq(const ddouble a)
+{
     ddouble abs_a = absq(a);
-
-    if (greaterqd(abs_a, 1.0)) {
+    if (greaterqd(abs_a, 1.0))
         return nanq();
-    }
-
-    if (isoneq(abs_a)) {
+    if (isoneq(abs_a))
         return (ispositiveq(a)) ? Q_PI_2 : negq(Q_PI_2);
-    }
 
     return atan2qq(a, sqrtq(subdq(1.0, sqrq(a))));
 }
 
-ddouble asinhq(const ddouble a) {
+ddouble asinhq(const ddouble a)
+{
     return logq(addqq(a,sqrtq(addqd(sqrq(a),1.0))));
 }
 
-ddouble acoshq(const ddouble a) {
-    if (lessqd(a, 1.0)) {
+ddouble acoshq(const ddouble a)
+{
+    if (lessqd(a, 1.0))
         return nanq();
-    }
 
     return logq(addqq(a, sqrtq(subqd(sqrq(a), 1.0))));
 }
 
-ddouble atanhq(const ddouble a) {
-    if (equalqd(a, -1.0)) {
+ddouble atanhq(const ddouble a)
+{
+    if (equalqd(a, -1.0))
         return negq(infq());
-    } else if (isoneq(a)) {
+    if (isoneq(a))
         return infq();
-    } else if (greaterqd(absq(a), 1.0)) {
+    if (greaterqd(absq(a), 1.0))
         return nanq();
-    }
 
     return mul_pwr2(logq(divqq(adddq(1.0, a) , subdq(1.0, a))), 0.5);
 }
 
-ddouble powqq(const ddouble a, const ddouble b) {
-    if (iszeroq(a) && iszeroq(b)) {
+ddouble powqq(const ddouble a, const ddouble b)
+{
+    if (iszeroq(a) && iszeroq(b))
         return Q_ONE;
-    } else if (iszeroq(a) && !iszeroq(b)) {
+    if (iszeroq(a) && !iszeroq(b))
         return Q_ZERO;
-    } else {
-        return expq(mulqq(b, logq(a)));
-    }
+
+    return expq(mulqq(b, logq(a)));
 }
 
-ddouble powqd(const ddouble a, const double b) {
-    if (iszeroq(a) && b == 0) {
+ddouble powqd(const ddouble a, const double b)
+{
+    if (iszeroq(a) && b == 0)
         return Q_ONE;
-    } else if (iszeroq(a) && b != 0) {
+    if (iszeroq(a) && b != 0)
         return Q_ZERO;
-    } else {
-        return expq(muldq(b, logq(a)));
-    }
+
+    return expq(muldq(b, logq(a)));
 }
 
-ddouble powdq(const double a, const ddouble b) {
-    if (a == 0 && iszeroq(b)) {
+ddouble powdq(const double a, const ddouble b)
+{
+    if (a == 0 && iszeroq(b))
         return Q_ONE;
-    } else if (a == 0 && !iszeroq(b)) {
+    if (a == 0 && !iszeroq(b))
         return Q_ZERO;
-    } else {
-        return expq(mulqd(b, log(a)));
-    }
+
+    return expq(mulqd(b, log(a)));
 }
 
-ddouble modfqq(const ddouble a, ddouble *b) {
+ddouble modfqq(const ddouble a, ddouble *b)
+{
     if (isnegativeq(a)) {
         *b = ceilq(a);
     } else {
