@@ -595,41 +595,34 @@ ddouble atan2qq(ddouble y, ddouble x)
         If |x| > |y|, then first iteration is used since the
         denominator is larger.  Otherwise, the second is used.
     */
-
-    if (iszeroq(x)) {
-        if (iszeroq(y))
-            return Q_ZERO; /* Both x and y are zero. */
+    if (iszeroq(x) && iszeroq(y))
+        return Q_ZERO;
+    if (iszeroq(x))
         return (ispositiveq(y)) ? Q_PI_2 : negq(Q_PI_2);
-    } else if (iszeroq(y)) {
+    if (iszeroq(y))
         return (ispositiveq(x)) ? Q_ZERO : Q_PI;
-    }
-
     if (equalqq(x, y))
         return (ispositiveq(y)) ? Q_PI_4: negq(Q_3PI_4);
-
     if (equalqq(x, negq(y)))
         return (ispositiveq(y)) ? Q_3PI_4 : negq(Q_PI_4);
 
-    ddouble r = sqrtq(addqq(sqrq(x), sqrq(y)));
-    ddouble xx = divqq(x, r);
-    ddouble yy = divqq(y, r);
+    ddouble r = hypotqq(x, y);
+    x = divqq(x, r);
+    y = divqq(y, r);
 
     /* Compute double precision approximation to atan. */
     ddouble z = (ddouble){atan2(y.hi, x.hi), 0.};
     ddouble sin_z, cos_z;
 
-    if (fabs(xx.hi) > fabs(yy.hi)) {
+    sincosq(z, &sin_z, &cos_z);
+    if (fabs(x.hi) > fabs(y.hi)) {
         /* Use Newton iteration 1.  z' = z + (y - sin(z)) / cos(z)  */
-        sincosq(z, &sin_z, &cos_z);
-        z = addqq(z, divqq(subqq(yy, sin_z), cos_z));
+        z = addqq(z, divqq(subqq(y, sin_z), cos_z));
     } else {
-
         /* Use Newton iteration 2.  z' = z - (x - cos(z)) / sin(z)  */
-        sincosq(z, &sin_z, &cos_z);
-        z = subqq(z, divqq(subqq(xx, cos_z), sin_z));
+        z = subqq(z, divqq(subqq(x, cos_z), sin_z));
     }
-
-  return z;
+    return z;
 }
 
 ddouble atan2dq(const double a, const ddouble b)
