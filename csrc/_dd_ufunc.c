@@ -599,13 +599,12 @@ static int make_dtype()
     static void func(void *_from, void *_to, npy_intp n,             \
                      void *_arr_from, void *_arr_to)                 \
     {                                                                \
-        static const from_type SPLIT = (from_type)(1) << 32;         \
         ddouble *to = (ddouble *)_to;                                \
         const from_type *from = (const from_type *)_from;            \
         for (npy_intp i = 0; i < n; ++i) {                           \
-            from_type lo = from[i] % SPLIT;                          \
-            from_type hi = from[i] - lo;                             \
-            to[i] = two_sum(hi, lo);                                 \
+            double hi = from[i];                                     \
+            double lo = from[i] - (from_type) hi;                    \
+            to[i] = (ddouble){hi, lo};                               \
         }                                                            \
         MARK_UNUSED(_arr_from);                                      \
         MARK_UNUSED(_arr_to);                                        \

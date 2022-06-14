@@ -36,5 +36,8 @@ def test_i64():
     x = np.int64((1 << 62) + 1)
     assert x == x.astype(ddouble).astype(x.dtype)
 
+    y = -x
+    assert (y + 1) == (y.astype(ddouble) + 1).astype(x.dtype)
+
     x = x.astype(np.uint64)
     assert x == x.astype(ddouble).astype(x.dtype)
