@@ -586,21 +586,21 @@ void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a)
 ddouble atan2qq(ddouble y, ddouble x)
 {
     /* Strategy: Instead of using Taylor series to compute
-        arctan, we instead use Newton's iteration to solve
-        the equation
-
-            sin(z) = y/r    or    cos(z) = x/r
-
-        where r = sqrt(x^2 + y^2).
-        The iteration is given by
-
-            z' = z + (y - sin(z)) / cos(z)          (for equation 1)
-            z' = z - (x - cos(z)) / sin(z)          (for equation 2)
-
-        Here, x and y are normalized so that x^2 + y^2 = 1.
-        If |x| > |y|, then first iteration is used since the
-        denominator is larger.  Otherwise, the second is used.
-    */
+     * arctan, we instead use Newton's iteration to solve
+     * the equation
+     *
+     *     sin(z) = y/r    or    cos(z) = x/r
+     *
+     * where r = sqrt(x^2 + y^2).
+     * The iteration is given by
+     *
+     *     z' = z + (y - sin(z)) / cos(z)          (for equation 1)
+     *     z' = z - (x - cos(z)) / sin(z)          (for equation 2)
+     *
+     * Here, x and y are normalized so that x^2 + y^2 = 1.
+     * If |x| > |y|, then first iteration is used since the
+     * denominator is larger.  Otherwise, the second is used.
+     */
     if (iszeroq(x) && iszeroq(y))
         return Q_ZERO;
     if (iszeroq(x))
