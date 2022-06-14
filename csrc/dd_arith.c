@@ -217,9 +217,6 @@ ddouble logq(ddouble a)
     return x;
 }
 
-static const ddouble _pi_16 =
-    {1.963495408493620697e-01, 7.654042494670957545e-18};
-
 /* Table of sin(k * pi/16) and cos(k * pi/16). */
 static const ddouble _sin_table[] = {
     {1.950903220161282758e-01, -7.991079068461731263e-18},
@@ -290,14 +287,18 @@ static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
     }
 }
 
+/**
+ * To compute 2pi-periodic function, we reduce the argument `a` by
+ * choosing integers z, -2 <= j <= 2 and -4 <= k <= 4 such that:
+ *
+ *   a == z * (2*pi) + j * (pi/2) + k * (pi/16) + t,
+ *
+ * where `abs(t) <= pi/32`.
+ */
 static ddouble mod_pi16(ddouble a, int *j, int *k)
 {
-    /* To compute sin(x), we choose integers a, b so that
-     *
-     *   x = t + j * (pi/2) + k * (pi/16)
-     *
-     * and |t| <= pi/32.
-     */
+    static const ddouble pi_16 =
+        {1.963495408493620697e-01, 7.654042494670957545e-18};
 
     // approximately reduce modulo 2*pi
     ddouble z = roundq(divqq(a, Q_2PI));
@@ -309,12 +310,11 @@ static ddouble mod_pi16(ddouble a, int *j, int *k)
     *j = (int)q;
 
     // approximately reduce modulo pi/16.
-    q = floor(t.hi / _pi_16.hi + 0.5);
-    t = subqq(t, mulqd(_pi_16, q));
+    q = floor(t.hi / pi_16.hi + 0.5);
+    t = subqq(t, mulqd(pi_16, q));
     *k = (int)q;
     return t;
 }
-
 
 ddouble sinq(ddouble a)
 {
@@ -334,7 +334,7 @@ ddouble sinq(ddouble a)
 
     int j, k;
     ddouble t = mod_pi16(a, &j, &k);
-    int abs_j = abs(j), abs_k = abs(k);
+    int abs_k = abs(k);
 
     if (j < -2 || j > 2)
         return nanq();
@@ -391,7 +391,7 @@ ddouble cosq(ddouble a)
 
     int j, k;
     ddouble t = mod_pi16(a, &j, &k);
-    int abs_j = abs(j), abs_k = abs(k);
+    int abs_k = abs(k);
 
     if (j < -2 || j > 2)
         return nanq();
@@ -520,29 +520,11 @@ void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a)
         return;
     }
 
-    // approximately reduce modulo 2*pi
-    ddouble z = nintq(divqq(a, Q_2PI));
-    ddouble r = subqq(a, mulqq(Q_2PI, z));
+    int j, k;
+    ddouble t = mod_pi16(a, &j, &k);
+    int abs_j = abs(j), abs_k = abs(k);
 
-    // approximately reduce module pi/2 and pi/16
-    ddouble t;
-    double q = floor(r.hi / Q_PI_2.hi + 0.5);
-    t = subqq(r, mulqd(Q_PI_2, q));
-    int j = (int)(q);
-    int abs_j = abs(j);
-    q = floor(t.hi / Q_PI_16.hi + 0.5);
-    t = subqq(t, mulqd(Q_PI_16, q));
-    int k = (int)(q);
-    int abs_k = abs(k);
-
-    if (abs_j > 2) {
-        // dd_real::error("(dd_real::sincos): Cannot reduce modulo pi/2.");
-        *cos_a = *sin_a = nanq();
-        return;
-    }
-
-    if (abs_k > 4) {
-        // dd_real::error("(dd_real::sincos): Cannot reduce modulo pi/16.");
+    if (abs_j > 2 || abs_k > 4) {
         *cos_a = *sin_a = nanq();
         return;
     }
