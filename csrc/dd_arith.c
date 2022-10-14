@@ -23,7 +23,7 @@ ddouble _hypotqq_ordered(ddouble x, ddouble y)
 {
     // assume that x >= y >= 0
     // special cases
-    if (iszeroq(x))
+    if (iszeroq(y))
         return x;
 
     // if very large or very small, renormalize

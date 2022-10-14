@@ -100,7 +100,7 @@ static bool PyDDouble_Cast(PyObject *arg, ddouble *out)
     return !PyErr_Occurred();
 }
 
-PyObject* PyDDouble_New(PyTypeObject *type, PyObject *args, PyObject *kwds)
+static PyObject* PyDDouble_New(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     PyObject *arg = NULL;
     if (PyArg_ParseTuple(args, "O", &arg) < 0)
@@ -189,7 +189,7 @@ static int PyDDouble_Nonzero(PyObject* _x)
     return !(x.hi == 0);
 }
 
-PyObject* PyDDouble_RichCompare(PyObject* _x, PyObject* _y, int op)
+static PyObject* PyDDouble_RichCompare(PyObject* _x, PyObject* _y, int op)
 {
     ddouble x, y;
     if (!PyDDouble_Cast(_x, &x) || !PyDDouble_Cast(_y, &y))
@@ -222,7 +222,7 @@ PyObject* PyDDouble_RichCompare(PyObject* _x, PyObject* _y, int op)
     return PyBool_FromLong(result);
 }
 
-Py_hash_t PyDDouble_Hash(PyObject *_x)
+static Py_hash_t PyDDouble_Hash(PyObject *_x)
 {
     ddouble x = PyDDouble_Unwrap(_x);
 
@@ -232,7 +232,7 @@ Py_hash_t PyDDouble_Hash(PyObject *_x)
     return (Py_hash_t)(LONG_MAX * mantissa) + exp;
 }
 
-PyObject *PyDDouble_Str(PyObject *self)
+static PyObject *PyDDouble_Str(PyObject *self)
 {
     char out[200];
     ddouble x = PyDDouble_Unwrap(self);
@@ -240,7 +240,7 @@ PyObject *PyDDouble_Str(PyObject *self)
     return PyUnicode_FromString(out);
 }
 
-PyObject *PyDDouble_Repr(PyObject *self)
+static PyObject *PyDDouble_Repr(PyObject *self)
 {
     char out[200];
     ddouble x = PyDDouble_Unwrap(self);
@@ -248,7 +248,7 @@ PyObject *PyDDouble_Repr(PyObject *self)
     return PyUnicode_FromString(out);
 }
 
-PyObject *PyDDoubleGetFinfo(PyObject *self, PyObject *_dummy)
+static PyObject *PyDDoubleGetFinfo(PyObject *self, PyObject *_dummy)
 {
     Py_INCREF(pyddouble_finfo);
     return pyddouble_finfo;
@@ -256,7 +256,7 @@ PyObject *PyDDoubleGetFinfo(PyObject *self, PyObject *_dummy)
     MARK_UNUSED(_dummy);
 }
 
-int make_ddouble_type()
+static int make_ddouble_type()
 {
     static PyNumberMethods ddouble_as_number = {
         .nb_add = PyDDouble_Add,
@@ -1010,7 +1010,7 @@ static int register_ufuncs()
     return ok ? 0 : -1;
 }
 
-int register_dtype_in_dicts()
+static int register_dtype_in_dicts()
 {
     PyObject *type_dict = NULL;
 
@@ -1029,7 +1029,7 @@ error:
 
 /* ----------------------- Python stuff -------------------------- */
 
-PyObject *make_module()
+static PyObject *make_module()
 {
     // Defitions
     static PyMethodDef no_methods[] = {
