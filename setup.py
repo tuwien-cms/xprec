@@ -210,7 +210,7 @@ setup(
         'numpy>=1.16',
         ],
     extras_require={
-        'test': ['pytest'],
+        'test': ['pytest', 'mpmath'],
         },
 
     ext_modules=[
