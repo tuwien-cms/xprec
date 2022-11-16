@@ -93,42 +93,41 @@ static const ddouble _inv_fact[] = {
  */
 static ddouble _exp_reduced(ddouble a, int *m)
 {
-    /* Strategy:  We first reduce the size of x by noting that
-     *
-     *     exp(k * r + m * log(2)) = 2^m * exp(r)^k
-     *
-     * where m and k are integers.  By choosing m appropriately
-     * we can make |k * r| <= log(2) / 2 = 0.347.
-     */
+    // Strategy:  We first reduce the size of x by noting that
+    //
+    //     exp(k * r + m * log(2)) = 2^m * exp(r)^k
+    //
+    // where m and k are integers.  By choosing m appropriately
+    // we can make |k * r| <= log(2) / 2 = 0.347.
     const double k = 512.0;
     const double inv_k = 1.0 / k;
     double mm = floor(a.hi / Q_LOG2.hi + 0.5);
     ddouble r = mul_pwr2(subqq(a, mulqd(Q_LOG2, mm)), inv_k);
     *m = (int)mm;
 
-    /* Now, evaluate exp(r) using the familiar Taylor series.  Reducing the
-     * argument substantially speeds up the convergence.  First, we compute
-     * terms of order 1 and 2 and add it to the sum
-     */
-    ddouble sum, term, rpower;
-    rpower = sqrq(r);
-    sum = addqq(r, mul_pwr2(rpower, 0.5));
+    // Now, evaluate exp(r) using the Taylor series, since reducing
+    // the argument substantially speeds up the convergence.  We omit order 0
+    // and start at order 1:
+    ddouble rpower = r;
+    ddouble term = r;
+    ddouble sum = term;
 
-    /* Next, compute terms of order 3 and up */
-    rpower = mulqq(rpower, r);
-    term = mulqq(rpower, _inv_fact[0]);
-    int i = 0;
-    do {
-        sum = addqq(sum, term);
-        rpower = mulqq(rpower, r);
-        ++i;
-        term = mulqq(rpower, _inv_fact[i]);
-    } while (fabs(term.hi) > inv_k * Q_EPS.hi && i < 5);
+    // Order 2
+    rpower = sqrq(r);
+    term = mul_pwr2(rpower, 0.5);
     sum = addqq(sum, term);
 
-    /* We now have that approximately exp(r) == 1 + sum.  Raise that to
-     * the m'th (512) power by squaring the binomial nine times
-     */
+    // Order 3 and up
+    for (int i = 0; i < 6; i++) {
+        rpower = mulqq(rpower, r);
+        term = mulqq(rpower, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= inv_k * Q_EPS.hi)
+            break;
+    }
+
+    // We now have that approximately exp(r) == 1 + sum.  Raise that to
+    // the m'th (512) power by squaring the binomial nine times
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
