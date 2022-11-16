@@ -233,24 +233,24 @@ static const ddouble _cos_table[] = {
 
 static ddouble sin_taylor(ddouble a)
 {
+    // Use the Taylor series a - a^3/3! + a^5/5! + ...
     const double thresh = 0.5 * fabs(a.hi) * Q_EPS.hi;
-    ddouble r, s, t, x;
+    const ddouble minus_asquared = negq(sqrq(a));
 
-    if (iszeroq(a))
-        return Q_ZERO;
+    // First order:
+    ddouble apow = a;
+    ddouble term = a;
+    ddouble sum = a;
 
-    int i = 0;
-    x = negq(sqrq(a));
-    s = a;
-    r = a;
-    do {
-        r = mulqq(r, x);
-        t = mulqq(r, _inv_fact[i]);
-        s = addqq(s, t);
-        i += 2;
-    } while (i < _n_inv_fact && fabs(t.hi) > thresh);
-
-    return s;
+    // Subsequent orders:
+    for (int i = 0; i < _n_inv_fact; i += 2) {
+        apow = mulqq(apow, minus_asquared);
+        term = mulqq(apow, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= thresh)
+            break;
+    }
+    return sum;
 }
 
 static ddouble cos_taylor(ddouble a)
