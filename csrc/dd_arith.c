@@ -63,9 +63,12 @@ ddouble sqrtq(ddouble a)
     return two_sum(ax, diff);
 }
 
-/* Inverse Factorials from 1/3!, 1/4!, asf. */
-static int _n_inv_fact = 15;
+/* Inverse Factorials from 1/0!, 1/1!, 1/2!, asf. */
+static int _n_inv_fact = 18;
 static const ddouble _inv_fact[] = {
+    {1.00000000000000000e+00, 0.00000000000000000e+00},
+    {1.00000000000000000e+00, 0.00000000000000000e+00},
+    {5.00000000000000000e-01, 0.00000000000000000e+00},
     {1.66666666666666657e-01, 9.25185853854297066e-18},
     {4.16666666666666644e-02, 2.31296463463574266e-18},
     {8.33333333333333322e-03, 1.15648231731787138e-19},
@@ -93,42 +96,41 @@ static const ddouble _inv_fact[] = {
  */
 static ddouble _exp_reduced(ddouble a, int *m)
 {
-    /* Strategy:  We first reduce the size of x by noting that
-     *
-     *     exp(k * r + m * log(2)) = 2^m * exp(r)^k
-     *
-     * where m and k are integers.  By choosing m appropriately
-     * we can make |k * r| <= log(2) / 2 = 0.347.
-     */
+    // Strategy:  We first reduce the size of x by noting that
+    //
+    //     exp(k * r + m * log(2)) = 2^m * exp(r)^k
+    //
+    // where m and k are integers.  By choosing m appropriately
+    // we can make |k * r| <= log(2) / 2 = 0.347.
     const double k = 512.0;
     const double inv_k = 1.0 / k;
     double mm = floor(a.hi / Q_LOG2.hi + 0.5);
     ddouble r = mul_pwr2(subqq(a, mulqd(Q_LOG2, mm)), inv_k);
     *m = (int)mm;
 
-    /* Now, evaluate exp(r) using the familiar Taylor series.  Reducing the
-     * argument substantially speeds up the convergence.  First, we compute
-     * terms of order 1 and 2 and add it to the sum
-     */
-    ddouble sum, term, rpower;
-    rpower = sqrq(r);
-    sum = addqq(r, mul_pwr2(rpower, 0.5));
+    // Now, evaluate exp(r) using the Taylor series, since reducing
+    // the argument substantially speeds up the convergence.  We omit order 0
+    // and start at order 1:
+    ddouble rpower = r;
+    ddouble term = r;
+    ddouble sum = term;
 
-    /* Next, compute terms of order 3 and up */
-    rpower = mulqq(rpower, r);
-    term = mulqq(rpower, _inv_fact[0]);
-    int i = 0;
-    do {
-        sum = addqq(sum, term);
-        rpower = mulqq(rpower, r);
-        ++i;
-        term = mulqq(rpower, _inv_fact[i]);
-    } while (fabs(term.hi) > inv_k * Q_EPS.hi && i < 5);
+    // Order 2
+    rpower = sqrq(r);
+    term = mul_pwr2(rpower, 0.5);
     sum = addqq(sum, term);
 
-    /* We now have that approximately exp(r) == 1 + sum.  Raise that to
-     * the m'th (512) power by squaring the binomial nine times
-     */
+    // Order 3 and up
+    for (int i = 3; i < 9; i++) {
+        rpower = mulqq(rpower, r);
+        term = mulqq(rpower, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= inv_k * Q_EPS.hi)
+            break;
+    }
+
+    // We now have that approximately exp(r) == 1 + sum.  Raise that to
+    // the m'th (512) power by squaring the binomial nine times
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
     sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
@@ -234,46 +236,46 @@ static const ddouble _cos_table[] = {
 
 static ddouble sin_taylor(ddouble a)
 {
+    // Use the Taylor series a - a^3/3! + a^5/5! + ...
     const double thresh = 0.5 * fabs(a.hi) * Q_EPS.hi;
-    ddouble r, s, t, x;
+    const ddouble minus_asquared = negq(sqrq(a));
 
-    if (iszeroq(a))
-        return Q_ZERO;
+    // First order:
+    ddouble apow = a;
+    ddouble term = a;
+    ddouble sum = a;
 
-    int i = 0;
-    x = negq(sqrq(a));
-    s = a;
-    r = a;
-    do {
-        r = mulqq(r, x);
-        t = mulqq(r, _inv_fact[i]);
-        s = addqq(s, t);
-        i += 2;
-    } while (i < _n_inv_fact && fabs(t.hi) > thresh);
-
-    return s;
+    // Subsequent orders:
+    for (int i = 3; i < _n_inv_fact; i += 2) {
+        apow = mulqq(apow, minus_asquared);
+        term = mulqq(apow, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= thresh)
+            break;
+    }
+    return sum;
 }
 
 static ddouble cos_taylor(ddouble a)
 {
+    // Use Taylor series 1 - x^2/2! + x^4/4! + ...
     const double thresh = 0.5 * Q_EPS.hi;
-    ddouble r, s, t, x;
+    const ddouble minus_asquared = negq(sqrq(a));
 
-    if (iszeroq(a))
-        return Q_ONE;
+    // Zeroth and second order:
+    ddouble apow = minus_asquared;
+    ddouble term = mul_pwr2(apow, 0.5);
+    ddouble sum = adddq(1.0, term);
 
-    x = negq(sqrq(a));
-    r = x;
-    s = adddq(1.0, mul_pwr2(r, 0.5));
-    int i = 1;
-    do {
-        r = mulqq(r, x);
-        t = mulqq(r, _inv_fact[i]);
-        s = addqq(s, t);
-        i += 2;
-    } while (i < _n_inv_fact && fabs(t.hi) > thresh);
-
-    return s;
+    // From fourth order:
+    for (int i = 4; i < _n_inv_fact; i += 2) {
+        apow = mulqq(apow, minus_asquared);
+        term = mulqq(apow, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= thresh)
+            break;
+    }
+    return sum;
 }
 
 static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
@@ -455,22 +457,25 @@ ddouble sinhq(ddouble a)
         return mul_pwr2(subqq(ea, reciprocalq(ea)), 0.5);
     }
 
-    /* since a is small, using the above formula gives
-     * a lot of cancellation.  So use Taylor series.
-     */
-    ddouble s = a;
-    ddouble t = a;
-    ddouble r = sqrq(t);
-    double m = 1.0;
-    double thresh = fabs((a.hi) * Q_EPS.hi);
+    // When a is small, using the above formula gives a lot of cancellation.
+    // Use Taylor series: x + x^3/3! + x^5/5! + ...
+    const ddouble asquared = sqrq(a);
+    const double thresh = fabs(a.hi) * Q_EPS.hi;
 
-    do {
-        m += 2.0;
-        t = mulqq(t, r);
-        t = divqd(t, (m - 1) * m);
-        s = addqq(s, t);
-    } while (absq(t).hi > thresh);
-    return s;
+    // First order:
+    ddouble apower = a;
+    ddouble sum = a;
+    ddouble term = a;
+
+    // From third order:
+    for (int i = 3; i < _n_inv_fact; i += 2) {
+        apower = mulqq(apower, asquared);
+        term = mulqq(apower, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= thresh)
+            break;
+    }
+    return sum;
 }
 
 ddouble coshq(ddouble a)
