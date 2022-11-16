@@ -457,22 +457,25 @@ ddouble sinhq(ddouble a)
         return mul_pwr2(subqq(ea, reciprocalq(ea)), 0.5);
     }
 
-    /* since a is small, using the above formula gives
-     * a lot of cancellation.  So use Taylor series.
-     */
-    ddouble s = a;
-    ddouble t = a;
-    ddouble r = sqrq(t);
-    double m = 1.0;
-    double thresh = fabs((a.hi) * Q_EPS.hi);
+    // When a is small, using the above formula gives a lot of cancellation.
+    // Use Taylor series: x + x^3/3! + x^5/5! + ...
+    const ddouble asquared = sqrq(a);
+    const double thresh = fabs(a.hi) * Q_EPS.hi;
 
-    do {
-        m += 2.0;
-        t = mulqq(t, r);
-        t = divqd(t, (m - 1) * m);
-        s = addqq(s, t);
-    } while (absq(t).hi > thresh);
-    return s;
+    // First order:
+    ddouble apower = a;
+    ddouble sum = a;
+    ddouble term = a;
+
+    // From third order:
+    for (int i = 3; i < _n_inv_fact; i += 2) {
+        apower = mulqq(apower, asquared);
+        term = mulqq(apower, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= thresh)
+            break;
+    }
+    return sum;
 }
 
 ddouble coshq(ddouble a)
