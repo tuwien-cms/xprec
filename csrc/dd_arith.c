@@ -255,24 +255,24 @@ static ddouble sin_taylor(ddouble a)
 
 static ddouble cos_taylor(ddouble a)
 {
+    // Use Taylor series 1 - x^2/2! + x^4/4! + ...
     const double thresh = 0.5 * Q_EPS.hi;
-    ddouble r, s, t, x;
+    const ddouble minus_asquared = negq(sqrq(a));
 
-    if (iszeroq(a))
-        return Q_ONE;
+    // Zeroth and second order:
+    ddouble apow = minus_asquared;
+    ddouble term = mul_pwr2(apow, 0.5);
+    ddouble sum = adddq(1.0, term);
 
-    x = negq(sqrq(a));
-    r = x;
-    s = adddq(1.0, mul_pwr2(r, 0.5));
-    int i = 1;
-    do {
-        r = mulqq(r, x);
-        t = mulqq(r, _inv_fact[i]);
-        s = addqq(s, t);
-        i += 2;
-    } while (i < _n_inv_fact && fabs(t.hi) > thresh);
-
-    return s;
+    // From fourth order:
+    for (int i = 1; i < _n_inv_fact; i += 2) {
+        apow = mulqq(apow, minus_asquared);
+        term = mulqq(apow, _inv_fact[i]);
+        sum = addqq(sum, term);
+        if (fabs(term.hi) <= thresh)
+            break;
+    }
+    return sum;
 }
 
 static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
