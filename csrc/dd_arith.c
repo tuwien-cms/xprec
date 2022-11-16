@@ -63,9 +63,12 @@ ddouble sqrtq(ddouble a)
     return two_sum(ax, diff);
 }
 
-/* Inverse Factorials from 1/3!, 1/4!, asf. */
-static int _n_inv_fact = 15;
+/* Inverse Factorials from 1/0!, 1/1!, 1/2!, asf. */
+static int _n_inv_fact = 18;
 static const ddouble _inv_fact[] = {
+    {1.00000000000000000e+00, 0.00000000000000000e+00},
+    {1.00000000000000000e+00, 0.00000000000000000e+00},
+    {5.00000000000000000e-01, 0.00000000000000000e+00},
     {1.66666666666666657e-01, 9.25185853854297066e-18},
     {4.16666666666666644e-02, 2.31296463463574266e-18},
     {8.33333333333333322e-03, 1.15648231731787138e-19},
@@ -118,7 +121,7 @@ static ddouble _exp_reduced(ddouble a, int *m)
     sum = addqq(sum, term);
 
     // Order 3 and up
-    for (int i = 0; i < 6; i++) {
+    for (int i = 3; i < 9; i++) {
         rpower = mulqq(rpower, r);
         term = mulqq(rpower, _inv_fact[i]);
         sum = addqq(sum, term);
@@ -243,7 +246,7 @@ static ddouble sin_taylor(ddouble a)
     ddouble sum = a;
 
     // Subsequent orders:
-    for (int i = 0; i < _n_inv_fact; i += 2) {
+    for (int i = 3; i < _n_inv_fact; i += 2) {
         apow = mulqq(apow, minus_asquared);
         term = mulqq(apow, _inv_fact[i]);
         sum = addqq(sum, term);
@@ -265,7 +268,7 @@ static ddouble cos_taylor(ddouble a)
     ddouble sum = adddq(1.0, term);
 
     // From fourth order:
-    for (int i = 1; i < _n_inv_fact; i += 2) {
+    for (int i = 4; i < _n_inv_fact; i += 2) {
         apow = mulqq(apow, minus_asquared);
         term = mulqq(apow, _inv_fact[i]);
         sum = addqq(sum, term);
