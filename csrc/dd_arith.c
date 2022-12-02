@@ -1,11 +1,11 @@
 /* Double-double arithmetic library
  *
  * Part of the functions are copied from the QD library for U.C. Berkeley
- * and licensed BSD.
+ * and licensed modified BSD (see QD-LICENSE.txt)
  *
  * Copyright (C) 2012 Yozo Hida, Xiaoye S. Li, David H. Bailey
  * Copyright (C) 2021 Markus Wallerberger and others
- * SPDX-License-Identifier: MIT, BSD
+ * SPDX-License-Identifier: MIT and Modified-BSD
  */
 #include "./dd_arith.h"
 #include <math.h>
