@@ -40,4 +40,4 @@ Licensed under the MIT license (see LICENSE.txt).
 
 Contains code from the QD library, which is
 Copyright (C) 2012 Yozo Hida, Xiaoye S. Li, David H. Bailey.
-Released under the BSD license.
+Released under a modified BSD license (see QD-LICENSE.txt).
