@@ -1,11 +1,15 @@
 /* Double-double arithmetic library
  *
- * Part of the functions are copied from the QD library for U.C. Berkeley
- * and licensed BSD.
+ * Part of the functions are modified from the QD library for U.C. Berkeley
+ * and licensed under a modified BSD license (see QD-LICENSE.txt)
+ *
+ * Some of the algorithms were updated according to the findings in
+ * M. Joldes, et al., ACM Trans. Math. Softw. 44, 1-27 (2018)
+ * (Algorithm numbers in the code)
  *
  * Copyright (C) 2012 Yozo Hida, Xiaoye S. Li, David H. Bailey
  * Copyright (C) 2021 Markus Wallerberger and others
- * SPDX-License-Identifier: MIT, BSD
+ * SPDX-License-Identifier: MIT and Modified-BSD
  */
 #pragma once
 #include <math.h>
