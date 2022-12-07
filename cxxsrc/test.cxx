@@ -17,4 +17,5 @@ int main()
     if (z < std::numeric_limits<DDouble>::epsilon()) {
         std::cout << "Small!";
     }
+    //z = sin(z);
 }

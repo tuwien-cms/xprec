@@ -30,24 +30,30 @@ public:
     constexpr DDouble(std::uint32_t x) : _hi(x), _lo(0.0) { }
 
     /**
-     * Construct ddouble from hi and low part.
+     * Construct DDouble from hi and low part.
      * You MUST ensure that abs(hi) > epsilon * abs(lo).
      */
     constexpr DDouble(double hi, double lo) : _hi(hi), _lo(lo) { }
 
-    /** Perform ddouble-accurate sum of two doubles */
+    /** Perform DDouble-accurate sum of two doubles */
     static DDouble sum(double a, double b);
 
-    /** Perform ddouble-accurate product of two doubles */
+    /** Perform DDouble-accurate product of two doubles */
     static DDouble product(double a, double b);
 
-    /** Get high part of the ddouble */
+    /** Perform DDouble-accurate reciprocal (1/x) of a double x */
+    static DDouble reciprocal(double a);
+
+    /** Perform DDouble-accurate square root of a double x */
+    static DDouble sqrt(double a);
+
+    /** Get high part of the DDouble */
     constexpr double hi() const { return _hi; }
 
-    /** Get low part of the ddouble */
+    /** Get low part of the DDouble */
     constexpr double lo() const { return _lo; }
 
-    /** Convert ddouble to different type */
+    /** Convert DDouble to different type */
     template <typename T>
     constexpr T as() const;
 
@@ -103,6 +109,34 @@ private:
     double _hi;
     double _lo;
 };
+
+// C++ forbids overloading functions in the std namespace, which is why we
+// define it outside of that.
+//
+// Type-generic code should use argument-dependent lookup (ADL), i.e., use
+// "using std::sin" and then call "sin".
+
+DDouble acos(DDouble a);
+DDouble acosh(DDouble a);
+DDouble asin(DDouble a);
+DDouble asinh(DDouble a);
+DDouble atan(DDouble a);
+DDouble atan2(DDouble a, DDouble b);
+DDouble atanh(DDouble a);
+DDouble cos(DDouble a);
+DDouble cosh(DDouble a);
+DDouble exp(DDouble a);
+DDouble expm1(DDouble a);
+DDouble modf(DDouble a, DDouble *b);
+DDouble hypot(DDouble a, DDouble b);
+DDouble ldexp(DDouble a, int m);
+DDouble log(DDouble a);
+DDouble pow(DDouble a, DDouble b);
+DDouble sin(DDouble a);
+DDouble sinh(DDouble a);
+DDouble sqrt(DDouble a);
+DDouble tan(DDouble a);
+DDouble tanh(DDouble a);
 
 namespace std {
 
@@ -188,6 +222,22 @@ inline DDouble DDouble::product(double a, double b)
     double pi = a * b;
     double rho = std::fma(a, b, -pi);
     return DDouble(pi, rho);
+}
+
+inline DDouble DDouble::reciprocal(double a)
+{
+    // Lifted from DoubleFloats.jl
+    double hi = 1 / a;
+    double lo = std::fma(-hi, a, 1.0) / a;
+    return DDouble(hi, lo);
+}
+
+inline DDouble DDouble::sqrt(double a)
+{
+    // Lifted from DoubleFloats.jl
+    double hi = std::sqrt(a);
+    double lo = std::fma(-hi, hi, a) / (2 * hi);
+    return DDouble(hi, lo);
 }
 
 inline DDouble operator+(DDouble x, double y)
@@ -291,6 +341,33 @@ inline constexpr long double DDouble::as<long double>() const
 template <> inline constexpr double DDouble::as<double>() const { return hi(); }
 template <> inline constexpr float DDouble::as<float>() const { return hi(); }
 
+inline DDouble ldexp(DDouble a, int n)
+{
+    return DDouble(std::ldexp(a.hi(), n), std::ldexp(a.lo(), n));
+}
+
+inline bool signbit(DDouble a)
+{
+    return std::signbit(a.hi());
+}
+
+inline DDouble copysign(DDouble mag, double sgn)
+{
+    // The sign is determined by the hi part, however, the sign of hi and lo
+    // need not be the same, so we cannot merely broadcast copysign to both
+    // parts.
+    return signbit(mag) != std::signbit(sgn) ? -mag : mag;
+}
+
+inline DDouble copysign(DDouble mag, DDouble sgn)
+{
+    return copysign(mag, sgn.hi());
+}
+
+inline DDouble copysign(double mag, DDouble sgn)
+{
+    return DDouble(std::copysign(mag, sgn.hi()));
+}
 
 constexpr DDouble std::numeric_limits<DDouble>::min() noexcept
 {
@@ -341,5 +418,3 @@ constexpr DDouble std::numeric_limits<DDouble>::denorm_min() noexcept
 {
     return DDouble(_double::denorm_min());
 }
-
-//} /* namespace std */
