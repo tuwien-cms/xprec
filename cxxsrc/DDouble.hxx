@@ -1,3 +1,11 @@
+/* Small double-double arithmetic library.
+ *
+ * Most of the basic numerical algorithms are directly lifted from:
+ * M. Joldes, et al., ACM Trans. Math. Softw. 44, 1-27 (2018)
+ *
+ * Copyright (C) 2022 Markus Wallerberger and others
+ * SPDX-License-Identifier: MIT
+ */
 #pragma once
 #include <cmath>
 #include <cstdint>
@@ -21,6 +29,12 @@ public:
     constexpr DDouble(std::int32_t x) : _hi(x), _lo(0.0) { }
     constexpr DDouble(std::uint32_t x) : _hi(x), _lo(0.0) { }
 
+    /**
+     * Construct ddouble from hi and low part.
+     * You MUST ensure that abs(hi) > epsilon * abs(lo).
+     */
+    constexpr DDouble(double hi, double lo) : _hi(hi), _lo(lo) { }
+
     /** Perform ddouble-accurate sum of two doubles */
     static DDouble sum(double a, double b);
 
@@ -35,7 +49,7 @@ public:
 
     /** Convert ddouble to different type */
     template <typename T>
-    constexpr T as();
+    constexpr T as() const;
 
     friend DDouble operator+(DDouble x, double y);
     friend DDouble operator+(DDouble x, DDouble y);
@@ -83,15 +97,11 @@ public:
     friend bool operator> (double x, DDouble y) { return DDouble(x) > y; }
 
 protected:
-    constexpr DDouble(double hi, double lo) : _hi(hi), _lo(lo) { }
-
     static DDouble fast_sum(double a, double b);
 
 private:
     double _hi;
     double _lo;
-
-    friend class std::numeric_limits<DDouble>;
 };
 
 namespace std {
@@ -145,13 +155,14 @@ public:
     static constexpr bool traps = false;
     static constexpr bool tinyness_before = false;
 };
+} /* namespace std */
 
-}
 
 // ======================== Implementation ===========================
 
 inline DDouble DDouble::fast_sum(double a, double b)
 {
+    // M. Joldes, et al., ACM Trans. Math. Softw. 44, 1-27 (2018)
     // Algorithm 1: cost 3 flops
     double s = a + b;
     double z = s - a;
@@ -272,18 +283,16 @@ inline bool operator>(DDouble x, DDouble y)
 }
 
 template <>
-constexpr long double DDouble::as<long double>()
+inline constexpr long double DDouble::as<long double>() const
 {
     return (long double) hi() + lo();
 }
 
-template <> constexpr double DDouble::as<double>() { return hi(); }
-template <> constexpr float DDouble::as<float>() { return hi(); }
+template <> inline constexpr double DDouble::as<double>() const { return hi(); }
+template <> inline constexpr float DDouble::as<float>() const { return hi(); }
 
 
-namespace std {
-
-constexpr DDouble numeric_limits<DDouble>::min() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::min() noexcept
 {
     // Whereas the maximum exponent is the same for double and DDouble,
     // Denormalization in the low part means that the min exponent for
@@ -291,46 +300,46 @@ constexpr DDouble numeric_limits<DDouble>::min() noexcept
     return DDouble(_double::min() / _double::epsilon());
 }
 
-constexpr DDouble numeric_limits<DDouble>::max() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::max() noexcept
 {
     return DDouble(_double::max(),
                     _double::max() / _double::epsilon() / _double::radix);
 }
 
-constexpr DDouble numeric_limits<DDouble>::lowest() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::lowest() noexcept
 {
     return DDouble(_double::lowest(),
                     _double::lowest() / _double::epsilon() / _double::radix);
 }
 
-constexpr DDouble numeric_limits<DDouble>::epsilon() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::epsilon() noexcept
 {
     return DDouble(_double::epsilon() * _double::epsilon() / _double::radix);
 }
 
-constexpr DDouble numeric_limits<DDouble>::round_error() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::round_error() noexcept
 {
     return DDouble(_double::round_error());
 }
 
-constexpr DDouble numeric_limits<DDouble>::infinity() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::infinity() noexcept
 {
     return DDouble(_double::infinity(), _double::infinity());
 }
 
-constexpr DDouble numeric_limits<DDouble>::quiet_NaN() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::quiet_NaN() noexcept
 {
     return DDouble(_double::quiet_NaN(), _double::quiet_NaN());
 }
 
-constexpr DDouble numeric_limits<DDouble>::signaling_NaN() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::signaling_NaN() noexcept
 {
     return DDouble(_double::signaling_NaN(), _double::signaling_NaN());
 }
 
-constexpr DDouble numeric_limits<DDouble>::denorm_min() noexcept
+constexpr DDouble std::numeric_limits<DDouble>::denorm_min() noexcept
 {
     return DDouble(_double::denorm_min());
 }
 
-} /* namespace std */
+//} /* namespace std */

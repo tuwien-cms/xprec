@@ -6,7 +6,7 @@ int main()
 {
     DDouble x(3.0f);
     x += 1;
-    std::cout << x.as<float>() << std::endl;
+    std::cout << x.as<double>() << std::endl;
 
     long double y = 1.00000000000000001L;
     DDouble z(y);
