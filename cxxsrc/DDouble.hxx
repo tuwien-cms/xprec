@@ -2,22 +2,40 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 
+/**
+ * Class for double-double arithmetic.
+ *
+ * Emulates quadruple precision with a pair of doubles.  This roughly doubles
+ * the mantissa bits (and thus squares the precision of double).  The range
+ * is almost the same as double, with a larger area of denormalized numbers.
+ */
 class DDouble {
-private:
-    double _hi;
-    double _lo;
-
 public:
-    constexpr DDouble() : _hi(0.0), _lo(0.0) { }
-
+    constexpr DDouble(double x=0) : _hi(x), _lo(0.0) { }
     constexpr DDouble(long double x) : _hi(x), _lo(x - _hi) { }
 
-    constexpr DDouble(double x) : _hi(x), _lo(0.0) { }
+    constexpr DDouble(std::int64_t x) : _hi(x), _lo(x - _hi) { }
+    constexpr DDouble(std::uint64_t x) : _hi(x), _lo(x - _hi) { }
+    constexpr DDouble(std::int32_t x) : _hi(x), _lo(0.0) { }
+    constexpr DDouble(std::uint32_t x) : _hi(x), _lo(0.0) { }
 
+    /** Perform ddouble-accurate sum of two doubles */
+    static DDouble sum(double a, double b);
+
+    /** Perform ddouble-accurate product of two doubles */
+    static DDouble product(double a, double b);
+
+    /** Get high part of the ddouble */
     constexpr double hi() const { return _hi; }
 
+    /** Get low part of the ddouble */
     constexpr double lo() const { return _lo; }
+
+    /** Convert ddouble to different type */
+    template <typename T>
+    constexpr T as();
 
     friend DDouble operator+(DDouble x, double y);
     friend DDouble operator+(DDouble x, DDouble y);
@@ -64,26 +82,73 @@ public:
     friend bool operator>=(double x, DDouble y) { return DDouble(x) >= y; }
     friend bool operator> (double x, DDouble y) { return DDouble(x) > y; }
 
-    operator long double () const { return _to_float<long double>(); }
-    operator double () const { return _to_float<double>(); }
-    operator float () const { return _to_float<float>(); }
-
-    operator bool () const { return (bool) hi(); }
-
-    static DDouble sum(double a, double b);
-
-    static DDouble product(double a, double b);
-
 protected:
     constexpr DDouble(double hi, double lo) : _hi(hi), _lo(lo) { }
 
     static DDouble fast_sum(double a, double b);
 
 private:
-    template <typename T> T _to_float() const;
+    double _hi;
+    double _lo;
 
     friend class std::numeric_limits<DDouble>;
 };
+
+namespace std {
+
+/**
+ * Specialization of numerical limits for the double-double type.
+ */
+template <>
+class numeric_limits<DDouble> {
+    using _double = numeric_limits<double>;
+
+public:
+    static constexpr bool is_specialized = true;
+    static constexpr bool is_signed = true;
+    static constexpr bool is_integer = false;
+    static constexpr bool is_exact = false;
+
+    static constexpr bool has_infinity = _double::has_infinity;
+    static constexpr bool has_quiet_NaN = _double::has_quiet_NaN;
+    static constexpr bool has_signaling_NaN = _double::has_signaling_NaN;
+    static constexpr float_denorm_style has_denorm = _double::has_denorm;
+    static constexpr bool has_denorm_loss = false;
+
+    static constexpr float_round_style round_style = _double::round_style;
+    static constexpr int digits = 2 * _double::digits + 1;
+    static constexpr int digits10 = 2 * _double::digits10;
+    static constexpr int max_digits10 = 2 * _double::max_digits10;
+
+    static constexpr int radix = _double::radix;
+
+    static constexpr int min_exponent = _double::min_exponent + _double::digits;
+    static constexpr int min_exponent10 = _double::min_exponent10 + _double::digits10;
+    static constexpr int max_exponent = _double::max_exponent;
+    static constexpr int max_exponent10 = _double::max_exponent10;
+
+    static constexpr DDouble min() noexcept;
+    static constexpr DDouble max() noexcept;
+    static constexpr DDouble lowest() noexcept;
+    static constexpr DDouble epsilon() noexcept;
+    static constexpr DDouble round_error() noexcept;
+
+    static constexpr DDouble infinity() noexcept;
+    static constexpr DDouble quiet_NaN() noexcept;
+    static constexpr DDouble signaling_NaN() noexcept;
+    static constexpr DDouble denorm_min() noexcept;
+
+    static constexpr bool is_bounded = numeric_limits<double>::is_bounded;
+    static constexpr bool is_iec559 = false;
+    static constexpr bool is_modulo = false;
+
+    static constexpr bool traps = false;
+    static constexpr bool tinyness_before = false;
+};
+
+}
+
+// ======================== Implementation ===========================
 
 inline DDouble DDouble::fast_sum(double a, double b)
 {
@@ -206,82 +271,66 @@ inline bool operator>(DDouble x, DDouble y)
     return x.hi() > y.hi() || (x.hi() == y.hi() && x.lo() > y.lo());
 }
 
-template <typename T>
-inline T DDouble::_to_float() const
+template <>
+constexpr long double DDouble::as<long double>()
 {
-    return sizeof(T) > sizeof(double) ? T(_hi) + _lo : T(_hi);
+    return (long double) hi() + lo();
 }
+
+template <> constexpr double DDouble::as<double>() { return hi(); }
+template <> constexpr float DDouble::as<float>() { return hi(); }
+
 
 namespace std {
 
-template <>
-class numeric_limits<DDouble> {
-    using _double = numeric_limits<double>;
-
-public:
-    static constexpr bool is_specialized = true;
-    static constexpr bool is_signed = true;
-    static constexpr bool is_integer = false;
-    static constexpr bool is_exact = false;
-
-    static constexpr bool has_infinity = _double::has_infinity;
-    static constexpr bool has_quiet_NaN = _double::has_quiet_NaN;
-    static constexpr bool has_signaling_NaN = _double::has_signaling_NaN;
-    static constexpr float_denorm_style has_denorm = _double::has_denorm;
-    static constexpr bool has_denorm_loss = false;
-
-    static constexpr float_round_style round_style = _double::round_style;
-    static constexpr int digits = 2 * _double::digits + 1;
-    static constexpr int digits10 = 2 * _double::digits10 + 1;
-    static constexpr int max_digits10 = 2 * _double::max_digits10 + 1;
-
-    static constexpr int radix = _double::radix;
-
+constexpr DDouble numeric_limits<DDouble>::min() noexcept
+{
     // Whereas the maximum exponent is the same for double and DDouble,
     // Denormalization in the low part means that the min exponent for
     // normalized values is lower.
-    static constexpr int min_exponent = _double::min_exponent + _double::digits;
-    static constexpr int min_exponent10 = _double::min_exponent10 + _double::digits10;
-    static constexpr int max_exponent = _double::max_exponent;
-    static constexpr int max_exponent10 = _double::max_exponent10;
-
-    static constexpr DDouble min() noexcept {
-        return DDouble(_double::min() / _double::epsilon());
-    }
-    static constexpr DDouble max() noexcept {
-        return DDouble(_double::max(),
-                       _double::max() / _double::epsilon() / _double::radix);
-    }
-    static constexpr DDouble lowest() noexcept {
-        return DDouble(_double::lowest(),
-                       _double::lowest() / _double::epsilon() / _double::radix);
-    }
-    static constexpr DDouble epsilon() noexcept {
-        return DDouble(_double::epsilon() * _double::epsilon() / _double::radix);
-    }
-    static constexpr DDouble round_error() noexcept {
-        return DDouble(_double::round_error());
-    }
-
-    static constexpr DDouble infinity() noexcept {
-        return DDouble(_double::infinity(), _double::infinity());
-    }
-    static constexpr DDouble quiet_NaN() noexcept {
-        return DDouble(_double::quiet_NaN(), _double::quiet_NaN());
-    }
-    static constexpr DDouble signaling_NaN() noexcept {
-        return DDouble(_double::signaling_NaN(), _double::signaling_NaN());
-    }
-    static constexpr DDouble denorm_min() noexcept {
-        return DDouble(_double::denorm_min());
-    }
-
-    static constexpr bool is_bounded = numeric_limits<double>::is_bounded;
-    static constexpr bool is_iec559 = false;
-    static constexpr bool is_modulo = false;
-
-    static constexpr bool traps = false;
-    static constexpr bool tinyness_before = false;
-};
-
+    return DDouble(_double::min() / _double::epsilon());
 }
+
+constexpr DDouble numeric_limits<DDouble>::max() noexcept
+{
+    return DDouble(_double::max(),
+                    _double::max() / _double::epsilon() / _double::radix);
+}
+
+constexpr DDouble numeric_limits<DDouble>::lowest() noexcept
+{
+    return DDouble(_double::lowest(),
+                    _double::lowest() / _double::epsilon() / _double::radix);
+}
+
+constexpr DDouble numeric_limits<DDouble>::epsilon() noexcept
+{
+    return DDouble(_double::epsilon() * _double::epsilon() / _double::radix);
+}
+
+constexpr DDouble numeric_limits<DDouble>::round_error() noexcept
+{
+    return DDouble(_double::round_error());
+}
+
+constexpr DDouble numeric_limits<DDouble>::infinity() noexcept
+{
+    return DDouble(_double::infinity(), _double::infinity());
+}
+
+constexpr DDouble numeric_limits<DDouble>::quiet_NaN() noexcept
+{
+    return DDouble(_double::quiet_NaN(), _double::quiet_NaN());
+}
+
+constexpr DDouble numeric_limits<DDouble>::signaling_NaN() noexcept
+{
+    return DDouble(_double::signaling_NaN(), _double::signaling_NaN());
+}
+
+constexpr DDouble numeric_limits<DDouble>::denorm_min() noexcept
+{
+    return DDouble(_double::denorm_min());
+}
+
+} /* namespace std */
