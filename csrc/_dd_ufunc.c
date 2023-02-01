@@ -20,6 +20,12 @@
 #include "numpy/ufuncobject.h"
 #include "numpy/npy_3kcompat.h"
 
+#if PY_VERSION_HEX < 0x030900A4 && !defined(Py_SET_TYPE)
+static inline void _Py_SET_TYPE(PyObject *ob, PyTypeObject *type)
+{ ob->ob_type = type; }
+#define Py_SET_TYPE(ob, type) _Py_SET_TYPE((PyObject*)(ob), type)
+#endif
+
 /**
  * Allows parameter to be marked unused
  */
@@ -562,7 +568,7 @@ static int make_dtype()
 
     ddouble_dtype.typeobj = pyddouble_type;
     ddouble_dtype.f = &ddouble_arrfuncs;
-    Py_TYPE(&ddouble_dtype) = &PyArrayDescr_Type;
+    Py_SET_TYPE(&ddouble_dtype, &PyArrayDescr_Type);
 
     PyArray_InitArrFuncs(&ddouble_arrfuncs);
     ddouble_arrfuncs.getitem = NPyDDouble_GetItem;
