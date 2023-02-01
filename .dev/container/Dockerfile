@@ -12,6 +12,7 @@ RUN apt-get update && \
     zip \
     vim \
     cmake pkg-config gfortran \
+    sudo \
     && \
     apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/* # clean up
 
