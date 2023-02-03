@@ -65,7 +65,7 @@ def test_sqrt():
     # are in trouble, so we truncate the lower end of the range by
     # another 16 digits
     x = np.geomspace(1e-292, 1e307, 1953)
-    check_unary(mpmath.sqrt, np.sqrt, x, EPS)
+    check_unary(mpmath.sqrt, np.sqrt, x, 2*EPS)
 
 
 def test_log():

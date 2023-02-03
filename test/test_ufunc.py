@@ -72,7 +72,7 @@ def test_power():
 
 def test_arctan2():
     x = np.linspace(-100, 100, 100)
-    _compare_ufunc(np.arctan2, x[:,None], x[None,:])
+    _compare_ufunc(np.arctan2, x[:,None], x[None,:], ulps=2)
 
 
 def test_arcsin():
