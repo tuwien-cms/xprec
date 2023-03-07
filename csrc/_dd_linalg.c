@@ -22,7 +22,7 @@
 
 /************************ Linear algebra ***************************/
 
-static void u_matmulq(char **args, const npy_intp *dims, const npy_intp* steps,
+static void u_matmulw(char **args, const npy_intp *dims, const npy_intp* steps,
                       void *data)
 {
     // signature (n;i,j),(n;j,k)->(n;i,k)
@@ -97,7 +97,7 @@ static void ensure_inplace_3(
 
 /*************************** More complicated ***********************/
 
-static void u_normq(
+static void u_normw(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
    // signature (n;i)->(n;)
@@ -106,12 +106,12 @@ static void u_normq(
     char *_a = args[0], *_b = args[1];
 
     for (npy_intp n = 0; n != nn; ++n, _a += san, _b += sbn) {
-        *(ddouble *)_b = normq((const ddouble *)_a, ii, _sai / sizeof(ddouble));
+        *(ddouble *)_b = normw((const ddouble *)_a, ii, _sai / sizeof(ddouble));
     }
     MARK_UNUSED(data);
 }
 
-static void u_householderq(
+static void u_householderw(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;i)->(n;),(n;i)
@@ -121,7 +121,7 @@ static void u_householderq(
     char *_a = args[0], *_b = args[1], *_c = args[2];
 
     for (npy_intp n = 0; n != nn; ++n, _a += _san, _b += _sbn, _c += _scn) {
-        *(ddouble *)_b = householderq(
+        *(ddouble *)_b = householderw(
                 (const ddouble *)_a, (ddouble *)_c, ii,
                 _sai / sizeof(ddouble), _sci / sizeof(ddouble));
     }
@@ -149,7 +149,7 @@ static void u_rank1updateq(
     MARK_UNUSED(data);
 }
 
-static void u_jacobisweepq(
+static void u_jacobisweepw(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;i,j),(n;i=j,j)->(n;i,j),(n;i=j,j);(n,)
@@ -175,7 +175,7 @@ static void u_jacobisweepq(
     MARK_UNUSED(data);
 }
 
-static void u_givensq(
+static void u_givensw(
     char **args, const npy_intp *dims, const npy_intp* steps, void *data)
 {
     // signature (n;2)->(n;2),(n;2,2)
@@ -190,13 +190,13 @@ static void u_givensq(
         ddouble g = *(ddouble *) (_a + sai);
 
         ddouble c, s, r;
-        givensq(f, g, &c, &s, &r);
+        givensw(f, g, &c, &s, &r);
 
         *(ddouble *)_b = r;
         *(ddouble *)(_b + sbi) = Q_ZERO;
         *(ddouble *)_c = c;
         *(ddouble *)(_c + scj) = s;
-        *(ddouble *)(_c + sci) = negq(s);
+        *(ddouble *)(_c + sci) = negw(s);
         *(ddouble *)(_c + sci + scj) = c;
     }
     MARK_UNUSED(data);
@@ -280,7 +280,7 @@ static void u_svd_2x2(
         svd_2x2(a11, a12, a21, a22, &smin, &smax, &cv, &sv, &cu, &su);
 
         *(ddouble *)_b = cu;
-        *(ddouble *)(_b + sbj) = negq(su);
+        *(ddouble *)(_b + sbj) = negw(su);
         *(ddouble *)(_b + sbi) = su;
         *(ddouble *)(_b + sbi + sbj) = cu;
 
@@ -289,7 +289,7 @@ static void u_svd_2x2(
 
         *(ddouble *)_d = cv;
         *(ddouble *)(_d + sdj) = sv;
-        *(ddouble *)(_d + sdi) = negq(sv);
+        *(ddouble *)(_d + sdi) = negw(sv);
         *(ddouble *)(_d + sdi + sdj) = cv;
     }
     MARK_UNUSED(data);
@@ -411,15 +411,15 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
     if (import_ddouble_dtype() < 0)
         return NULL;
 
-    gufunc(u_normq, 1, 1, "(i)->()",
+    gufunc(u_normw, 1, 1, "(i)->()",
            "norm", "Vector 2-norm", false);
-    gufunc(u_matmulq, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
+    gufunc(u_matmulw, 2, 1, "(i?,j),(j,k?)->(i?,k?)",
            "matmul", "Matrix multiplication", true);
-    gufunc(u_givensq, 1, 2, "(2)->(2),(2,2)",
+    gufunc(u_givensw, 1, 2, "(2)->(2),(2,2)",
            "givens", "Generate Givens rotation", false);
     gufunc(u_givens_seqq, 2, 1, "(i,2),(i,j?)->(i,j?)",
            "givens_seq", "apply sequence of givens rotation to matrix", false);
-    gufunc(u_householderq, 1, 2, "(i)->(),(i)",
+    gufunc(u_householderw, 1, 2, "(i)->(),(i)",
            "householder", "Generate Householder reflectors", false);
     gufunc(u_rank1updateq, 3, 1, "(i,j),(i),(j)->(i,j)",
            "rank1update", "Perform rank-1 update of matrix", false);
@@ -427,7 +427,7 @@ PyMODINIT_FUNC PyInit__dd_linalg(void)
            "svd2x2", "SVD of upper triangular 2x2 problem", false);
     gufunc(u_svvals_2x2, 1, 1, "(2,2)->(2)",
            "svvals2x2", "singular values of upper triangular 2x2 problem", false);
-    gufunc(u_jacobisweepq, 2, 3, "(i,j),(j,j)->(i,j),(j,j),()",
+    gufunc(u_jacobisweepw, 2, 3, "(i,j),(j,j)->(i,j),(j,j),()",
            "jacobi_sweep", "Perform sweep of one-sided Jacobi rotations", false);
     gufunc(u_golub_kahan_chaseq, 2, 3, "(i),(i)->(i),(i),(i,4)",
            "golub_kahan_chase", "bidiagonal chase procedure", false);

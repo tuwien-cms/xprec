@@ -23,7 +23,7 @@ static inline void lmul_givensq(
 }
 
 /** Compute 2-norm of a vector */
-ddouble normq(const ddouble *x, long nn, long sxn);
+ddouble normw(const ddouble *x, long nn, long sxn);
 
 /**
  * Perform a rank-one update of a `ii` times `jj` matrix:
@@ -39,7 +39,7 @@ void rank1updateq(ddouble *a, long ais, long ajs, const ddouble *v, long vs,
  *      [  c  s ] [ f ]     [ r ]
  *      [ -s  c ] [ g ]  =  [ 0 ]
  */
-void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r);
+void givensw(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r);
 
 /**
  * Compute Householder reflector `H[tau, v]`, defined as:
@@ -49,7 +49,7 @@ void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r);
  * that, when applied to a given `x`, zeros out all but the first component.
  * The scaling factor `tau` is returned, while `v` is written.
  */
-ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv);
+ddouble householderw(const ddouble *x, ddouble *v, long nn, long sx, long sv);
 
 /**
  * Perform the SVD of an arbitrary two-by-two matrix:

@@ -94,11 +94,11 @@ static bool PyDDouble_Cast(PyObject *arg, ddouble *out)
             if (!PyErr_Occurred())
                 *out = *(ddouble *)PyArray_DATA(arr);
             else
-                *out = nanq();
+                *out = nanw();
             Py_XDECREF(arr);
         }
     } else {
-        *out = nanq();
+        *out = nanw();
         PyErr_Format(PyExc_TypeError,
             "Cannot cast instance of %s to ddouble scalar",
             arg->ob_type->tp_name);
@@ -175,9 +175,9 @@ static PyObject* PyDDouble_Int(PyObject* self)
         }                                                               \
     }
 
-PYWRAP_UNARY(PyDDouble_Positive, posq)
-PYWRAP_UNARY(PyDDouble_Negative, negq)
-PYWRAP_UNARY(PyDDouble_Absolute, absq)
+PYWRAP_UNARY(PyDDouble_Positive, posw)
+PYWRAP_UNARY(PyDDouble_Negative, negw)
+PYWRAP_UNARY(PyDDouble_Absolute, absw)
 
 PYWRAP_BINARY(PyDDouble_Add, addqq, nb_add)
 PYWRAP_BINARY(PyDDouble_Subtract, subqq, nb_subtract)
@@ -412,7 +412,7 @@ static int NPyDDouble_Compare(const void *_a, const void *_b, void *arr)
         return -1;
     if (greaterqq(a, b))
         return 1;
-    if (isnanq(b))
+    if (isnanw(b))
         return 1;
     return 0;
     MARK_UNUSED(arr);
@@ -458,7 +458,7 @@ static void NPyDDouble_CopySwap(void *_d, void *_s, int swap, void* arr)
 static npy_bool NPyDDouble_NonZero(void *data, void *arr)
 {
     ddouble x = *(ddouble *)data;
-    return !iszeroq(x);
+    return !iszerow(x);
     MARK_UNUSED(arr);
 }
 
@@ -507,7 +507,7 @@ static int NPyDDouble_ArgMax(void *_data, npy_intp n, npy_intp *max_ind,
                              void *arr)
 {
     ddouble *data = (ddouble *)_data;
-    ddouble max_val = negq(infq());
+    ddouble max_val = negw(infw());
     for (npy_intp i = 0; i < n; ++i) {
         if (greaterqq(data[i], max_val)) {
             max_val = data[i];
@@ -522,7 +522,7 @@ static int NPyDDouble_ArgMin(void *_data, npy_intp n, npy_intp *min_ind,
                              void *arr)
 {
     ddouble *data = (ddouble *)_data;
-    ddouble min_val = infq();
+    ddouble min_val = infw();
     for (npy_intp i = 0; i < n; ++i) {
         if (lessqq(data[i], min_val)) {
             min_val = data[i];
@@ -771,17 +771,17 @@ ULOOP_BINARY(u_addqd, addqd, ddouble, ddouble, double)
 ULOOP_BINARY(u_subqd, subqd, ddouble, ddouble, double)
 ULOOP_BINARY(u_mulqd, mulqd, ddouble, ddouble, double)
 ULOOP_BINARY(u_divqd, divqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_adddq, adddq, ddouble, double, ddouble)
-ULOOP_BINARY(u_subdq, subdq, ddouble, double, ddouble)
-ULOOP_BINARY(u_muldq, muldq, ddouble, double, ddouble)
-ULOOP_BINARY(u_divdq, divdq, ddouble, double, ddouble)
+ULOOP_BINARY(u_adddw, adddw, ddouble, double, ddouble)
+ULOOP_BINARY(u_subdw, subdw, ddouble, double, ddouble)
+ULOOP_BINARY(u_muldw, muldw, ddouble, double, ddouble)
+ULOOP_BINARY(u_divdw, divdw, ddouble, double, ddouble)
 ULOOP_BINARY(u_addqq, addqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_subqq, subqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_mulqq, mulqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_divqq, divqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_copysignqq, copysignqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_copysignqd, copysignqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_copysigndq, copysigndq, ddouble, double, ddouble)
+ULOOP_BINARY(u_copysigndw, copysigndw, ddouble, double, ddouble)
 ULOOP_BINARY(u_equalqq, equalqq, bool, ddouble, ddouble)
 ULOOP_BINARY(u_notequalqq, notequalqq, bool, ddouble, ddouble)
 ULOOP_BINARY(u_greaterqq, greaterqq, bool, ddouble, ddouble)
@@ -794,58 +794,58 @@ ULOOP_BINARY(u_greaterqd, greaterqd, bool, ddouble, double)
 ULOOP_BINARY(u_lessqd, lessqd, bool, ddouble, double)
 ULOOP_BINARY(u_greaterequalqd, greaterequalqd, bool, ddouble, double)
 ULOOP_BINARY(u_lessequalqd, lessequalqd, bool, ddouble, double)
-ULOOP_BINARY(u_equaldq, equaldq, bool, double, ddouble)
-ULOOP_BINARY(u_notequaldq, notequaldq, bool, double, ddouble)
-ULOOP_BINARY(u_greaterdq, greaterdq, bool, double, ddouble)
-ULOOP_BINARY(u_lessdq, lessdq, bool, double, ddouble)
-ULOOP_BINARY(u_greaterequaldq, greaterequaldq, bool, double, ddouble)
-ULOOP_BINARY(u_lessequaldq, lessequaldq, bool, double, ddouble)
+ULOOP_BINARY(u_equaldw, equaldw, bool, double, ddouble)
+ULOOP_BINARY(u_notequaldw, notequaldw, bool, double, ddouble)
+ULOOP_BINARY(u_greaterdw, greaterdw, bool, double, ddouble)
+ULOOP_BINARY(u_lessdw, lessdw, bool, double, ddouble)
+ULOOP_BINARY(u_greaterequaldw, greaterequaldw, bool, double, ddouble)
+ULOOP_BINARY(u_lessequaldw, lessequaldw, bool, double, ddouble)
 ULOOP_BINARY(u_fminqq, fminqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_fmaxqq, fmaxqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_fminqd, fminqd, ddouble, ddouble, double)
 ULOOP_BINARY(u_fmaxqd, fmaxqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_fmindq, fmindq, ddouble, double, ddouble)
-ULOOP_BINARY(u_fmaxdq, fmaxdq, ddouble, double, ddouble)
+ULOOP_BINARY(u_fmindw, fmindw, ddouble, double, ddouble)
+ULOOP_BINARY(u_fmaxdw, fmaxdw, ddouble, double, ddouble)
 ULOOP_BINARY(u_atan2qd, atan2qd, ddouble, ddouble, double)
 ULOOP_BINARY(u_atan2dq, atan2dq, ddouble, double, ddouble)
 ULOOP_BINARY(u_atan2qq, atan2qq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_powqd, powqd, ddouble, ddouble, double)
-ULOOP_BINARY(u_powdq, powdq, ddouble, double, ddouble)
+ULOOP_BINARY(u_powdw, powdw, ddouble, double, ddouble)
 ULOOP_BINARY(u_powqq, powqq, ddouble, ddouble, ddouble)
 ULOOP_BINARY(u_hypotqq, hypotqq, ddouble, ddouble, ddouble)
-ULOOP_BINARY(u_hypotdq, hypotdq, ddouble, double, ddouble)
+ULOOP_BINARY(u_hypotdw, hypotdw, ddouble, double, ddouble)
 ULOOP_BINARY(u_hypotqd, hypotqd, ddouble, ddouble, double)
 ULOOP_BINARY(u_ldexpqi, ldexpqi, ddouble, ddouble, int)
 ULOOP_MODF(u_modfqq, modfqq, ddouble, ddouble, ddouble)
-ULOOP_UNARY(u_signbitq, signbitq, bool, ddouble)
-ULOOP_UNARY(u_signq, signq, ddouble, ddouble)
-ULOOP_UNARY(u_isfiniteq, isfiniteq, bool, ddouble)
-ULOOP_UNARY(u_isinfq, isinfq, bool, ddouble)
-ULOOP_UNARY(u_isnanq, isnanq, bool, ddouble)
-ULOOP_UNARY(u_negq, negq, ddouble, ddouble)
-ULOOP_UNARY(u_posq, posq, ddouble, ddouble)
-ULOOP_UNARY(u_absq, absq, ddouble, ddouble)
-ULOOP_UNARY(u_reciprocalq, reciprocalq, ddouble, ddouble)
-ULOOP_UNARY(u_sqrq, sqrq, ddouble, ddouble)
-ULOOP_UNARY(u_roundq, roundq, ddouble, ddouble)
-ULOOP_UNARY(u_floorq, floorq, ddouble, ddouble)
-ULOOP_UNARY(u_ceilq, ceilq, ddouble, ddouble)
-ULOOP_UNARY(u_sqrtq, sqrtq, ddouble, ddouble)
-ULOOP_UNARY(u_expq, expq, ddouble, ddouble)
+ULOOP_UNARY(u_signbitw, signbitw, bool, ddouble)
+ULOOP_UNARY(u_signw, signw, ddouble, ddouble)
+ULOOP_UNARY(u_isfinitew, isfinitew, bool, ddouble)
+ULOOP_UNARY(u_isinfw, isinfw, bool, ddouble)
+ULOOP_UNARY(u_isnanw, isnanw, bool, ddouble)
+ULOOP_UNARY(u_negw, negw, ddouble, ddouble)
+ULOOP_UNARY(u_posw, posw, ddouble, ddouble)
+ULOOP_UNARY(u_absw, absw, ddouble, ddouble)
+ULOOP_UNARY(u_reciprocalw, reciprocalw, ddouble, ddouble)
+ULOOP_UNARY(u_sqrw, sqrw, ddouble, ddouble)
+ULOOP_UNARY(u_roundw, roundw, ddouble, ddouble)
+ULOOP_UNARY(u_floorw, floorw, ddouble, ddouble)
+ULOOP_UNARY(u_ceilw, ceilw, ddouble, ddouble)
+ULOOP_UNARY(u_sqrtw, sqrtw, ddouble, ddouble)
+ULOOP_UNARY(u_expw, expw, ddouble, ddouble)
 ULOOP_UNARY(u_expm1q, expm1q, ddouble, ddouble)
-ULOOP_UNARY(u_logq, logq, ddouble, ddouble)
-ULOOP_UNARY(u_sinq, sinq, ddouble, ddouble)
-ULOOP_UNARY(u_cosq, cosq, ddouble, ddouble)
-ULOOP_UNARY(u_tanq, tanq, ddouble, ddouble)
-ULOOP_UNARY(u_atanq, atanq, ddouble, ddouble)
-ULOOP_UNARY(u_acosq, acosq, ddouble, ddouble)
-ULOOP_UNARY(u_asinq, asinq, ddouble, ddouble)
-ULOOP_UNARY(u_atanhq, atanhq, ddouble, ddouble)
-ULOOP_UNARY(u_acoshq, acoshq, ddouble, ddouble)
-ULOOP_UNARY(u_asinhq, asinhq, ddouble, ddouble)
-ULOOP_UNARY(u_sinhq, sinhq, ddouble, ddouble)
-ULOOP_UNARY(u_coshq, coshq, ddouble, ddouble)
-ULOOP_UNARY(u_tanhq, tanhq, ddouble, ddouble)
+ULOOP_UNARY(u_logw, logw, ddouble, ddouble)
+ULOOP_UNARY(u_sinw, sinw, ddouble, ddouble)
+ULOOP_UNARY(u_cosw, cosw, ddouble, ddouble)
+ULOOP_UNARY(u_tanw, tanw, ddouble, ddouble)
+ULOOP_UNARY(u_atanw, atanw, ddouble, ddouble)
+ULOOP_UNARY(u_acosw, acosw, ddouble, ddouble)
+ULOOP_UNARY(u_asinw, asinw, ddouble, ddouble)
+ULOOP_UNARY(u_atanhw, atanhw, ddouble, ddouble)
+ULOOP_UNARY(u_acoshw, acoshw, ddouble, ddouble)
+ULOOP_UNARY(u_asinhw, asinhw, ddouble, ddouble)
+ULOOP_UNARY(u_sinhw, sinhw, ddouble, ddouble)
+ULOOP_UNARY(u_coshw, coshw, ddouble, ddouble)
+ULOOP_UNARY(u_tanhw, tanhw, ddouble, ddouble)
 
 static bool register_binary(PyUFuncGenericFunction dq_func,
         PyUFuncGenericFunction qd_func, PyUFuncGenericFunction qq_func,
@@ -960,59 +960,59 @@ error:
 
 static int register_ufuncs()
 {
-    bool ok = register_unary(u_negq, type_num, "negative")
-        && register_unary(u_posq, type_num, "positive")
-        && register_unary(u_absq, type_num, "absolute")
-        && register_unary(u_reciprocalq, type_num, "reciprocal")
-        && register_unary(u_sqrq, type_num, "square")
-        && register_unary(u_sqrtq, type_num, "sqrt")
-        && register_unary(u_signbitq, NPY_BOOL, "signbit")
-        && register_unary(u_isfiniteq, NPY_BOOL, "isfinite")
-        && register_unary(u_isinfq, NPY_BOOL, "isinf")
-        && register_unary(u_isnanq, NPY_BOOL, "isnan")
-        && register_unary(u_roundq, type_num, "rint")
-        && register_unary(u_floorq, type_num, "floor")
-        && register_unary(u_ceilq, type_num, "ceil")
-        && register_unary(u_expq, type_num, "exp")
+    bool ok = register_unary(u_negw, type_num, "negative")
+        && register_unary(u_posw, type_num, "positive")
+        && register_unary(u_absw, type_num, "absolute")
+        && register_unary(u_reciprocalw, type_num, "reciprocal")
+        && register_unary(u_sqrw, type_num, "square")
+        && register_unary(u_sqrtw, type_num, "sqrt")
+        && register_unary(u_signbitw, NPY_BOOL, "signbit")
+        && register_unary(u_isfinitew, NPY_BOOL, "isfinite")
+        && register_unary(u_isinfw, NPY_BOOL, "isinf")
+        && register_unary(u_isnanw, NPY_BOOL, "isnan")
+        && register_unary(u_roundw, type_num, "rint")
+        && register_unary(u_floorw, type_num, "floor")
+        && register_unary(u_ceilw, type_num, "ceil")
+        && register_unary(u_expw, type_num, "exp")
         && register_unary(u_expm1q, type_num, "expm1")
-        && register_unary(u_logq, type_num, "log")
-        && register_unary(u_sinq, type_num, "sin")
-        && register_unary(u_cosq, type_num, "cos")
-        && register_unary(u_tanq, type_num, "tan")
-        && register_unary(u_atanq, type_num, "arctan")
-        && register_unary(u_acosq, type_num, "arccos")
-        && register_unary(u_asinq, type_num, "arcsin")
-        && register_unary(u_atanhq, type_num, "arctanh")
-        && register_unary(u_acoshq, type_num, "arccosh")
-        && register_unary(u_asinhq, type_num, "arcsinh")
-        && register_unary(u_sinhq, type_num, "sinh")
-        && register_unary(u_coshq, type_num, "cosh")
-        && register_unary(u_tanhq, type_num, "tanh")
-        && register_unary(u_signq, type_num, "sign")
+        && register_unary(u_logw, type_num, "log")
+        && register_unary(u_sinw, type_num, "sin")
+        && register_unary(u_cosw, type_num, "cos")
+        && register_unary(u_tanw, type_num, "tan")
+        && register_unary(u_atanw, type_num, "arctan")
+        && register_unary(u_acosw, type_num, "arccos")
+        && register_unary(u_asinw, type_num, "arcsin")
+        && register_unary(u_atanhw, type_num, "arctanh")
+        && register_unary(u_acoshw, type_num, "arccosh")
+        && register_unary(u_asinhw, type_num, "arcsinh")
+        && register_unary(u_sinhw, type_num, "sinh")
+        && register_unary(u_coshw, type_num, "cosh")
+        && register_unary(u_tanhw, type_num, "tanh")
+        && register_unary(u_signw, type_num, "sign")
         && register_ldexp(u_ldexpqi, type_num, "ldexp")
         && register_modf(u_modfqq, type_num, "modf")
-        && register_binary(u_adddq, u_addqd, u_addqq, type_num, "add")
-        && register_binary(u_subdq, u_subqd, u_subqq, type_num, "subtract")
-        && register_binary(u_muldq, u_mulqd, u_mulqq, type_num, "multiply")
-        && register_binary(u_divdq, u_divqd, u_divqq, type_num, "true_divide")
-        && register_binary(u_powdq, u_powqd, u_powqq, type_num, "power")
-        && register_binary(u_equaldq, u_equalqd, u_equalqq, NPY_BOOL, "equal")
-        && register_binary(u_notequaldq, u_notequalqd, u_notequalqq, NPY_BOOL,
+        && register_binary(u_adddw, u_addqd, u_addqq, type_num, "add")
+        && register_binary(u_subdw, u_subqd, u_subqq, type_num, "subtract")
+        && register_binary(u_muldw, u_mulqd, u_mulqq, type_num, "multiply")
+        && register_binary(u_divdw, u_divqd, u_divqq, type_num, "true_divide")
+        && register_binary(u_powdw, u_powqd, u_powqq, type_num, "power")
+        && register_binary(u_equaldw, u_equalqd, u_equalqq, NPY_BOOL, "equal")
+        && register_binary(u_notequaldw, u_notequalqd, u_notequalqq, NPY_BOOL,
                            "not_equal")
-        && register_binary(u_greaterdq, u_greaterqd, u_greaterqq, NPY_BOOL, "greater")
-        && register_binary(u_lessdq, u_lessqd, u_lessqq, NPY_BOOL, "less")
-        && register_binary(u_greaterequaldq, u_greaterequalqd, u_greaterequalqq,
+        && register_binary(u_greaterdw, u_greaterqd, u_greaterqq, NPY_BOOL, "greater")
+        && register_binary(u_lessdw, u_lessqd, u_lessqq, NPY_BOOL, "less")
+        && register_binary(u_greaterequaldw, u_greaterequalqd, u_greaterequalqq,
                            NPY_BOOL, "greater_equal")
-        && register_binary(u_lessequaldq, u_lessequalqd, u_lessequalqq, NPY_BOOL,
+        && register_binary(u_lessequaldw, u_lessequalqd, u_lessequalqq, NPY_BOOL,
                            "less_equal")
-        && register_binary(u_fmindq, u_fminqd, u_fminqq, type_num, "fmin")
-        && register_binary(u_fmaxdq, u_fmaxqd, u_fmaxqq, type_num, "fmax")
-        && register_binary(u_fmindq, u_fminqd, u_fminqq, type_num, "minimum")
-        && register_binary(u_fmaxdq, u_fmaxqd, u_fmaxqq, type_num, "maximum")
+        && register_binary(u_fmindw, u_fminqd, u_fminqq, type_num, "fmin")
+        && register_binary(u_fmaxdw, u_fmaxqd, u_fmaxqq, type_num, "fmax")
+        && register_binary(u_fmindw, u_fminqd, u_fminqq, type_num, "minimum")
+        && register_binary(u_fmaxdw, u_fmaxqd, u_fmaxqq, type_num, "maximum")
         && register_binary(u_atan2dq, u_atan2qd, u_atan2qq, type_num, "arctan2")
-        && register_binary(u_copysigndq, u_copysignqd, u_copysignqq, type_num,
+        && register_binary(u_copysigndw, u_copysignqd, u_copysignqq, type_num,
                            "copysign")
-        && register_binary(u_hypotdq, u_hypotqd, u_hypotqq, type_num, "hypot");
+        && register_binary(u_hypotdw, u_hypotqd, u_hypotqq, type_num, "hypot");
     return ok ? 0 : -1;
 }
 
@@ -1087,8 +1087,8 @@ static int register_constants()
         && constant(Q_E, "E")
         && constant(Q_LOG2, "LOG2")
         && constant(Q_LOG10, "LOG10")
-        && constant(nanq(), "NAN")
-        && constant(infq(), "INF");
+        && constant(nanw(), "NAN")
+        && constant(infw(), "INF");
     return ok ? 0 : -1;
 }
 

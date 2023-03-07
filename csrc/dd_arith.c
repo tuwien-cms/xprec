@@ -16,14 +16,14 @@ static const double INV_LARGE = 3.054936363499605e-151;
 
 static ddouble hypotqq_compute(ddouble x, ddouble y)
 {
-    return sqrtq(addqq(sqrq(x), sqrq(y)));
+    return sqrtw(addqq(sqrw(x), sqrw(y)));
 }
 
 ddouble _hypotqq_ordered(ddouble x, ddouble y)
 {
     // assume that x >= y >= 0
     // special cases
-    if (iszeroq(y))
+    if (iszerow(y))
         return x;
 
     // if very large or very small, renormalize
@@ -42,7 +42,7 @@ ddouble _hypotqq_ordered(ddouble x, ddouble y)
     return hypotqq_compute(x, y);
 }
 
-ddouble sqrtq(ddouble a)
+ddouble sqrtw(ddouble a)
 {
     /* Given approximation x to 1/sqrt(a), perform a single Newton step:
      *
@@ -58,7 +58,7 @@ ddouble sqrtq(ddouble a)
 
     double x = 1.0 / sqrt(a.hi);
     double ax = a.hi * x;
-    ddouble ax_sqr = sqrq((ddouble){ax, 0});
+    ddouble ax_sqr = sqrw((ddouble){ax, 0});
     double diff = subqq(a, ax_sqr).hi * x * 0.5;
     return two_sum(ax, diff);
 }
@@ -116,7 +116,7 @@ static ddouble _exp_reduced(ddouble a, int *m)
     ddouble sum = term;
 
     // Order 2
-    rpower = sqrq(r);
+    rpower = sqrw(r);
     term = mul_pwr2(rpower, 0.5);
     sum = addqq(sum, term);
 
@@ -131,27 +131,27 @@ static ddouble _exp_reduced(ddouble a, int *m)
 
     // We now have that approximately exp(r) == 1 + sum.  Raise that to
     // the m'th (512) power by squaring the binomial nine times
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
-    sum = addqq(mul_pwr2(sum, 2.0), sqrq(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
+    sum = addqq(mul_pwr2(sum, 2.0), sqrw(sum));
     return sum;
 }
 
-ddouble expq(ddouble a)
+ddouble expw(ddouble a)
 {
     if (a.hi <= -709.0)
         return Q_ZERO;
     if (a.hi >= 709.0)
-        return infq();
-    if (iszeroq(a))
+        return infw();
+    if (iszerow(a))
         return Q_ONE;
-    if (isoneq(a))
+    if (isonew(a))
         return Q_E;
 
     int m;
@@ -159,7 +159,7 @@ ddouble expq(ddouble a)
 
     /** Add back the one and multiply by 2 to the m */
     sum = addqd(sum, 1.0);
-    return ldexpq(sum, (int)m);
+    return ldexpw(sum, (int)m);
 }
 
 ddouble expm1q(ddouble a)
@@ -167,8 +167,8 @@ ddouble expm1q(ddouble a)
     if (a.hi <= -709.0)
         return (ddouble){-1.0, 0.0};
     if (a.hi >= 709.0)
-        return infq();
-    if (iszeroq(a))
+        return infw();
+    if (iszerow(a))
         return Q_ZERO;
 
     int m;
@@ -180,16 +180,16 @@ ddouble expm1q(ddouble a)
 
     /* Non-truncation case: compute full exp, then remove the one */
     sum = addqd(sum, 1.0);
-    sum = ldexpq(sum, (int)m);
+    sum = ldexpw(sum, (int)m);
     return subqd(sum, 1.0);
 }
 
 ddouble ldexpqi(ddouble a, int exp)
 {
-    return ldexpq(a, exp);
+    return ldexpw(a, exp);
 }
 
-ddouble logq(ddouble a)
+ddouble logw(ddouble a)
 {
     /* Strategy.  The Taylor series for log converges much more
      * slowly than that of exp, due to the lack of the factorial
@@ -207,15 +207,15 @@ ddouble logq(ddouble a)
      * Only one iteration is needed, since Newton's iteration
      * approximately doubles the number of digits per iteration.
      */
-    if (isoneq(a))
+    if (isonew(a))
         return Q_ZERO;
-    if (iszeroq(a))
-        return negq(infq());
-    if (!ispositiveq(a))
-        return nanq();
+    if (iszerow(a))
+        return negw(infw());
+    if (!ispositivew(a))
+        return nanw();
 
     ddouble x = {log(a.hi), 0.0}; /* Initial approximation */
-    x = subqd(addqq(x, mulqq(a, expq(negq(x)))), 1.0);
+    x = subqd(addqq(x, mulqq(a, expw(negw(x)))), 1.0);
     return x;
 }
 
@@ -238,7 +238,7 @@ static ddouble sin_taylor(ddouble a)
 {
     // Use the Taylor series a - a^3/3! + a^5/5! + ...
     const double thresh = 0.5 * fabs(a.hi) * Q_EPS.hi;
-    const ddouble minus_asquared = negq(sqrq(a));
+    const ddouble minus_asquared = negw(sqrw(a));
 
     // First order:
     ddouble apow = a;
@@ -260,12 +260,12 @@ static ddouble cos_taylor(ddouble a)
 {
     // Use Taylor series 1 - x^2/2! + x^4/4! + ...
     const double thresh = 0.5 * Q_EPS.hi;
-    const ddouble minus_asquared = negq(sqrq(a));
+    const ddouble minus_asquared = negw(sqrw(a));
 
     // Zeroth and second order:
     ddouble apow = minus_asquared;
     ddouble term = mul_pwr2(apow, 0.5);
-    ddouble sum = adddq(1.0, term);
+    ddouble sum = adddw(1.0, term);
 
     // From fourth order:
     for (int i = 4; i < _n_inv_fact; i += 2) {
@@ -280,12 +280,12 @@ static ddouble cos_taylor(ddouble a)
 
 static void sincos_taylor(ddouble a, ddouble *sin_a, ddouble *cos_a)
 {
-    if (iszeroq(a)) {
+    if (iszerow(a)) {
         *sin_a = Q_ZERO;
         *cos_a = Q_ONE;
     } else {
         *sin_a = sin_taylor(a);
-        *cos_a = sqrtq(subdq(1.0, sqrq(*sin_a)));
+        *cos_a = sqrtw(subdw(1.0, sqrw(*sin_a)));
     }
 }
 
@@ -303,7 +303,7 @@ static ddouble mod_pi16(ddouble a, int *j, int *k)
         {1.963495408493620697e-01, 7.654042494670957545e-18};
 
     // approximately reduce modulo 2*pi
-    ddouble z = roundq(divqq(a, Q_2PI));
+    ddouble z = roundw(divqq(a, Q_2PI));
     ddouble r = subqq(a, mulqq(Q_2PI, z));
 
     // approximately reduce modulo pi/2
@@ -318,7 +318,7 @@ static ddouble mod_pi16(ddouble a, int *j, int *k)
     return t;
 }
 
-ddouble sinq(ddouble a)
+ddouble sinw(ddouble a)
 {
     /* Strategy.  To compute sin(x), we choose integers a, b so that
      *
@@ -331,7 +331,7 @@ ddouble sinq(ddouble a)
      * we can compute sin(x) from sin(s), cos(s).  This greatly
      * increases the convergence of the sine Taylor series.
      */
-    if (iszeroq(a))
+    if (iszerow(a))
         return Q_ZERO;
 
     int j, k;
@@ -339,10 +339,10 @@ ddouble sinq(ddouble a)
     int abs_k = abs(k);
 
     if (j < -2 || j > 2)
-        return nanq();
+        return nanw();
 
     if (abs_k > 4)
-        return nanq();
+        return nanw();
 
     if (k == 0) {
         switch (j)
@@ -352,9 +352,9 @@ ddouble sinq(ddouble a)
         case 1:
             return cos_taylor(t);
         case -1:
-            return negq(cos_taylor(t));
+            return negw(cos_taylor(t));
         default:
-            return negq(sin_taylor(t));
+            return negw(sin_taylor(t));
         }
     }
 
@@ -376,19 +376,19 @@ ddouble sinq(ddouble a)
         if (k > 0)
             r = subqq(mulqq(v, sin_x), mulqq(u, cos_x));
         else if (k < 0)   /* NOTE! */
-            r = subqq(mulqq(negq(u), cos_x), mulqq(v, sin_x));
+            r = subqq(mulqq(negw(u), cos_x), mulqq(v, sin_x));
     } else {
         if (k > 0)
-            r = subqq(mulqq(negq(u), sin_x), mulqq(v, cos_x));
+            r = subqq(mulqq(negw(u), sin_x), mulqq(v, cos_x));
         else
             r = subqq(mulqq(v, cos_x), mulqq(u, sin_x));
     }
     return r;
 }
 
-ddouble cosq(ddouble a)
+ddouble cosw(ddouble a)
 {
-    if (iszeroq(a))
+    if (iszerow(a))
         return Q_ONE;
 
     int j, k;
@@ -396,21 +396,21 @@ ddouble cosq(ddouble a)
     int abs_k = abs(k);
 
     if (j < -2 || j > 2)
-        return nanq();
+        return nanw();
 
     if (abs_k > 4)
-        return nanq();
+        return nanw();
 
     if (k == 0) {
         switch (j) {
         case 0:
             return cos_taylor(t);
         case 1:
-            return negq(sin_taylor(t));
+            return negw(sin_taylor(t));
         case -1:
             return sin_taylor(t);
         default:
-            return negq(cos_taylor(t));
+            return negw(cos_taylor(t));
         }
     }
 
@@ -426,7 +426,7 @@ ddouble cosq(ddouble a)
             r = addqq(mulqq(u, cos_x), mulqq(v, sin_x));
     } else if (j == 1) {
         if (k > 0)
-            r = subqq(mulqq(negq(u), sin_x), mulqq(v, cos_x));
+            r = subqq(mulqq(negw(u), sin_x), mulqq(v, cos_x));
         else
             r = subqq(mulqq(v, cos_x), mulqq(u, sin_x));
     } else if (j == -1) {
@@ -438,28 +438,28 @@ ddouble cosq(ddouble a)
         if (k > 0)
             r = subqq(mulqq(v, sin_x), mulqq(u, cos_x));
         else
-            r = subqq(mulqq(negq(u), cos_x), mulqq(v, sin_x));
+            r = subqq(mulqq(negw(u), cos_x), mulqq(v, sin_x));
     }
     return r;
 }
 
-ddouble sinhq(ddouble a)
+ddouble sinhw(ddouble a)
 {
-    if (iszeroq(a))
+    if (iszerow(a))
         return Q_ZERO;
 
-    if (absq(a).hi > 0.05) {
-        ddouble ea = expq(a);
-        if (isinfq(ea))
+    if (absw(a).hi > 0.05) {
+        ddouble ea = expw(a);
+        if (isinfw(ea))
             return ea;
-        if (iszeroq(ea))
-            return negq(infq());
-        return mul_pwr2(subqq(ea, reciprocalq(ea)), 0.5);
+        if (iszerow(ea))
+            return negw(infw());
+        return mul_pwr2(subqq(ea, reciprocalw(ea)), 0.5);
     }
 
     // When a is small, using the above formula gives a lot of cancellation.
     // Use Taylor series: x + x^3/3! + x^5/5! + ...
-    const ddouble asquared = sqrq(a);
+    const ddouble asquared = sqrw(a);
     const double thresh = fabs(a.hi) * Q_EPS.hi;
 
     // First order:
@@ -478,48 +478,48 @@ ddouble sinhq(ddouble a)
     return sum;
 }
 
-ddouble coshq(ddouble a)
+ddouble coshw(ddouble a)
 {
-    if (iszeroq(a))
+    if (iszerow(a))
         return Q_ONE;
 
-    ddouble ea = expq(a);
-    if (isinfq(ea) || iszeroq(ea))
-        return infq();
-    return mul_pwr2(addqq(ea, reciprocalq(ea)), 0.5);
+    ddouble ea = expw(a);
+    if (isinfw(ea) || iszerow(ea))
+        return infw();
+    return mul_pwr2(addqq(ea, reciprocalw(ea)), 0.5);
 }
 
-ddouble tanhq(ddouble a)
+ddouble tanhw(ddouble a)
 {
-    if (iszeroq(a))
+    if (iszerow(a))
         return Q_ZERO;
 
     if (fabs(a.hi) > 0.05) {
-        ddouble ea = expq(a);
-        ddouble inv_ea = reciprocalq(ea);
+        ddouble ea = expw(a);
+        ddouble inv_ea = reciprocalw(ea);
         return divqq(subqq(ea, inv_ea), addqq(ea, inv_ea));
     }
 
     ddouble s, c;
-    s = sinhq(a);
-    c = sqrtq(adddq(1.0, sqrq(s)));
+    s = sinhw(a);
+    c = sqrtw(adddw(1.0, sqrw(s)));
     return divqq(s, c);
 }
 
-ddouble tanq(ddouble a)
+ddouble tanw(ddouble a)
 {
-    if (iszeroq(a))
+    if (iszerow(a))
         return Q_ZERO;
 
     ddouble s, c;
-    s = sinq(a);
-    c = cosq(a);
+    s = sinw(a);
+    c = cosw(a);
     return divqq(s, c);
 }
 
-void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a)
+void sincosw(const ddouble a, ddouble *sin_a, ddouble *cos_a)
 {
-    if (iszeroq(a)) {
+    if (iszerow(a)) {
         *sin_a = Q_ZERO;
         *cos_a = Q_ONE;
         return;
@@ -530,7 +530,7 @@ void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a)
     int abs_j = abs(j), abs_k = abs(k);
 
     if (abs_j > 2 || abs_k > 4) {
-        *cos_a = *sin_a = nanq();
+        *cos_a = *sin_a = nanw();
         return;
     }
 
@@ -559,13 +559,13 @@ void sincosq(const ddouble a, ddouble *sin_a, ddouble *cos_a)
         *cos_a = c;
     } else if (j == 1) {
         *sin_a = c;
-        *cos_a = negq(s);
+        *cos_a = negw(s);
     } else if (j == -1) {
-        *sin_a = negq(c);
+        *sin_a = negw(c);
         *cos_a = s;
     } else {
-        *sin_a = negq(s);
-        *cos_a = negq(c);
+        *sin_a = negw(s);
+        *cos_a = negw(c);
     }
 
 }
@@ -588,16 +588,16 @@ ddouble atan2qq(ddouble y, ddouble x)
      * If |x| > |y|, then first iteration is used since the
      * denominator is larger.  Otherwise, the second is used.
      */
-    if (iszeroq(x) && iszeroq(y))
+    if (iszerow(x) && iszerow(y))
         return Q_ZERO;
-    if (iszeroq(x))
-        return (ispositiveq(y)) ? Q_PI_2 : negq(Q_PI_2);
-    if (iszeroq(y))
-        return (ispositiveq(x)) ? Q_ZERO : Q_PI;
+    if (iszerow(x))
+        return (ispositivew(y)) ? Q_PI_2 : negw(Q_PI_2);
+    if (iszerow(y))
+        return (ispositivew(x)) ? Q_ZERO : Q_PI;
     if (equalqq(x, y))
-        return (ispositiveq(y)) ? Q_PI_4: negq(Q_3PI_4);
-    if (equalqq(x, negq(y)))
-        return (ispositiveq(y)) ? Q_3PI_4 : negq(Q_PI_4);
+        return (ispositivew(y)) ? Q_PI_4: negw(Q_3PI_4);
+    if (equalqq(x, negw(y)))
+        return (ispositivew(y)) ? Q_3PI_4 : negw(Q_PI_4);
 
     ddouble r = hypotqq(x, y);
     x = divqq(x, r);
@@ -607,7 +607,7 @@ ddouble atan2qq(ddouble y, ddouble x)
     ddouble z = (ddouble){atan2(y.hi, x.hi), 0.};
     ddouble sin_z, cos_z;
 
-    sincosq(z, &sin_z, &cos_z);
+    sincosw(z, &sin_z, &cos_z);
     if (fabs(x.hi) > fabs(y.hi)) {
         /* Use Newton iteration 1.  z' = z + (y - sin(z)) / cos(z)  */
         z = addqq(z, divqq(subqq(y, sin_z), cos_z));
@@ -628,94 +628,94 @@ ddouble atan2qd(const ddouble a, const double b)
     return atan2qq(a, (ddouble){b, 0.});
 }
 
-ddouble atanq(const ddouble a)
+ddouble atanw(const ddouble a)
 {
     return atan2qq(a, Q_ONE);
 }
 
-ddouble acosq(const ddouble a)
+ddouble acosw(const ddouble a)
 {
-    ddouble abs_a = absq(a);
+    ddouble abs_a = absw(a);
     if (greaterqq(abs_a, Q_ONE))
-        return nanq();
-    if (isoneq(abs_a))
-        return (ispositiveq(a)) ? Q_ZERO : Q_PI;
+        return nanw();
+    if (isonew(abs_a))
+        return (ispositivew(a)) ? Q_ZERO : Q_PI;
 
-    return atan2qq(sqrtq(subdq(1.0, sqrq(a))), a);
+    return atan2qq(sqrtw(subdw(1.0, sqrw(a))), a);
 }
 
-ddouble asinq(const ddouble a)
+ddouble asinw(const ddouble a)
 {
-    ddouble abs_a = absq(a);
+    ddouble abs_a = absw(a);
     if (greaterqd(abs_a, 1.0))
-        return nanq();
-    if (isoneq(abs_a))
-        return (ispositiveq(a)) ? Q_PI_2 : negq(Q_PI_2);
+        return nanw();
+    if (isonew(abs_a))
+        return (ispositivew(a)) ? Q_PI_2 : negw(Q_PI_2);
 
-    return atan2qq(a, sqrtq(subdq(1.0, sqrq(a))));
+    return atan2qq(a, sqrtw(subdw(1.0, sqrw(a))));
 }
 
-ddouble asinhq(const ddouble a)
+ddouble asinhw(const ddouble a)
 {
-    return logq(addqq(a,sqrtq(addqd(sqrq(a),1.0))));
+    return logw(addqq(a,sqrtw(addqd(sqrw(a),1.0))));
 }
 
-ddouble acoshq(const ddouble a)
+ddouble acoshw(const ddouble a)
 {
     if (lessqd(a, 1.0))
-        return nanq();
+        return nanw();
 
-    return logq(addqq(a, sqrtq(subqd(sqrq(a), 1.0))));
+    return logw(addqq(a, sqrtw(subqd(sqrw(a), 1.0))));
 }
 
-ddouble atanhq(const ddouble a)
+ddouble atanhw(const ddouble a)
 {
     if (equalqd(a, -1.0))
-        return negq(infq());
-    if (isoneq(a))
-        return infq();
-    if (greaterqd(absq(a), 1.0))
-        return nanq();
+        return negw(infw());
+    if (isonew(a))
+        return infw();
+    if (greaterqd(absw(a), 1.0))
+        return nanw();
 
-    return mul_pwr2(logq(divqq(adddq(1.0, a) , subdq(1.0, a))), 0.5);
+    return mul_pwr2(logw(divqq(adddw(1.0, a) , subdw(1.0, a))), 0.5);
 }
 
 ddouble powqq(const ddouble a, const ddouble b)
 {
-    if (iszeroq(a) && iszeroq(b))
+    if (iszerow(a) && iszerow(b))
         return Q_ONE;
-    if (iszeroq(a) && !iszeroq(b))
+    if (iszerow(a) && !iszerow(b))
         return Q_ZERO;
 
-    return expq(mulqq(b, logq(a)));
+    return expw(mulqq(b, logw(a)));
 }
 
 ddouble powqd(const ddouble a, const double b)
 {
-    if (iszeroq(a) && b == 0)
+    if (iszerow(a) && b == 0)
         return Q_ONE;
-    if (iszeroq(a) && b != 0)
+    if (iszerow(a) && b != 0)
         return Q_ZERO;
 
-    return expq(muldq(b, logq(a)));
+    return expw(muldw(b, logw(a)));
 }
 
-ddouble powdq(const double a, const ddouble b)
+ddouble powdw(const double a, const ddouble b)
 {
-    if (a == 0 && iszeroq(b))
+    if (a == 0 && iszerow(b))
         return Q_ONE;
-    if (a == 0 && !iszeroq(b))
+    if (a == 0 && !iszerow(b))
         return Q_ZERO;
 
-    return expq(mulqd(b, log(a)));
+    return expw(mulqd(b, log(a)));
 }
 
 ddouble modfqq(const ddouble a, ddouble *b)
 {
-    if (isnegativeq(a)) {
-        *b = ceilq(a);
+    if (isnegativew(a)) {
+        *b = ceilw(a);
     } else {
-        *b = floorq(a);
+        *b = floorw(a);
     }
     return subqq(a, *b);
 }

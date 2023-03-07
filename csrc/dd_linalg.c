@@ -18,12 +18,12 @@ static ddouble normq_scaled(const ddouble *x, long nn, long sxn,
     ddouble sum = Q_ZERO;
     for (long n = 0; n < nn; ++n, x += sxn) {
         ddouble curr = mul_pwr2(*x, scaling);
-        sum = addqq(sum, sqrq(curr));
+        sum = addqq(sum, sqrw(curr));
     };
-    return mul_pwr2(sqrtq(sum), 1.0/scaling);
+    return mul_pwr2(sqrtw(sum), 1.0/scaling);
 }
 
-ddouble normq(const ddouble *x, long nn, long sxn)
+ddouble normw(const ddouble *x, long nn, long sxn)
 {
     ddouble sum = normq_scaled(x, nn, sxn, 1.0);
 
@@ -36,13 +36,13 @@ ddouble normq(const ddouble *x, long nn, long sxn)
         return sum;
 }
 
-ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv)
+ddouble householderw(const ddouble *x, ddouble *v, long nn, long sx, long sv)
 {
     if (nn == 0)
         return Q_ZERO;
 
-    ddouble norm_x = normq(x + sx, nn - 1, sx);
-    if (iszeroq(norm_x))
+    ddouble norm_x = normw(x + sx, nn - 1, sx);
+    if (iszerow(norm_x))
         return Q_ZERO;
 
     ddouble alpha = *x;
@@ -50,7 +50,7 @@ ddouble householderq(const ddouble *x, ddouble *v, long nn, long sx, long sv)
 
     ddouble diff = subqq(beta, alpha);
     ddouble tau = divqq(diff, beta);
-    ddouble scale = reciprocalq(negq(diff));
+    ddouble scale = reciprocalw(negw(diff));
 
     v[0] = Q_ONE;
     for (long n = 1; n != nn; ++n)
@@ -70,24 +70,24 @@ void rank1updateq(ddouble *a, long ais, long ajs, const ddouble *v, long vs,
     }
 }
 
-void givensq(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
+void givensw(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
 {
     /* ACM Trans. Math. Softw. 28(2), 206, Alg 1 */
-    if (iszeroq(g)) {
+    if (iszerow(g)) {
         *c = Q_ONE;
         *s = Q_ZERO;
         *r = f;
-    } else if (iszeroq(f)) {
+    } else if (iszerow(f)) {
         *c = Q_ZERO;
-        *s = (ddouble) {signbitq(g), 0.0};
-        *r = absq(g);
+        *s = (ddouble) {signbitw(g), 0.0};
+        *r = absw(g);
     } else {
         *r = copysignqq(hypotqq(f, g), f);
 
         /* This may come at a slight loss of precision, however, we should
          * not really have to care ...
          */
-        ddouble inv_r = reciprocalq(*r);
+        ddouble inv_r = reciprocalw(*r);
         *c = mulqq(f, inv_r);
         *s = mulqq(g, inv_r);
     }
@@ -97,9 +97,9 @@ static void svd_tri2x2(
                 ddouble f, ddouble g, ddouble h, ddouble *smin, ddouble *smax,
                 ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
 {
-    ddouble fa = absq(f);
-    ddouble ga = absq(g);
-    ddouble ha = absq(h);
+    ddouble fa = absw(f);
+    ddouble ga = absw(g);
+    ddouble ha = absw(h);
     bool compute_uv = cv != NULL;
 
     if (lessqq(fa, ha)) {
@@ -107,7 +107,7 @@ static void svd_tri2x2(
         svd_tri2x2(h, g, f, smin, smax, su, cu, sv, cv);
         return;
     }
-    if (iszeroq(ga)) {
+    if (iszerow(ga)) {
         // already diagonal
         *smin = ha;
         *smax = fa;
@@ -138,19 +138,19 @@ static void svd_tri2x2(
     ddouble fmh = subqq(fa, ha);
     ddouble d = divqq(fmh, fa);
     ddouble q = divqq(g, f);
-    ddouble s = subdq(2.0, d);
-    ddouble spq = hypotqq(q, s);
-    ddouble dpq = hypotqq(d, q);
-    ddouble a = mul_pwr2(addqq(spq, dpq), 0.5);
-    *smin = absq(divqq(ha, a));
-    *smax = absq(mulqq(fa, a));
+    ddouble s = subdw(2.0, d);
+    ddouble spw = hypotqq(q, s);
+    ddouble dpw = hypotqq(d, q);
+    ddouble a = mul_pwr2(addqq(spw, dpw), 0.5);
+    *smin = absw(divqq(ha, a));
+    *smax = absw(mulqq(fa, a));
 
     if (compute_uv) {
-        ddouble tmp = addqq(divqq(q, addqq(spq, s)),
-                            divqq(q, addqq(dpq, d)));
-        tmp = mulqq(tmp, adddq(1.0, a));
+        ddouble tmp = addqq(divqq(q, addqq(spw, s)),
+                            divqq(q, addqq(dpw, d)));
+        tmp = mulqq(tmp, adddw(1.0, a));
         ddouble tt = hypotqd(tmp, 2.0);
-        *cv = divdq(2.0, tt);
+        *cv = divdw(2.0, tt);
         *sv = divqq(tmp, tt);
         *cu = divqq(addqq(*cv, mulqq(*sv, q)), a);
         *su = divqq(mulqq(divqq(h, f), *sv), a);
@@ -161,7 +161,7 @@ void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
              ddouble *smax, ddouble *cv, ddouble *sv, ddouble *cu, ddouble *su)
 {
     bool compute_uv = cv != NULL;
-    if(iszeroq(a21))
+    if(iszerow(a21))
         return svd_tri2x2(a11, a12, a22, smin, smax, cv, sv, cu, su);
 
     /* First, we use a givens rotation  Rx
@@ -169,7 +169,7 @@ void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
      *   [ -sx   cx ] [ a21  a22 ]   [ 0   a22' ]
      */
     ddouble cx, sx, rx;
-    givensq(a11, a21, &cx, &sx, &rx);
+    givensw(a11, a21, &cx, &sx, &rx);
     a11 = rx;
     a21 = Q_ZERO;
     lmul_givensq(&a12, &a22, cx, sx, a12, a22);
@@ -185,7 +185,7 @@ void svd_2x2(ddouble a11, ddouble a12, ddouble a21, ddouble a22, ddouble *smin,
      *   [  sx   cx ] [  su   cu ]   [  su'   cu' ]
      */
     if (compute_uv)
-        lmul_givensq(cu, su, cx, negq(sx), *cu, *su);
+        lmul_givensq(cu, su, cx, negw(sx), *cu, *su);
 }
 
 ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
@@ -195,7 +195,7 @@ ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
     ddouble offd = Q_ZERO;
 
     if (ii < jj)
-        return nanq();
+        return nanw();
 
     // Note that the inner loop only runs over the square portion!
     for (long i = 0; i < jj - 1; ++i) {
@@ -209,7 +209,7 @@ ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
                 Hij = addqq(Hij, mulqq(u_ki, u_kj));
                 Hjj = addqq(Hjj, mulqq(u_kj, u_kj));
             }
-            offd = addqq(offd, sqrq(Hij));
+            offd = addqq(offd, sqrw(Hij));
 
             // diagonalize
             svd_2x2(Hii, Hij, Hij, Hjj, &_smin, &_smax, &cv, &sv, &_cu, &_su);
@@ -229,7 +229,7 @@ ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
             }
         }
     }
-    offd = sqrtq(offd);
+    offd = sqrtw(offd);
     return offd;
 }
 
@@ -244,8 +244,8 @@ static ddouble gk_shift(ddouble d1, ddouble e1, ddouble d2)
     ddouble smin, smax;
     svd_tri2x2(d1, e1, d2, &smin, &smax, NULL, NULL, NULL, NULL);
 
-    ddouble smin_dist = absq(subqq(smin, d2));
-    ddouble smax_dist = absq(subqq(smax, d2));
+    ddouble smin_dist = absw(subqq(smin, d2));
+    ddouble smax_dist = absw(subqq(smax, d2));
     return lessqq(smin_dist, smax_dist) ? smin : smax;
 }
 
@@ -257,12 +257,12 @@ void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
 
     ddouble shift = gk_shift(d[(ii-2)*sd], e[(ii-2)*se], d[(ii-1)*sd]);
     ddouble g = e[0];
-    ddouble f = addqq(copysigndq(1.0, d[0]), divqq(shift, d[0]));
-    f = mulqq(f, subqq(absq(d[0]), shift));
+    ddouble f = addqq(copysigndw(1.0, d[0]), divqq(shift, d[0]));
+    f = mulqq(f, subqq(absw(d[0]), shift));
 
     for (long i = 0; i < (ii - 1); ++i) {
         ddouble r, cosr, sinr;
-        givensq(f, g, &cosr, &sinr, &r);
+        givensw(f, g, &cosr, &sinr, &r);
         if (i != 0)
             e[(i-1)*se] = r;
 
@@ -272,7 +272,7 @@ void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
         *(rot++) = sinr;
 
         ddouble cosl, sinl;
-        givensq(f, g, &cosl, &sinl, &r);
+        givensw(f, g, &cosl, &sinl, &r);
         d[i*sd] = r;
         lmul_givensq(&f, &d[(i+1)*sd], cosl, sinl, e[i*se], d[(i+1)*sd]);
         if (i < ii - 2) {

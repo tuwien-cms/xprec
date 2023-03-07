@@ -90,29 +90,29 @@ static inline ddouble divqd(ddouble x, double y)
 
 /* -------------------- Combining double/quad ------------------------- */
 
-static inline ddouble negq(ddouble);
-static inline ddouble reciprocalq(ddouble);
+static inline ddouble negw(ddouble);
+static inline ddouble reciprocalw(ddouble);
 
-static inline ddouble adddq(double x, ddouble y)
+static inline ddouble adddw(double x, ddouble y)
 {
     return addqd(y, x);
 }
 
-static inline ddouble subdq(double x, ddouble y)
+static inline ddouble subdw(double x, ddouble y)
 {
     /* TODO: Probably not ideal */
-    return addqd(negq(y), x);
+    return addqd(negw(y), x);
 }
 
-static inline ddouble muldq(double x, ddouble y)
+static inline ddouble muldw(double x, ddouble y)
 {
     return mulqd(y, x);
 }
 
-static inline ddouble divdq(double x, ddouble y)
+static inline ddouble divdw(double x, ddouble y)
 {
     /* TODO: Probably not ideal */
-    return mulqd(reciprocalq(y), x);
+    return mulqd(reciprocalw(y), x);
 }
 
 static inline ddouble mul_pwr2(ddouble a, double b) {
@@ -161,22 +161,22 @@ static inline ddouble divqq(ddouble x, ddouble y)
 
 /* -------------------- Unary functions ------------------------- */
 
-static inline ddouble negq(ddouble a)
+static inline ddouble negw(ddouble a)
 {
     return (ddouble){-a.hi, -a.lo};
 }
 
-static inline ddouble posq(ddouble a)
+static inline ddouble posw(ddouble a)
 {
     return (ddouble){-a.hi, -a.lo};
 }
 
-static inline ddouble absq(ddouble a)
+static inline ddouble absw(ddouble a)
 {
-    return signbit(a.hi) ? negq(a) : a;
+    return signbit(a.hi) ? negw(a) : a;
 }
 
-static inline ddouble reciprocalq(ddouble y)
+static inline ddouble reciprocalw(ddouble y)
 {
     /* Alg 17 with x = 1 */
     double t_hi = 1.0 / y.hi;
@@ -187,7 +187,7 @@ static inline ddouble reciprocalq(ddouble y)
     return two_sum_quick(t_hi, t_lo);
 }
 
-static inline ddouble sqrq(ddouble a)
+static inline ddouble sqrw(ddouble a)
 {
     /* Alg 11 */
     ddouble c = two_prod(a.hi, a.hi);
@@ -195,7 +195,7 @@ static inline ddouble sqrq(ddouble a)
     return two_sum_quick(c.hi, c.lo + t);
 }
 
-static inline ddouble roundq(ddouble a)
+static inline ddouble roundw(ddouble a)
 {
     double hi = round(a.hi);
     double lo;
@@ -220,7 +220,7 @@ static inline ddouble roundq(ddouble a)
     }
 }
 
-static inline ddouble floorq(ddouble a)
+static inline ddouble floorw(ddouble a)
 {
     double hi = floor(a.hi);
     double lo = 0.0;
@@ -233,7 +233,7 @@ static inline ddouble floorq(ddouble a)
     return (ddouble){hi, lo};
 }
 
-static inline ddouble ceilq(ddouble a)
+static inline ddouble ceilw(ddouble a)
 {
     double hi = ceil(a.hi);
     double lo = 0.0;
@@ -246,7 +246,7 @@ static inline ddouble ceilq(ddouble a)
     return (ddouble){hi, lo};
 }
 
-static inline bool signbitq(ddouble x)
+static inline bool signbitw(ddouble x)
 {
     return signbit(x.hi);
 }
@@ -257,40 +257,40 @@ static inline ddouble copysignqq(ddouble x, ddouble y)
      * need not be the same, so we cannot merely broadcast copysign to both
      * parts.
      */
-    return signbitq(x) != signbitq(y) ? negq(x) : x;
+    return signbitw(x) != signbitw(y) ? negw(x) : x;
 }
 
 static inline ddouble copysignqd(ddouble x, double y)
 {
-    return signbitq(x) != signbit(y) ? negq(x) : x;
+    return signbitw(x) != signbit(y) ? negw(x) : x;
 }
 
-static inline ddouble copysigndq(double x, ddouble y)
+static inline ddouble copysigndw(double x, ddouble y)
 {
     /* It is less surprising to return a ddouble here */
     double res = copysign(x, y.hi);
     return (ddouble) {res, 0.0};
 }
 
-static inline bool iszeroq(ddouble x);
+static inline bool iszerow(ddouble x);
 
-static inline ddouble signq(ddouble x)
+static inline ddouble signw(ddouble x)
 {
     /* The numpy sign function does not respect signed zeros.  We do. */
-    if (iszeroq(x))
+    if (iszerow(x))
         return x;
-    return copysigndq(1.0, x);
+    return copysigndw(1.0, x);
 }
 
 /******************************** Constants *********************************/
 
-static inline ddouble nanq()
+static inline ddouble nanw()
 {
     double nan = strtod("NaN", NULL);
     return (ddouble){nan, nan};
 }
 
-static inline ddouble infq()
+static inline ddouble infw()
 {
     double inf = strtod("Inf", NULL);
     return (ddouble){inf, inf};
@@ -314,17 +314,17 @@ static const ddouble Q_MAX = {1.79769313486231570815e+308, 0.0};
 static const ddouble Q_TINY = {2.2250738585072014e-308, 0.0};
 
 
-static inline bool isfiniteq(ddouble x)
+static inline bool isfinitew(ddouble x)
 {
     return isfinite(x.hi);
 }
 
-static inline bool isinfq(ddouble x)
+static inline bool isinfw(ddouble x)
 {
     return isinf(x.hi);
 }
 
-static inline bool isnanq(ddouble x)
+static inline bool isnanw(ddouble x)
 {
     return isnan(x.hi);
 }
@@ -395,32 +395,32 @@ static inline bool lessequalqd(ddouble a, double b)
 
 /*********************** Comparisons d/q ***************************/
 
-static inline bool equaldq(double a, ddouble b)
+static inline bool equaldw(double a, ddouble b)
 {
     return equalqq((ddouble){a, 0}, b);
 }
 
-static inline bool notequaldq(double a, ddouble b)
+static inline bool notequaldw(double a, ddouble b)
 {
     return notequalqq((ddouble){a, 0}, b);
 }
 
-static inline bool greaterdq(double a, ddouble b)
+static inline bool greaterdw(double a, ddouble b)
 {
     return greaterqq((ddouble){a, 0}, b);
 }
 
-static inline bool lessdq(double a, ddouble b)
+static inline bool lessdw(double a, ddouble b)
 {
     return lessqq((ddouble){a, 0}, b);
 }
 
-static inline bool greaterequaldq(double a, ddouble b)
+static inline bool greaterequaldw(double a, ddouble b)
 {
     return greaterequalqq((ddouble){a, 0}, b);
 }
 
-static inline bool lessequaldq(double a, ddouble b)
+static inline bool lessequaldw(double a, ddouble b)
 {
     return lessequalqq((ddouble){a, 0}, b);
 }
@@ -447,43 +447,43 @@ static inline ddouble fmaxqd(ddouble a, double b)
     return greaterqd(a, b) ? a : (ddouble) {b, 0};
 }
 
-static inline ddouble fmindq(double a, ddouble b)
+static inline ddouble fmindw(double a, ddouble b)
 {
-    return lessdq(a, b) ? (ddouble) {a, 0} : b;
+    return lessdw(a, b) ? (ddouble) {a, 0} : b;
 }
 
-static inline ddouble fmaxdq(double a, ddouble b)
+static inline ddouble fmaxdw(double a, ddouble b)
 {
-    return greaterdq(a, b) ? (ddouble) {a, 0} : b;
+    return greaterdw(a, b) ? (ddouble) {a, 0} : b;
 }
 
 /************************** Unary tests **************************/
 
-static inline bool iszeroq(ddouble x)
+static inline bool iszerow(ddouble x)
 {
     return x.hi == 0.0;
 }
 
-static inline bool isoneq(ddouble x)
+static inline bool isonew(ddouble x)
 {
     return x.hi == 1.0 && x.lo == 0.0;
 }
 
-static inline bool ispositiveq(ddouble x)
+static inline bool ispositivew(ddouble x)
 {
     return x.hi > 0.0;
 }
 
-static inline bool isnegativeq(ddouble x)
+static inline bool isnegativew(ddouble x)
 {
     return x.hi < 0.0;
 }
 
 /************************** Advanced math functions ********************/
 
-ddouble sqrtq(ddouble a);
+ddouble sqrtw(ddouble a);
 
-static inline ddouble ldexpq(ddouble a, int exp)
+static inline ddouble ldexpw(ddouble a, int exp)
 {
     return (ddouble) {ldexp(a.hi, exp), ldexp(a.lo, exp)};
 }
@@ -494,15 +494,15 @@ ddouble _hypotqq_ordered(ddouble x, ddouble y);
 
 static inline ddouble hypotqq(ddouble x, ddouble y)
 {
-    x = absq(x);
-    y = absq(y);
+    x = absw(x);
+    y = absw(y);
     if (x.hi < y.hi)
         return _hypotqq_ordered(y, x);
     else
         return _hypotqq_ordered(x, y);
 }
 
-static inline ddouble hypotdq(double x, ddouble y)
+static inline ddouble hypotdw(double x, ddouble y)
 {
     return hypotqq((ddouble){x, 0}, y);
 }
@@ -513,33 +513,33 @@ static inline ddouble hypotqd(ddouble x, double y)
 }
 
 /* Computes the nearest integer to d. */
-static inline ddouble nintq(ddouble d) {
-    if (equalqq(d, floorq(d))) {
+static inline ddouble nintw(ddouble d) {
+    if (equalqq(d, floorw(d))) {
         return d;
     }
-    return floorq(addqq(d, (ddouble){0.5, 0}));
+    return floorw(addqq(d, (ddouble){0.5, 0}));
 }
 
-ddouble expq(ddouble a);
+ddouble expw(ddouble a);
 ddouble expm1q(ddouble a);
 ddouble ldexpqi(ddouble a, int m);
-ddouble logq(ddouble a);
-ddouble sinq(ddouble a);
-ddouble cosq(ddouble a);
-ddouble tanq(ddouble a);
-ddouble sinhq(ddouble a);
-ddouble coshq(ddouble a);
-ddouble tanhq(ddouble a);
-ddouble atanq(ddouble a);
-ddouble acosq(ddouble a);
-ddouble asinq(ddouble a);
-ddouble atanhq(ddouble a);
-ddouble acoshq(ddouble a);
-ddouble asinhq(ddouble a);
+ddouble logw(ddouble a);
+ddouble sinw(ddouble a);
+ddouble cosw(ddouble a);
+ddouble tanw(ddouble a);
+ddouble sinhw(ddouble a);
+ddouble coshw(ddouble a);
+ddouble tanhw(ddouble a);
+ddouble atanw(ddouble a);
+ddouble acosw(ddouble a);
+ddouble asinw(ddouble a);
+ddouble atanhw(ddouble a);
+ddouble acoshw(ddouble a);
+ddouble asinhw(ddouble a);
 ddouble atan2qd(ddouble a, double b);
 ddouble atan2dq(double a, ddouble b);
 ddouble atan2qq(ddouble a, ddouble b);
 ddouble powqq(ddouble a, ddouble b);
 ddouble powqd(ddouble a, double b);
-ddouble powdq(double a, ddouble b);
+ddouble powdw(double a, ddouble b);
 ddouble modfqq(ddouble a, ddouble *b);
