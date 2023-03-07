@@ -18,7 +18,7 @@ static ddouble normq_scaled(const ddouble *x, long nn, long sxn,
     ddouble sum = Q_ZERO;
     for (long n = 0; n < nn; ++n, x += sxn) {
         ddouble curr = mul_pwr2(*x, scaling);
-        sum = addqq(sum, sqrw(curr));
+        sum = addww(sum, sqrw(curr));
     };
     return mul_pwr2(sqrtw(sum), 1.0/scaling);
 }
@@ -46,15 +46,15 @@ ddouble householderw(const ddouble *x, ddouble *v, long nn, long sx, long sv)
         return Q_ZERO;
 
     ddouble alpha = *x;
-    ddouble beta = copysignqq(hypotqq(alpha, norm_x), alpha);
+    ddouble beta = copysignww(hypotww(alpha, norm_x), alpha);
 
-    ddouble diff = subqq(beta, alpha);
-    ddouble tau = divqq(diff, beta);
+    ddouble diff = subww(beta, alpha);
+    ddouble tau = divww(diff, beta);
     ddouble scale = reciprocalw(negw(diff));
 
     v[0] = Q_ONE;
     for (long n = 1; n != nn; ++n)
-        v[n * sv] = mulqq(scale, x[n * sx]);
+        v[n * sv] = mulww(scale, x[n * sx]);
     return tau;
 }
 
@@ -64,8 +64,8 @@ void rank1updateq(ddouble *a, long ais, long ajs, const ddouble *v, long vs,
     #pragma omp parallel for collapse(2)
     for (long i = 0; i < ii; ++i) {
         for (long j = 0; j < jj; ++j) {
-            ddouble tmp = mulqq(v[i * vs], w[j * ws]);
-            a[i * ais + j * ajs] = addqq(a[i * ais + j * ajs], tmp);
+            ddouble tmp = mulww(v[i * vs], w[j * ws]);
+            a[i * ais + j * ajs] = addww(a[i * ais + j * ajs], tmp);
         }
     }
 }
@@ -82,14 +82,14 @@ void givensw(ddouble f, ddouble g, ddouble *c, ddouble *s, ddouble *r)
         *s = (ddouble) {signbitw(g), 0.0};
         *r = absw(g);
     } else {
-        *r = copysignqq(hypotqq(f, g), f);
+        *r = copysignww(hypotww(f, g), f);
 
         /* This may come at a slight loss of precision, however, we should
          * not really have to care ...
          */
         ddouble inv_r = reciprocalw(*r);
-        *c = mulqq(f, inv_r);
-        *s = mulqq(g, inv_r);
+        *c = mulww(f, inv_r);
+        *s = mulww(g, inv_r);
     }
 }
 
@@ -102,7 +102,7 @@ static void svd_tri2x2(
     ddouble ha = absw(h);
     bool compute_uv = cv != NULL;
 
-    if (lessqq(fa, ha)) {
+    if (lessww(fa, ha)) {
         // switch h <-> f, cu <-> sv, cv <-> su
         svd_tri2x2(h, g, f, smin, smax, su, cu, sv, cv);
         return;
@@ -123,37 +123,37 @@ static void svd_tri2x2(
         // ga is very large
         *smax = ga;
         if (ha.hi > 1.0)
-            *smin = divqq(fa, divqq(ga, ha));
+            *smin = divww(fa, divww(ga, ha));
         else
-            *smin = mulqq(divqq(fa, ga), ha);
+            *smin = mulww(divww(fa, ga), ha);
         if (compute_uv) {
             *cu = Q_ONE;
-            *su = divqq(h, g);
+            *su = divww(h, g);
             *cv = Q_ONE;
-            *sv = divqq(f, g);
+            *sv = divww(f, g);
         }
         return;
     }
     // normal case
-    ddouble fmh = subqq(fa, ha);
-    ddouble d = divqq(fmh, fa);
-    ddouble q = divqq(g, f);
+    ddouble fmh = subww(fa, ha);
+    ddouble d = divww(fmh, fa);
+    ddouble q = divww(g, f);
     ddouble s = subdw(2.0, d);
-    ddouble spw = hypotqq(q, s);
-    ddouble dpw = hypotqq(d, q);
-    ddouble a = mul_pwr2(addqq(spw, dpw), 0.5);
-    *smin = absw(divqq(ha, a));
-    *smax = absw(mulqq(fa, a));
+    ddouble spw = hypotww(q, s);
+    ddouble dpw = hypotww(d, q);
+    ddouble a = mul_pwr2(addww(spw, dpw), 0.5);
+    *smin = absw(divww(ha, a));
+    *smax = absw(mulww(fa, a));
 
     if (compute_uv) {
-        ddouble tmp = addqq(divqq(q, addqq(spw, s)),
-                            divqq(q, addqq(dpw, d)));
-        tmp = mulqq(tmp, adddw(1.0, a));
-        ddouble tt = hypotqd(tmp, 2.0);
+        ddouble tmp = addww(divww(q, addww(spw, s)),
+                            divww(q, addww(dpw, d)));
+        tmp = mulww(tmp, adddw(1.0, a));
+        ddouble tt = hypotwd(tmp, 2.0);
         *cv = divdw(2.0, tt);
-        *sv = divqq(tmp, tt);
-        *cu = divqq(addqq(*cv, mulqq(*sv, q)), a);
-        *su = divqq(mulqq(divqq(h, f), *sv), a);
+        *sv = divww(tmp, tt);
+        *cu = divww(addww(*cv, mulww(*sv, q)), a);
+        *su = divww(mulww(divww(h, f), *sv), a);
     }
 }
 
@@ -205,11 +205,11 @@ ddouble jacobi_sweep(ddouble *u, long sui, long suj, ddouble *vt, long svi,
             for (long k = 0; k != ii; ++k) {
                 ddouble u_ki = u[k * sui + i * suj];
                 ddouble u_kj = u[k * sui + j * suj];
-                Hii = addqq(Hii, mulqq(u_ki, u_ki));
-                Hij = addqq(Hij, mulqq(u_ki, u_kj));
-                Hjj = addqq(Hjj, mulqq(u_kj, u_kj));
+                Hii = addww(Hii, mulww(u_ki, u_ki));
+                Hij = addww(Hij, mulww(u_ki, u_kj));
+                Hjj = addww(Hjj, mulww(u_kj, u_kj));
             }
-            offd = addqq(offd, sqrw(Hij));
+            offd = addww(offd, sqrw(Hij));
 
             // diagonalize
             svd_2x2(Hii, Hij, Hij, Hjj, &_smin, &_smax, &cv, &sv, &_cu, &_su);
@@ -244,9 +244,9 @@ static ddouble gk_shift(ddouble d1, ddouble e1, ddouble d2)
     ddouble smin, smax;
     svd_tri2x2(d1, e1, d2, &smin, &smax, NULL, NULL, NULL, NULL);
 
-    ddouble smin_dist = absw(subqq(smin, d2));
-    ddouble smax_dist = absw(subqq(smax, d2));
-    return lessqq(smin_dist, smax_dist) ? smin : smax;
+    ddouble smin_dist = absw(subww(smin, d2));
+    ddouble smax_dist = absw(subww(smax, d2));
+    return lessww(smin_dist, smax_dist) ? smin : smax;
 }
 
 void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
@@ -257,8 +257,8 @@ void golub_kahan_chaseq(ddouble *d, long sd, ddouble *e, long se, long ii,
 
     ddouble shift = gk_shift(d[(ii-2)*sd], e[(ii-2)*se], d[(ii-1)*sd]);
     ddouble g = e[0];
-    ddouble f = addqq(copysigndw(1.0, d[0]), divqq(shift, d[0]));
-    f = mulqq(f, subqq(absw(d[0]), shift));
+    ddouble f = addww(copysigndw(1.0, d[0]), divww(shift, d[0]));
+    f = mulww(f, subww(absw(d[0]), shift));
 
     for (long i = 0; i < (ii - 1); ++i) {
         ddouble r, cosr, sinr;

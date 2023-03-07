@@ -18,8 +18,8 @@
 static inline void lmul_givensq(
         ddouble *a, ddouble *b, ddouble c, ddouble s, ddouble x, ddouble y)
 {
-    *a = addqq(mulqq(c, x), mulqq(s, y));
-    *b = subqq(mulqq(c, y), mulqq(s, x));
+    *a = addww(mulww(c, x), mulww(s, y));
+    *b = subww(mulww(c, y), mulww(s, x));
 }
 
 /** Compute 2-norm of a vector */

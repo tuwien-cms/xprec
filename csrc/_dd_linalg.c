@@ -45,8 +45,8 @@ static void u_matmulw(char **args, const npy_intp *dims, const npy_intp* steps,
             for (npy_intp k = 0; k < kk; ++k) {
                 ddouble val = Q_ZERO, tmp;
                 for (npy_intp j = 0; j < jj; ++j) {
-                    tmp = mulqq(a[i * sai + j * saj], b[j * sbj + k * sbk]);
-                    val = addqq(val, tmp);
+                    tmp = mulww(a[i * sai + j * saj], b[j * sbj + k * sbk]);
+                    val = addww(val, tmp);
                 }
                 c[i * sci + k * sck] = val;
             }
