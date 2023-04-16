@@ -39,7 +39,7 @@ Trouble shooting
 You may suffer from a long runtime when xprec is built with icc. If you encounter this problem, please try the following:
 
 ```
-CFLAGS=“-fp-model=precise” pip install xprec
+CFLAGS="-fp-model=precise" pip install xprec
 ```
 
 Licence
