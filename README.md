@@ -32,6 +32,16 @@ Quickstart
     A = np.vander(np.linspace(-1, 1, 80, dtype=ddouble), 150)
     U, s, VT = xprec.linalg.svd(A)
 
+Trouble shooting
+---
+
+* icc<br>
+You may suffer from a long runtime when xprec is built with icc. If you encounter this problem, please try the following:
+
+```
+CFLAGS=“-fp-model=precise” pip install xprec
+```
+
 Licence
 -------
 The xprec library is
