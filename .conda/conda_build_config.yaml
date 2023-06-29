@@ -7,8 +7,8 @@ numpy:
     # 1.18 does not build with Python 3.9
     #- 1.19
     #- 1.20
-    #- 1.21
-    #- 1.22
+    - 1.21
+    - 1.22
     - 1.23
 
 pin_run_as_build:
