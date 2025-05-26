@@ -1,15 +1,13 @@
 python:
-    #- 3.8
-    #- 3.9
-    - 3.10
+    - 3.12
 
 numpy:
     # 1.18 does not build with Python 3.9
     #- 1.19
     #- 1.20
-    - 1.21
-    - 1.22
-    - 1.23
+    - 1.26
+    - 2.2
+    - 2.3
 
 pin_run_as_build:
     numpy: x.x
