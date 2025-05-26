@@ -1,11 +1,14 @@
 python:
     - 3.13
+    - 3.12
+    - 3.11
 
 numpy:
     # 1.18 does not build with Python 3.9
     #- 1.19
     #- 1.20
-    #- 1.26
+    - 1.26
+    - 2.1
     - 2.2
 
 pin_run_as_build:
