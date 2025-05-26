@@ -26,9 +26,6 @@ jobs:
           - os: windows-latest
             numpy-version: auto
             python-version: 3.9
-          - os: macos-12
-            numpy-version: auto
-            python-version: 3.9
           - os: macos-latest
             numpy-version: auto
             python-version: 3.11
